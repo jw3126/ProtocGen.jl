@@ -1,0 +1,17 @@
+#!/bin/sh
+# -*- mode: julia -*-
+#=
+# Self-executing Julia script. The shell exec below is inside a Julia
+# multi-line comment (#= ... =#) so Julia ignores it; the shell runs it
+# and re-execs julia on this same file.
+HERE="$(cd "$(dirname "$0")" && pwd)"
+exec julia --project="${HERE}/.." --startup-file=no --color=no "$0" "$@"
+=#
+
+using ProtoBufDescriptors
+
+# protoc's plugin contract: read CodeGeneratorRequest from stdin, write
+# CodeGeneratorResponse to stdout, exit 0 even when reporting an error
+# (errors travel inside the response). Anything that escapes here means the
+# plugin itself is broken.
+ProtoBufDescriptors.run_plugin(stdin, stdout)
