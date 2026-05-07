@@ -75,13 +75,13 @@
     @test reencode(oz) == bytes_maybe_zero
     @test reencode(ou) == bytes_maybe_unset
 
-    # Build the same two values directly and confirm.
+    # Build the same two values directly and confirm. Constructor signature
+    # is Outer(name, maybe, nested, packed_ints, choice) — `ci`/`cs` collapse
+    # into the `choice` oneof field (Phase 6).
     nothing_outer = Base.invokelatest(sample_mod.Outer,
-                                       "u", nothing, nothing,
-                                       Int32(0), "", Int64[])
+                                       "u", nothing, nothing, Int64[], nothing)
     zero_outer    = Base.invokelatest(sample_mod.Outer,
-                                       "z", Int32(0), nothing,
-                                       Int32(0), "", Int64[])
+                                       "z", Int32(0), nothing, Int64[], nothing)
     @test reencode(nothing_outer) == bytes_maybe_unset
     @test reencode(zero_outer)    == bytes_maybe_zero
 end

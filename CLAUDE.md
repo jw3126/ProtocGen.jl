@@ -63,8 +63,8 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 3 | Plugin protocol shim (`bin/protoc-gen-julia`, offline driver) | DONE |
 | 4 | Codegen happy path (proto3, no presence) | DONE |
 | 5 | Presence — `Union{Nothing,T}` (the headline feature) | DONE |
-| 6 | proto2 `required`, maps, oneofs, packed, groups | NEXT |
-| 7 | Well-known types | pending |
+| 6 | proto2 `required`, maps, oneofs, packed, groups | DONE (groups deferred) |
+| 7 | Well-known types | NEXT |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | pending |
 | 9 | Conformance + golden corpus | pending |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
@@ -108,9 +108,28 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   true` (proto3 explicit `optional`, with its synthetic oneof) become
   `Union{Nothing,T}` defaulted to `nothing` and skip-iff-`nothing` on encode.
   As a result an explicit-optional scalar set to zero round-trips correctly:
-  the value travels on the wire, and unset ≠ default-zero. proto2
-  `optional` will share the same predicate when proto2 codegen lands in
-  Phase 6.
+  the value travels on the wire, and unset ≠ default-zero. proto2 `optional`
+  shares the same predicate after Phase 6.
+- Phase 6 covers real oneofs, maps, and proto2:
+  - **Real oneofs** (non-synthetic) collapse all member fields into a single
+    struct field of type `Union{Nothing, OneOf{<:Union{T1, T2, ...}}}`.
+    Decode dispatches on tag and writes `OneOf(:member, value)`; encode
+    branches on `_o.name` and emits the active member. `oneof_field_types`
+    metadata is also emitted so users can introspect the union.
+  - **Maps** are detected via `MessageOptions.map_entry == true`. The field
+    is emitted as `Dict{K,V}` and the synthetic `*Entry` message is
+    suppressed; decode/encode go through the codec's existing
+    `decode!(::Dict)` / `encode(::Int, ::Dict)` dispatch.
+  - **proto2** is fully supported: `optional` scalars get the same
+    `Union{Nothing,T}` treatment as proto3 explicit-optional; `required`
+    fields are emitted as bare types with `_saw_*` flags accumulated during
+    decode and a `DecodeError("required field X missing")` thrown if any
+    flag stays `false`. Required submessages use `Ref{T}()` (uninitialized)
+    so the validation step throws a clear error before anyone touches the
+    Ref. `DecodeError <: Exception` is a new public type.
+  - **Groups** (deprecated proto2 wire format) are intentionally not
+    supported in v1. `_scalar_jl_type_and_wire` errors clearly if a
+    `TYPE_GROUP` field reaches codegen.
 - `gen/` holds the Phase 2 bootstrap.
   - `gen/proto/` — `.proto` source inputs. `descriptor.proto` is the older
     ProtoBuf.jl-vendored copy (parseable by ProtoBuf.jl's text parser) with
@@ -146,12 +165,19 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   decodes to `Int32(0)`, and the same proto encoded with `maybe` unset
   decodes to `nothing`. Re-encode of either is byte-identical to what
   `protoc --encode` would have produced.
+- `test/test_proto2.jl` exercises proto2: required scalars + required
+  submessage decode happy path, optional scalars round-trip presence,
+  re-encode is byte-identical to protoc, and a hand-crafted blob missing
+  the `name` required field raises `DecodeError`.
+- `test_codegen.jl` also covers maps end-to-end (`Dict{String,Int32}`,
+  `Dict{Int32,String}`, `Dict{String,SubMessage}`) and the real oneof on
+  `sample.Outer`.
 - **`test/test_encode.jl` and `test/test_decode.jl` were NOT ported** — they
   exercise the codec via generated structs and depend on `protojl` /
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.
 - CI matrix mirrors ProtoBuf.jl: 1.10 / 1 / nightly × Linux / Windows / macOS ×
   x64 / aarch64.
-- 1401 / 1401 tests pass.
+- 1441 / 1441 tests pass.
 
 ### Known bootstrap caveats
 

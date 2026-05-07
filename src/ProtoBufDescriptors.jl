@@ -14,6 +14,21 @@ struct OneOf{T}
     value::T
 end
 
+"""
+    DecodeError(msg)
+
+Thrown by generated `decode` methods when a wire-format invariant is violated
+that the decoder can describe — e.g., a proto2 `required` field is missing
+from the input. Distinct from `EOFError` and the codec's lower-level errors.
+"""
+struct DecodeError <: Exception
+    msg::String
+end
+
+function Base.showerror(io::IO, e::DecodeError)
+    print(io, "DecodeError: ", e.msg)
+end
+
 function Base.getindex(t::OneOf)
     return t.value
 end
@@ -55,7 +70,7 @@ include("codegen.jl")
 include("plugin.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder
-export OneOf, AbstractProtoBufMessage
+export OneOf, AbstractProtoBufMessage, DecodeError
 export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values
 
 end # module

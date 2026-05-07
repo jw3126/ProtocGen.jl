@@ -19,6 +19,7 @@ end
     include("test_plugin.jl")
     include("test_codegen.jl")
     include("test_presence.jl")
+    include("test_proto2.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(ProtoBufDescriptors)

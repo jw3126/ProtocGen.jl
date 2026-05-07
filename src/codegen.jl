@@ -59,18 +59,27 @@ end
 
 struct LocalNames
     package::String              # e.g. "sample"; "" if no package
+    syntax::String               # "proto2" or "proto3"
     messages::Set{String}        # fully-qualified names like ".sample.Outer.Inner"
     enums::Set{String}           # fully-qualified names like ".sample.MyEnum"
     jl_names::Dict{String,String}  # FQN -> Julia identifier ("Outer" or var"Outer.Inner")
     enum_defs::Dict{String,EnumDescriptorProto}  # FQN -> the enum's descriptor
+    map_entries::Dict{String,DescriptorProto}    # FQN -> map_entry synthetic message
+end
+
+function _is_map_entry(msg::DescriptorProto)
+    o = msg.options
+    return o !== nothing && o.map_entry === true
 end
 
 function _gather_names(file::FileDescriptorProto)
     package = something(file.package, "")
+    syntax = something(file.syntax, "proto2")
     messages = Set{String}()
     enums = Set{String}()
     jl_names = Dict{String,String}()
     enum_defs = Dict{String,EnumDescriptorProto}()
+    map_entries = Dict{String,DescriptorProto}()
     prefix = isempty(package) ? "" : ".$(package)"
 
     function visit_message(msg::DescriptorProto, parent_proto::String, parent_jl::String)
@@ -78,6 +87,9 @@ function _gather_names(file::FileDescriptorProto)
         jl_name = isempty(parent_jl) ? something(msg.name, "") : string(parent_jl, ".", something(msg.name, ""))
         push!(messages, proto_name)
         jl_names[proto_name] = jl_name
+        if _is_map_entry(msg)
+            map_entries[proto_name] = msg
+        end
         for nested in msg.nested_type
             visit_message(nested, proto_name, jl_name)
         end
@@ -101,7 +113,7 @@ function _gather_names(file::FileDescriptorProto)
         jl_names[efqn] = ename
         enum_defs[efqn] = e
     end
-    return LocalNames(package, messages, enums, jl_names, enum_defs)
+    return LocalNames(package, syntax, messages, enums, jl_names, enum_defs, map_entries)
 end
 
 function _resolve_typename(type_name::String, names::LocalNames)
@@ -127,6 +139,8 @@ struct FieldModel
     is_repeated::Bool
     is_message::Bool
     is_enum::Bool
+    is_map::Bool                # `map<K,V>` — emitted as `Dict{K,V}`
+    is_required::Bool           # proto2 `required`
     jl_type::String             # the type used in the struct field declaration
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
     wire_annotation::String     # "" / "Val{:fixed}" / "Val{:zigzag}"
@@ -158,14 +172,38 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     is_repeated = label === L.LABEL_REPEATED
     is_message = ftype === T.TYPE_MESSAGE
     is_enum = ftype === T.TYPE_ENUM
+    is_required = label === L.LABEL_REQUIRED  # only legal in proto2
 
     if is_message
-        elem = _resolve_typename(something(field.type_name, ""), names)
+        ref_name = something(field.type_name, "")
+        # Maps are sugar over `repeated <synthetic>Entry` where the entry has
+        # `options.map_entry = true`. Surface the field as `Dict{K,V}` and
+        # let the codec's existing Dict dispatch handle the wire format.
+        if is_repeated && haskey(names.map_entries, ref_name)
+            entry = names.map_entries[ref_name]
+            k_type, v_type = _map_entry_kv_types(entry, names)
+            jl_type  = "Dict{$(k_type),$(v_type)}"
+            init_val = "Dict{$(k_type),$(v_type)}()"
+            default  = "Dict{$(k_type),$(v_type)}()"
+            skip     = "!isempty(_x.$(jl_fieldname))"
+            return FieldModel(proto_name, jl_fieldname, number, true, false, false,
+                              true, false,
+                              jl_type, jl_type, "", init_val, default, skip)
+        end
+        elem = _resolve_typename(ref_name, names)
         if is_repeated
             jl_type   = "Vector{$(elem)}"
             init_val  = "PB.BufferedVector{$(elem)}()"
             default   = "Vector{$(elem)}()"
             skip      = "!isempty(_x.$(jl_fieldname))"
+        elseif is_required
+            # proto2 required submessage. Field is non-nullable; the decode
+            # body initializes a Ref{T}() (uninitialized) and validates that
+            # it was actually set.
+            jl_type  = elem
+            init_val = "Ref{$(elem)}()"
+            default  = "Ref{$(elem)}()"
+            skip     = "true"
         else
             jl_type   = "Union{Nothing,$(elem)}"
             init_val  = "Ref{Union{Nothing,$(elem)}}(nothing)"
@@ -173,6 +211,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             skip      = "!isnothing(_x.$(jl_fieldname))"
         end
         return FieldModel(proto_name, jl_fieldname, number, is_repeated, true, false,
+                          false, is_required,
                           jl_type, elem, "", init_val, default, skip)
     elseif is_enum
         elem = _resolve_typename(something(field.type_name, ""), names)
@@ -184,13 +223,14 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             skip     = "!isempty(_x.$(jl_fieldname))"
         else
             # No presence on a bare proto3 enum — defaults to the first enum
-            # value (numeric 0).
+            # value (numeric 0). proto2 required enums encode unconditionally.
             jl_type  = elem_t
             init_val = "$(elem).$(_first_enum_member(field, names))"
             default  = init_val
-            skip     = "_x.$(jl_fieldname) != $(default)"
+            skip     = is_required ? "true" : "_x.$(jl_fieldname) != $(default)"
         end
         return FieldModel(proto_name, jl_fieldname, number, is_repeated, false, true,
+                          false, is_required,
                           jl_type, elem_t, "", init_val, default, skip)
     else
         scalar_jl, wire = _scalar_jl_type_and_wire(ftype)
@@ -199,11 +239,11 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             init_val  = "PB.BufferedVector{$(scalar_jl)}()"
             default   = "Vector{$(scalar_jl)}()"
             skip      = "!isempty(_x.$(jl_fieldname))"
-        elseif _wants_scalar_presence(field)
-            # Phase 5: proto3 explicit `optional` (and, in the future, proto2
-            # `optional`) carry presence. Surface that in Julia by typing the
-            # field as `Union{Nothing,T}` defaulted to `nothing`. The decode
-            # path overwrites `nothing` on tag, the encode path skips iff
+        elseif _wants_scalar_presence(field, names)
+            # Phase 5/6: proto3 explicit `optional` and proto2 `optional`
+            # carry presence. Surface that in Julia by typing the field as
+            # `Union{Nothing,T}` defaulted to `nothing`. The decode path
+            # overwrites `nothing` on tag, the encode path skips iff
             # `nothing`. As a result an explicit-optional scalar set to zero
             # round-trips correctly — the value travels on the wire and unset
             # ≠ default-zero.
@@ -215,7 +255,9 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             jl_type   = scalar_jl
             init_val  = _scalar_zero(scalar_jl)
             default   = init_val
-            if scalar_jl == "String"
+            if is_required
+                skip = "true"
+            elseif scalar_jl == "String"
                 skip = "!isempty(_x.$(jl_fieldname))"
             elseif scalar_jl == "Vector{UInt8}"
                 skip = "!isempty(_x.$(jl_fieldname))"
@@ -226,17 +268,58 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             end
         end
         return FieldModel(proto_name, jl_fieldname, number, is_repeated, false, false,
+                          false, is_required,
                           jl_type, scalar_jl, wire, init_val, default, skip)
     end
 end
 
-# Whether this scalar field carries explicit presence semantics. A proto3
-# field with the `optional` keyword has `proto3_optional == true` (it also
-# gets a synthetic oneof, which we ignore — synthetic oneofs are descriptor-
-# level scaffolding only). proto2 `optional` will get the same treatment in a
-# follow-on; today only proto3 ships codegen.
-function _wants_scalar_presence(field::FieldDescriptorProto)
-    return field.proto3_optional === true
+# Whether this scalar field carries explicit presence semantics:
+# - proto3 explicit `optional`: `proto3_optional == true` on the descriptor
+#   plus a synthetic oneof; we ignore the oneof (descriptor scaffolding)
+#   and key on the bool.
+# - proto2 `optional`: every proto2 field has an explicit label, and the
+#   spec requires presence tracking for `optional`.
+# In both cases the field stays on the regular field list (it's not a real
+# oneof member) and we just emit `Union{Nothing,T}`.
+function _wants_scalar_presence(field::FieldDescriptorProto, names::LocalNames)
+    L = var"FieldDescriptorProto.Label"
+    field.proto3_optional === true && return true
+    if names.syntax == "proto2"
+        return field.label === L.LABEL_OPTIONAL
+    end
+    return false
+end
+
+# Resolve a single field's type to a Julia type string, used for map key/
+# value lookup. Mirrors the type-mapping logic of _model_field but without
+# the per-field-shape decoration (no Vector, no Union).
+function _resolve_field_jl_type(field::FieldDescriptorProto, names::LocalNames)
+    T = var"FieldDescriptorProto.Type"
+    ftype = getfield(field, Symbol("#type"))
+    if ftype === T.TYPE_MESSAGE
+        return _resolve_typename(something(field.type_name, ""), names)
+    elseif ftype === T.TYPE_ENUM
+        return string(_resolve_typename(something(field.type_name, ""), names), ".T")
+    else
+        scalar_jl, _ = _scalar_jl_type_and_wire(ftype)
+        return scalar_jl
+    end
+end
+
+function _map_entry_kv_types(entry::DescriptorProto, names::LocalNames)
+    key_field = nothing
+    val_field = nothing
+    for f in entry.field
+        n = Int(something(f.number, Int32(0)))
+        if n == 1
+            key_field = f
+        elseif n == 2
+            val_field = f
+        end
+    end
+    key_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing key field 1")
+    val_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing value field 2")
+    return _resolve_field_jl_type(key_field, names), _resolve_field_jl_type(val_field, names)
 end
 
 # Find the enum's zero-valued member. proto3 mandates a 0 value as the first
@@ -257,6 +340,66 @@ function _first_enum_member(field::FieldDescriptorProto, names::LocalNames)
 end
 
 # ----------------------------------------------------------------------------
+# Per-message layout. Real oneofs (non-synthetic) collapse multiple proto
+# fields into a single Julia struct field of type
+# `Union{Nothing, OneOf{<:Union{T1, T2, ...}}}`. Synthetic oneofs (proto3
+# `optional` scaffolding) are descriptor-only — their member field stays a
+# plain Phase-5 `Union{Nothing,T}`.
+# ----------------------------------------------------------------------------
+
+struct OneofModel
+    proto_name::String
+    jl_fieldname::String
+    members::Vector{FieldModel}
+end
+
+# An oneof_decl is synthetic iff exactly one field references it AND that
+# field has proto3_optional=true. We detect this from the field list (not
+# the oneof_decl, which doesn't carry that information directly).
+function _synthetic_oneof_indices(msg::DescriptorProto)
+    counts = Dict{Int,Int}()
+    p3_opt_in = Dict{Int,Bool}()
+    for f in msg.field
+        idx = f.oneof_index
+        idx === nothing && continue
+        i = Int(idx)
+        counts[i] = get(counts, i, 0) + 1
+        if f.proto3_optional === true
+            p3_opt_in[i] = true
+        end
+    end
+    out = Set{Int}()
+    for (i, c) in counts
+        if c == 1 && get(p3_opt_in, i, false)
+            push!(out, i)
+        end
+    end
+    return out
+end
+
+# Group real-oneof members by oneof_index.
+function _build_oneofs(msg::DescriptorProto, names::LocalNames, synthetic::Set{Int})
+    members_by_idx = Dict{Int,Vector{FieldModel}}()
+    for f in msg.field
+        idx = f.oneof_index
+        idx === nothing && continue
+        i = Int(idx)
+        i in synthetic && continue
+        push!(get!(members_by_idx, i, FieldModel[]), _model_field(f, names))
+    end
+    oneofs = OneofModel[]
+    for (i, decl) in pairs(msg.oneof_decl)
+        # `pairs` over a Vector is 1-indexed; oneof_index is 0-indexed.
+        idx0 = i - 1
+        idx0 in synthetic && continue
+        haskey(members_by_idx, idx0) || continue
+        oname = something(decl.name, "")
+        push!(oneofs, OneofModel(oname, _jl_fieldname(oname), members_by_idx[idx0]))
+    end
+    return oneofs
+end
+
+# ----------------------------------------------------------------------------
 # Emitters.
 # ----------------------------------------------------------------------------
 
@@ -266,59 +409,139 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
 
     # Emit nested enums and nested messages first so they're defined before
-    # this struct (which references them).
+    # this struct (which references them). Skip synthetic map_entry messages —
+    # those are surfaced as `Dict{K,V}` on the parent field, never as a
+    # standalone Julia struct.
     for e in msg.enum_type
         _emit_enum(io, e, jl_name_plain)
     end
     for nested in msg.nested_type
+        _is_map_entry(nested) && continue
         _emit_message(io, nested, jl_name_plain, names)
     end
 
-    fields = [_model_field(f, names) for f in msg.field]
+    synthetic = _synthetic_oneof_indices(msg)
+    real_oneofs = _build_oneofs(msg, names, synthetic)
+    plain_fields = FieldModel[]
+    for f in msg.field
+        idx = f.oneof_index
+        if idx !== nothing && !(Int(idx) in synthetic)
+            # real-oneof member — folded into the OneofModel, not a plain field.
+            continue
+        end
+        push!(plain_fields, _model_field(f, names))
+    end
 
-    # struct
+    # struct: plain fields + one slot per real oneof.
     println(io, "struct ", jl_name)
-    for f in fields
+    for f in plain_fields
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
+    end
+    for o in real_oneofs
+        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
     end
     println(io, "end")
 
-    # default_values + field_numbers metadata
+    # Metadata.
     print(io, "PB.default_values(::Type{", jl_name, "}) = (;")
-    print(io, join(("$(f.jl_fieldname) = $(f.default_value)" for f in fields), ", "))
+    pieces = String[]
+    for f in plain_fields
+        push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
+    end
+    for o in real_oneofs
+        push!(pieces, "$(o.jl_fieldname) = nothing")
+    end
+    print(io, join(pieces, ", "))
     println(io, ")")
+
     print(io, "PB.field_numbers(::Type{", jl_name, "}) = (;")
-    print(io, join(("$(f.jl_fieldname) = $(f.number)" for f in fields), ", "))
+    pieces = String[]
+    for f in plain_fields
+        push!(pieces, "$(f.jl_fieldname) = $(f.number)")
+    end
+    for o in real_oneofs
+        for m in o.members
+            push!(pieces, "$(m.jl_fieldname) = $(m.number)")
+        end
+    end
+    print(io, join(pieces, ", "))
     println(io, ")")
+
+    if !isempty(real_oneofs)
+        print(io, "PB.oneof_field_types(::Type{", jl_name, "}) = (;")
+        oneof_pieces = String[]
+        for o in real_oneofs
+            inner = join(("$(m.jl_fieldname) = $(m.elem_jl_type)" for m in o.members), ", ")
+            push!(oneof_pieces, "$(o.jl_fieldname) = (;$(inner))")
+        end
+        print(io, join(oneof_pieces, ", "))
+        println(io, ")")
+    end
 
     println(io)
 
-    # decode. Parameters are underscore-prefixed so they can't collide with
-    # proto field names (we've seen this fire when a field is literally named
-    # `d` — a Float64 like Wide.d shadows the decoder otherwise).
+    # decode.
     println(io, "function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
-    for f in fields
+    for f in plain_fields
         println(io, "    ", f.jl_fieldname, " = ", f.init_value)
+        if f.is_required
+            println(io, "    _saw_", f.jl_fieldname, " = false")
+        end
+    end
+    for o in real_oneofs
+        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
     end
     println(io, "    while !PB.message_done(_d, _endpos, _group)")
     println(io, "        field_number, wire_type = PB.decode_tag(_d)")
     first_branch = true
-    for f in fields
+    for f in plain_fields
         kw = first_branch ? "if" : "elseif"
         first_branch = false
         println(io, "        ", kw, " field_number == ", f.number)
         _emit_decode_field(io, f)
+        if f.is_required
+            println(io, "            _saw_", f.jl_fieldname, " = true")
+        end
     end
-    if !isempty(fields)
+    for o in real_oneofs
+        for m in o.members
+            kw = first_branch ? "if" : "elseif"
+            first_branch = false
+            println(io, "        ", kw, " field_number == ", m.number)
+            _emit_decode_oneof_member(io, o, m)
+        end
+    end
+    if first_branch
+        # No fields at all.
+        println(io, "        Base.skip(_d, wire_type)")
+    else
         println(io, "        else")
         println(io, "            Base.skip(_d, wire_type)")
         println(io, "        end")
-    else
-        println(io, "        Base.skip(_d, wire_type)")
     end
     println(io, "    end")
+
+    # proto2 `required` validation. Emit a clear `DecodeError` per missing
+    # field rather than letting the implicit `Ref{T}()[]` access throw a
+    # generic UndefRefError, or letting a zero-defaulted scalar slip through.
+    for f in plain_fields
+        if f.is_required
+            qname = repr(f.proto_name)
+            println(io, "    _saw_", f.jl_fieldname,
+                    " || throw(PB.DecodeError(\"required field \" * ", qname,
+                    " * \" missing\"))")
+        end
+    end
+
     print(io, "    return ", jl_name, "(")
-    print(io, join(_decode_finalize.(fields), ", "))
+    arg_parts = String[]
+    for f in plain_fields
+        push!(arg_parts, _decode_finalize(f))
+    end
+    for o in real_oneofs
+        push!(arg_parts, o.jl_fieldname)
+    end
+    print(io, join(arg_parts, ", "))
     println(io, ")")
     println(io, "end")
 
@@ -327,8 +550,11 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # encode
     println(io, "function PB.encode(_e::PB.AbstractProtoEncoder, _x::", jl_name, ")")
     println(io, "    initpos = position(_e.io)")
-    for f in fields
+    for f in plain_fields
         _emit_encode_field(io, f)
+    end
+    for o in real_oneofs
+        _emit_encode_oneof(io, o)
     end
     println(io, "    return position(_e.io) - initpos")
     println(io, "end")
@@ -336,8 +562,11 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # _encoded_size
     println(io, "function PB._encoded_size(_x::", jl_name, ")")
     println(io, "    encoded_size = 0")
-    for f in fields
+    for f in plain_fields
         _emit_encoded_size_field(io, f)
+    end
+    for o in real_oneofs
+        _emit_encoded_size_oneof(io, o)
     end
     println(io, "    return encoded_size")
     println(io, "end")
@@ -345,8 +574,69 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io)
 end
 
+function _oneof_jl_type(o::OneofModel)
+    elem_union = join((m.elem_jl_type for m in o.members), ",")
+    return "Union{Nothing,OneOf{<:Union{$(elem_union)}}}"
+end
+
+function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
+    # Decode the value into a temporary, then wrap in OneOf.
+    if m.is_message
+        # OneOf members can be submessages — decode into a Ref, unwrap, wrap.
+        elem = m.elem_jl_type
+        println(io, "            _v = Ref{Union{Nothing,$(elem)}}(nothing)")
+        println(io, "            PB.decode!(_d, _v)")
+        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", _v[]::", elem, ")")
+    elseif m.is_enum
+        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, "))")
+    else
+        if !isempty(m.wire_annotation)
+            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, ", ", m.wire_annotation, "))")
+        else
+            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, "))")
+        end
+    end
+end
+
+function _emit_encode_oneof(io::IO, o::OneofModel)
+    println(io, "    let _o = _x.", o.jl_fieldname)
+    println(io, "        if !isnothing(_o)")
+    first_branch = true
+    for m in o.members
+        kw = first_branch ? "if" : "elseif"
+        first_branch = false
+        args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
+        println(io, "            ", kw, " _o.name === :", m.jl_fieldname)
+        println(io, "                PB.encode(_e, ", m.number, ", _o.value", args, ")")
+    end
+    println(io, "            end")
+    println(io, "        end")
+    println(io, "    end")
+end
+
+function _emit_encoded_size_oneof(io::IO, o::OneofModel)
+    println(io, "    let _o = _x.", o.jl_fieldname)
+    println(io, "        if !isnothing(_o)")
+    first_branch = true
+    for m in o.members
+        kw = first_branch ? "if" : "elseif"
+        first_branch = false
+        args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
+        println(io, "            ", kw, " _o.name === :", m.jl_fieldname)
+        println(io, "                encoded_size += PB._encoded_size(_o.value, ", m.number, args, ")")
+    end
+    println(io, "            end")
+    println(io, "        end")
+    println(io, "    end")
+end
+
 function _emit_decode_field(io::IO, f::FieldModel)
-    if f.is_message
+    if f.is_map
+        # Codec dispatch: `decode!(d, dict)` reads one entry off the wire and
+        # inserts (k, v) into `dict`. The caller's `dict` is the local
+        # variable initialized to `Dict{K,V}()` at the top of decode.
+        println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+    elseif f.is_message
         if f.is_repeated
             println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
         else
@@ -379,7 +669,10 @@ function _emit_decode_field(io::IO, f::FieldModel)
 end
 
 function _decode_finalize(f::FieldModel)
-    if f.is_message
+    if f.is_map
+        # `dict` is a real Dict the codec mutates in place; pass through.
+        return f.jl_fieldname
+    elseif f.is_message
         return f.is_repeated ? "$(f.jl_fieldname)[]" : "$(f.jl_fieldname)[]"
     elseif f.is_repeated
         return "$(f.jl_fieldname)[]"
