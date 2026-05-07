@@ -17,17 +17,30 @@ Phase 3 stub: this function does not yet emit code. It returns an empty
 response with the appropriate feature bits cleared. Phase 4 fills in real
 codegen.
 """
-function generate(::_GC.CodeGeneratorRequest)
+function generate(request::_GC.CodeGeneratorRequest)
     # We advertise FEATURE_PROTO3_OPTIONAL so protoc forwards proto3 `optional`
-    # fields to us instead of rejecting the request. The descriptor types
-    # already carry the `proto3_optional` flag and Phase 5 will codegen it
-    # correctly; until then the codegen is a stub.
+    # fields to us instead of rejecting the request. Phase 5 will actually use
+    # those bits; the Phase 4 happy-path codegen treats the field as a bare
+    # proto3 scalar (no presence) which is wire-compatible.
+    by_name = Dict{String,_G.FileDescriptorProto}()
+    for f in request.proto_file
+        name = something(f.name, "")
+        by_name[name] = f
+    end
+    files = _GC.var"CodeGeneratorResponse.File"[]
+    for path in request.file_to_generate
+        haskey(by_name, path) || continue
+        proto = by_name[path]
+        out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
+        content = Codegen.codegen(proto)
+        push!(files, _GC.var"CodeGeneratorResponse.File"(out_name, nothing, content, nothing))
+    end
     return _GC.CodeGeneratorResponse(
         nothing,
         _FEATURE_PROTO3_OPTIONAL,
         nothing,
         nothing,
-        _GC.var"CodeGeneratorResponse.File"[],
+        files,
     )
 end
 

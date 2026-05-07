@@ -17,6 +17,7 @@ end
     include("test_codec_primitives.jl")
     include("test_bootstrap_descriptors.jl")
     include("test_plugin.jl")
+    include("test_codegen.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(ProtoBufDescriptors)

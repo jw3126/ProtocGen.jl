@@ -2,27 +2,13 @@
     G = ProtoBufDescriptors.google.protobuf
     GC = ProtoBufDescriptors.google.protobuf.compiler
 
-    # Build a small CodeGeneratorRequest in memory and run it through
-    # run_plugin to verify the read-decode / encode-write plumbing.
+    # Build an empty CodeGeneratorRequest (no files to generate). This test
+    # exercises the read-decode / encode-write plumbing only — actual codegen
+    # is covered by test_codegen.jl.
     request = GC.CodeGeneratorRequest(
-        ["sample.proto"],
+        String[],
         nothing,
-        G.FileDescriptorProto[
-            G.FileDescriptorProto(
-                "sample.proto",
-                "sample",
-                String[],
-                Int32[],
-                Int32[],
-                G.DescriptorProto[],
-                G.EnumDescriptorProto[],
-                G.ServiceDescriptorProto[],
-                G.FieldDescriptorProto[],
-                nothing,
-                nothing,
-                "proto3",
-            ),
-        ],
+        G.FileDescriptorProto[],
         G.FileDescriptorProto[],
         nothing,
     )

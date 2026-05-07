@@ -61,8 +61,8 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 1 | Wire codec copied from ProtoBuf.jl | DONE |
 | 2 | Bootstrap descriptor types (`descriptor.proto`, `plugin.proto`) | DONE |
 | 3 | Plugin protocol shim (`bin/protoc-gen-julia`, offline driver) | DONE |
-| 4 | Codegen happy path (proto3, no presence) | NEXT |
-| 5 | Presence — `Union{Nothing,T}` (the headline feature) | pending |
+| 4 | Codegen happy path (proto3, no presence) | DONE |
+| 5 | Presence — `Union{Nothing,T}` (the headline feature) | NEXT |
 | 6 | proto2 `required`, maps, oneofs, packed, groups | pending |
 | 7 | Well-known types | pending |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | pending |
@@ -91,8 +91,19 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   `response.error`, not exceptions, per the protoc plugin contract).
 - `bin/protoc-gen-julia` is a self-executing julia script that activates the
   package and calls `run_plugin()`. Verified end-to-end with `protoc 3.20.x`:
-  protoc invokes the script, the stub returns a valid (empty) response,
-  protoc exits 0.
+  protoc invokes the script, codegen emits Julia for each input proto, and
+  protoc writes the resulting `.jl` files to the output directory.
+- `src/codegen.jl` (module `Codegen`) emits Julia from a `FileDescriptorProto`.
+  Phase 4 covers proto3 happy path: all 16 scalar wire encodings (varint,
+  zigzag, fixed, float, double, bool, string, bytes), enums, singular
+  submessages (`Union{Nothing,T}` defaulted to `nothing`), repeated scalars
+  (packed) and submessages, nested messages and enums (emitted at top level
+  with `var"Outer.Inner"`-style names). Topological sort ensures referenced
+  types are defined before their users; recursive types are not yet
+  supported. Generated `decode`/`encode`/`_encoded_size` parameters are
+  underscore-prefixed (`_d`/`_e`/`_x`) so they can't collide with proto field
+  names like `d` (a real foot-gun discovered while the `Wide.d::Float64`
+  field of the corpus test shadowed the decoder).
 - `gen/` holds the Phase 2 bootstrap.
   - `gen/proto/` — `.proto` source inputs. `descriptor.proto` is the older
     ProtoBuf.jl-vendored copy (parseable by ProtoBuf.jl's text parser) with
@@ -116,12 +127,19 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   contract and that `bin/protoc-gen-julia` is executable. The actual
   `protoc` subprocess test is intentionally not in the suite (cold julia
   start adds ~10s per invocation; revisit when Phase 10 sysimage lands).
+- `test/test_codegen.jl` exercises Phase 4 codegen end-to-end. The "happy
+  path" test runs the captured `sample.pb` `FileDescriptorSet` through
+  `run_plugin`, evals the generated module into a fresh `Module`, and
+  verifies (a) round-trip, (b) decoding bytes that came out of
+  `protoc --encode`. The "every wire encoding" corpus test does the same
+  for a richer proto exercising every scalar type, an enum, nested messages,
+  and three flavors of repeated.
 - **`test/test_encode.jl` and `test/test_decode.jl` were NOT ported** — they
   exercise the codec via generated structs and depend on `protojl` /
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.
 - CI matrix mirrors ProtoBuf.jl: 1.10 / 1 / nightly × Linux / Windows / macOS ×
   x64 / aarch64.
-- 1326 / 1326 tests pass.
+- 1391 / 1391 tests pass.
 
 ### Known bootstrap caveats
 

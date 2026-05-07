@@ -51,6 +51,7 @@ end
 
 include("../gen/google/google.jl")
 
+include("codegen.jl")
 include("plugin.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder
