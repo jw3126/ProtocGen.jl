@@ -1,0 +1,8 @@
+fs: 1.5
+fs: -2.25
+fs: 0
+ds: 3.14159265358979
+ds: -1e-10
+bs: true
+bs: false
+bs: true

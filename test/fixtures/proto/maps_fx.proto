@@ -1,0 +1,8 @@
+syntax = "proto3";
+package mfx;
+
+message Bag {
+  map<sfixed32, sint64>  a = 1;
+  map<string,   fixed64> b = 2;
+  map<sint32,   string>  c = 3;
+}

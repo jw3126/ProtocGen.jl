@@ -1,0 +1,8 @@
+syntax = "proto3";
+package rep;
+
+message M {
+  repeated float  fs = 1;
+  repeated double ds = 2;
+  repeated bool   bs = 3;
+}

@@ -189,11 +189,18 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         # let the codec's existing Dict dispatch handle the wire format.
         if is_repeated && haskey(names.map_entries, ref_name)
             entry = names.map_entries[ref_name]
-            k_type, v_type = _map_entry_kv_types(entry, names)
-            jl_type  = "Dict{$(k_type),$(v_type)}"
-            init_val = "Dict{$(k_type),$(v_type)}()"
-            default  = "Dict{$(k_type),$(v_type)}()"
+            kv = _map_entry_kv(entry, names)
+            jl_type  = "Dict{$(kv.key_type),$(kv.val_type)}"
+            init_val = "Dict{$(kv.key_type),$(kv.val_type)}()"
+            default  = "Dict{$(kv.key_type),$(kv.val_type)}()"
             skip     = "!isempty(_x.$(jl_fieldname))"
+            wire = if kv.key_wire == "Nothing" && kv.val_wire == "Nothing"
+                # Both default — codec uses the unannotated `decode!(d, ::Dict)`
+                # / `encode(e, i, ::Dict)` dispatch.
+                ""
+            else
+                "Val{Tuple{$(kv.key_wire),$(kv.val_wire)}}"
+            end
             return FieldModel(;
                 proto_name,
                 jl_fieldname,
@@ -202,6 +209,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
                 is_map = true,
                 jl_type,
                 elem_jl_type = jl_type,
+                wire_annotation = wire,
                 init_value = init_val,
                 default_value = default,
                 encode_skip = skip,
@@ -353,7 +361,23 @@ function _resolve_field_jl_type(field::FieldDescriptorProto, names::LocalNames)
     end
 end
 
-function _map_entry_kv_types(entry::DescriptorProto, names::LocalNames)
+# For maps the codec dispatches on `Val{Tuple{KAnnot,VAnnot}}` where each
+# annotation is a bare Symbol (`:fixed`, `:zigzag`) or `Nothing` — different
+# from the per-field `wire_annotation` for non-map scalars, which spells the
+# full `Val{:fixed}` form. See codec/decode.jl:58–98 / encode.jl:150–187.
+function _map_wire_annot(field::FieldDescriptorProto)
+    T = var"FieldDescriptorProto.Type"
+    ftype = getfield(field, Symbol("#type"))
+    if ftype === T.TYPE_FIXED32  || ftype === T.TYPE_FIXED64 ||
+       ftype === T.TYPE_SFIXED32 || ftype === T.TYPE_SFIXED64
+        return ":fixed"
+    elseif ftype === T.TYPE_SINT32 || ftype === T.TYPE_SINT64
+        return ":zigzag"
+    end
+    return "Nothing"
+end
+
+function _map_entry_kv(entry::DescriptorProto, names::LocalNames)
     key_field = nothing
     val_field = nothing
     for f in entry.field
@@ -366,7 +390,12 @@ function _map_entry_kv_types(entry::DescriptorProto, names::LocalNames)
     end
     key_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing key field 1")
     val_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing value field 2")
-    return _resolve_field_jl_type(key_field, names), _resolve_field_jl_type(val_field, names)
+    return (
+        key_type = _resolve_field_jl_type(key_field, names),
+        val_type = _resolve_field_jl_type(val_field, names),
+        key_wire = _map_wire_annot(key_field),
+        val_wire = _map_wire_annot(val_field),
+    )
 end
 
 # Find the enum's zero-valued member. proto3 mandates a 0 value as the first
@@ -683,10 +712,14 @@ end
 
 function _emit_decode_field(io::IO, f::FieldModel)
     if f.is_map
-        # Codec dispatch: `decode!(d, dict)` reads one entry off the wire and
-        # inserts (k, v) into `dict`. The caller's `dict` is the local
-        # variable initialized to `Dict{K,V}()` at the top of decode.
-        println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+        # Codec dispatch: `decode!(d, dict[, Val{Tuple{KAnnot,VAnnot}}])` reads
+        # one entry off the wire and inserts (k, v). The optional 3rd arg is
+        # only emitted when at least one of K/V uses fixed/zigzag wire format.
+        if isempty(f.wire_annotation)
+            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+        else
+            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
+        end
     elseif f.is_message
         if f.is_repeated
             println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
@@ -701,8 +734,11 @@ function _emit_decode_field(io::IO, f::FieldModel)
         end
     else
         if f.is_repeated
-            if f.elem_jl_type in ("String", "Vector{UInt8}", "Bool", "Float32", "Float64")
-                # The codec dispatches without wire-type for non-numeric repeated.
+            if f.elem_jl_type in ("String", "Vector{UInt8}")
+                # Strings and bytes have no-wire-type BufferedVector decoders
+                # (decode.jl:107, 120). Bool/Float32/Float64 do *not* — they
+                # need the wire-type so the codec can switch between packed
+                # (LENGTH_DELIMITED) and unpacked (decode.jl:174).
                 println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
             elseif !isempty(f.wire_annotation)
                 println(io, "            PB.decode!(_d, wire_type, ", f.jl_fieldname, ", ", f.wire_annotation, ")")

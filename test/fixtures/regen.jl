@@ -26,6 +26,8 @@ const PAYLOADS = [
     ("maps_sample.pb",        "maps.proto",    "maps.Bag",      "maps_sample.txtpb"),
     ("p2_full.pb",            "p2.proto",      "p2.Wrap",       "p2_full.txtpb"),
     ("p2_minimal.pb",         "p2.proto",      "p2.Wrap",       "p2_minimal.txtpb"),
+    ("rep_sample.pb",         "rep.proto",     "rep.M",         "rep_sample.txtpb"),
+    ("maps_fx_sample.pb",     "maps_fx.proto", "mfx.Bag",       "maps_fx_sample.txtpb"),
 ]
 
 # .proto files whose FileDescriptorSet we capture (as the codegen input
@@ -35,6 +37,8 @@ const DESCRIPTOR_SETS = [
     "corpus.proto",
     "maps.proto",
     "p2.proto",
+    "rep.proto",
+    "maps_fx.proto",
 ]
 
 function find_protoc()

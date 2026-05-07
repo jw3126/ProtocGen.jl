@@ -1,0 +1,6 @@
+a { key: -1 value: 1 }
+a { key:  7 value: -2 }
+b { key: "k1" value: 0xCAFEBABEDEADBEEF }
+b { key: "k2" value: 1 }
+c { key: -3 value: "neg" }
+c { key: 4  value: "pos" }
