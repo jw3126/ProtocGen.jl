@@ -62,8 +62,8 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 2 | Bootstrap descriptor types (`descriptor.proto`, `plugin.proto`) | DONE |
 | 3 | Plugin protocol shim (`bin/protoc-gen-julia`, offline driver) | DONE |
 | 4 | Codegen happy path (proto3, no presence) | DONE |
-| 5 | Presence — `Union{Nothing,T}` (the headline feature) | NEXT |
-| 6 | proto2 `required`, maps, oneofs, packed, groups | pending |
+| 5 | Presence — `Union{Nothing,T}` (the headline feature) | DONE |
+| 6 | proto2 `required`, maps, oneofs, packed, groups | NEXT |
 | 7 | Well-known types | pending |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | pending |
 | 9 | Conformance + golden corpus | pending |
@@ -104,6 +104,13 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   underscore-prefixed (`_d`/`_e`/`_x`) so they can't collide with proto field
   names like `d` (a real foot-gun discovered while the `Wide.d::Float64`
   field of the corpus test shadowed the decoder).
+- Phase 5 layers presence on top: scalar fields with `field.proto3_optional ==
+  true` (proto3 explicit `optional`, with its synthetic oneof) become
+  `Union{Nothing,T}` defaulted to `nothing` and skip-iff-`nothing` on encode.
+  As a result an explicit-optional scalar set to zero round-trips correctly:
+  the value travels on the wire, and unset ≠ default-zero. proto2
+  `optional` will share the same predicate when proto2 codegen lands in
+  Phase 6.
 - `gen/` holds the Phase 2 bootstrap.
   - `gen/proto/` — `.proto` source inputs. `descriptor.proto` is the older
     ProtoBuf.jl-vendored copy (parseable by ProtoBuf.jl's text parser) with
@@ -134,12 +141,17 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   `protoc --encode`. The "every wire encoding" corpus test does the same
   for a richer proto exercising every scalar type, an enum, nested messages,
   and three flavors of repeated.
+- `test/test_presence.jl` exercises Phase 5: a proto3 `optional int32`
+  encoded by `protoc` with `maybe: 0` (wire bytes include field 2 = 0)
+  decodes to `Int32(0)`, and the same proto encoded with `maybe` unset
+  decodes to `nothing`. Re-encode of either is byte-identical to what
+  `protoc --encode` would have produced.
 - **`test/test_encode.jl` and `test/test_decode.jl` were NOT ported** — they
   exercise the codec via generated structs and depend on `protojl` /
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.
 - CI matrix mirrors ProtoBuf.jl: 1.10 / 1 / nightly × Linux / Windows / macOS ×
   x64 / aarch64.
-- 1391 / 1391 tests pass.
+- 1401 / 1401 tests pass.
 
 ### Known bootstrap caveats
 

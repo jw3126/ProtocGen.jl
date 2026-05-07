@@ -199,6 +199,18 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             init_val  = "PB.BufferedVector{$(scalar_jl)}()"
             default   = "Vector{$(scalar_jl)}()"
             skip      = "!isempty(_x.$(jl_fieldname))"
+        elseif _wants_scalar_presence(field)
+            # Phase 5: proto3 explicit `optional` (and, in the future, proto2
+            # `optional`) carry presence. Surface that in Julia by typing the
+            # field as `Union{Nothing,T}` defaulted to `nothing`. The decode
+            # path overwrites `nothing` on tag, the encode path skips iff
+            # `nothing`. As a result an explicit-optional scalar set to zero
+            # round-trips correctly — the value travels on the wire and unset
+            # ≠ default-zero.
+            jl_type  = "Union{Nothing,$(scalar_jl)}"
+            init_val = "nothing"
+            default  = "nothing"
+            skip     = "!isnothing(_x.$(jl_fieldname))"
         else
             jl_type   = scalar_jl
             init_val  = _scalar_zero(scalar_jl)
@@ -216,6 +228,15 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         return FieldModel(proto_name, jl_fieldname, number, is_repeated, false, false,
                           jl_type, scalar_jl, wire, init_val, default, skip)
     end
+end
+
+# Whether this scalar field carries explicit presence semantics. A proto3
+# field with the `optional` keyword has `proto3_optional == true` (it also
+# gets a synthetic oneof, which we ignore — synthetic oneofs are descriptor-
+# level scaffolding only). proto2 `optional` will get the same treatment in a
+# follow-on; today only proto3 ships codegen.
+function _wants_scalar_presence(field::FieldDescriptorProto)
+    return field.proto3_optional === true
 end
 
 # Find the enum's zero-valued member. proto3 mandates a 0 value as the first

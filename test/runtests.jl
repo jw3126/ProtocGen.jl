@@ -18,6 +18,7 @@ end
     include("test_bootstrap_descriptors.jl")
     include("test_plugin.jl")
     include("test_codegen.jl")
+    include("test_presence.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(ProtoBufDescriptors)
