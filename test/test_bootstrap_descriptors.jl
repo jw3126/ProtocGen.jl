@@ -1,12 +1,10 @@
+module TestBootstrapDescriptors
+
+include("setup.jl")
+
 @testset "bootstrap descriptors" begin
     # FileDescriptorSet for fixtures/proto/sample.proto. See fixtures/README.md.
-    sample_pb = fixture("sample.pb")
-
-    G = ProtoBufDescriptors.google.protobuf
-    fdset = ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(sample_pb)),
-        G.FileDescriptorSet,
-    )
+    fdset = load_fdset("sample.pb")
 
     @test length(fdset.file) == 1
     fd = fdset.file[1]
@@ -77,3 +75,5 @@
     # and ones it left unset stay unset (e.g. proto3_optional on plain fields).
     @test f2_by_name["name"].proto3_optional !== true
 end
+
+end  # module TestBootstrapDescriptors

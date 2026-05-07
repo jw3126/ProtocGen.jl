@@ -1,7 +1,8 @@
-@testset "plugin protocol" begin
-    G = ProtoBufDescriptors.google.protobuf
-    GC = ProtoBufDescriptors.google.protobuf.compiler
+module TestPlugin
 
+include("setup.jl")
+
+@testset "plugin protocol" begin
     # Build an empty CodeGeneratorRequest (no files to generate). This test
     # exercises the read-decode / encode-write plumbing only — actual codegen
     # is covered by test_codegen.jl.
@@ -47,3 +48,5 @@
     @test isfile(plugin_path)
     @test (uperm(plugin_path) & 0o1) != 0
 end
+
+end  # module TestPlugin

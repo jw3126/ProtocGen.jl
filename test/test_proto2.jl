@@ -1,27 +1,16 @@
+module TestProto2
+
+include("setup.jl")
+
 @testset "Phase 6 — proto2 required + optional" begin
     # Schema in fixtures/proto/p2.proto. `p2_full.pb` is from the textproto
     # `name: "the-name" / nested { v: 7 } / maybe: 0 / hint: "hi"`; the
     # explicit `maybe: 0` is the presence signal we care about. `p2_minimal.pb`
     # leaves both optionals unset.
-    p2_pb         = fixture("p2.pb")
     p2_full_pb    = fixture("p2_full.pb")
     p2_minimal_pb = fixture("p2_minimal.pb")
 
-    G = ProtoBufDescriptors.google.protobuf
-    GC = ProtoBufDescriptors.google.protobuf.compiler
-
-    fdset = ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(p2_pb)),
-        G.FileDescriptorSet,
-    )
-    request = GC.CodeGeneratorRequest(
-        ["p2.proto"], nothing, fdset.file,
-        G.FileDescriptorProto[], nothing,
-    )
-    req_io = IOBuffer()
-    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(req_io), request)
-    out_io = IOBuffer()
-    response = ProtoBufDescriptors.run_plugin(IOBuffer(take!(req_io)), out_io)
+    response = run_codegen("p2.pb", ["p2.proto"])
     @test response.error === nothing
     f = response.file[1]
 
@@ -33,45 +22,32 @@
     @test occursin("_saw_name", f.content)
     @test occursin("required field", f.content)
 
-    p2_mod = Module(:GeneratedP2)
-    Core.eval(p2_mod, Meta.parseall(f.content))
+    p2_mod = eval_generated(f.content, :GeneratedP2)
 
     # Decode protoc-emitted bytes; explicit `maybe: 0` survives as `Int32(0)`,
     # and omitted optionals come back as `nothing`.
-    full = Base.invokelatest(ProtoBufDescriptors.decode,
-                             ProtoBufDescriptors.ProtoDecoder(IOBuffer(p2_full_pb)),
-                             p2_mod.Wrap)
+    full = decode_latest(p2_mod.Wrap, p2_full_pb)
     @test full.name == "the-name"
     @test full.nested.v == 7
     @test full.maybe === Int32(0)
     @test full.hint  === "hi"
 
-    minimal = Base.invokelatest(ProtoBufDescriptors.decode,
-                                ProtoBufDescriptors.ProtoDecoder(IOBuffer(p2_minimal_pb)),
-                                p2_mod.Wrap)
+    minimal = decode_latest(p2_mod.Wrap, p2_minimal_pb)
     @test minimal.name == "n"
     @test minimal.nested.v == 1
     @test minimal.maybe === nothing
     @test minimal.hint  === nothing
 
     # Re-encoded bytes match what protoc would have emitted, byte-identically.
-    function reencode(x)
-        io = IOBuffer()
-        Base.invokelatest(ProtoBufDescriptors.encode,
-                          ProtoBufDescriptors.ProtoEncoder(io), x)
-        return take!(io)
-    end
-    @test reencode(full)    == p2_full_pb
-    @test reencode(minimal) == p2_minimal_pb
+    @test encode_latest(full)    == p2_full_pb
+    @test encode_latest(minimal) == p2_minimal_pb
 
     # Missing required → clear DecodeError. Hand-crafted bytes: only the
     # nested submessage (field 2 = {v: 1}); the `name` required field
     # (number 1) is absent.
     missing_name = UInt8[0x12, 0x02, 0x08, 0x01]
     err = try
-        Base.invokelatest(ProtoBufDescriptors.decode,
-                          ProtoBufDescriptors.ProtoDecoder(IOBuffer(missing_name)),
-                          p2_mod.Wrap)
+        decode_latest(p2_mod.Wrap, missing_name)
         nothing
     catch e
         e
@@ -80,3 +56,5 @@
     @test occursin("required field", err.msg)
     @test occursin("name", err.msg)
 end
+
+end  # module TestProto2

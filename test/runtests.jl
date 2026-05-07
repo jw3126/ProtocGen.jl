@@ -3,14 +3,10 @@ using JET
 using ProtoBufDescriptors
 using Test
 
-function is_ci()
-    return get(ENV, "CI", "") in ("true", "True")
-end
-
-# Test fixtures live in `test/fixtures/pb/` as committed binary blobs
-# regenerated from `test/fixtures/{proto,txtpb}/` by `test/fixtures/regen.jl`.
-const FIXTURES = joinpath(@__DIR__, "fixtures", "pb")
-fixture(name) = read(joinpath(FIXTURES, name))
+# Each `test_*.jl` is wrapped in its own module that begins with
+# `include("setup.jl")`. setup.jl provides the shared aliases (G/GC),
+# fixture loader, codegen-via-plugin helper, and `invokelatest`-wrapped
+# wire ops; see test/setup.jl.
 
 @testset "ProtoBufDescriptors" begin
     @testset "smoke" begin

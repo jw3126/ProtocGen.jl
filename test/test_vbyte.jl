@@ -1,6 +1,9 @@
+module TestVbyte
+
+include("setup.jl")
+
 using ProtoBufDescriptors: Codecs
 using .Codecs: vbyte_decode, vbyte_encode
-using Test
 
 test_vbyte_decode(bytes, expected) = @test vbyte_decode(PipeBuffer(bytes), typeof(unsigned(expected))) == unsigned(expected)
 test_vbyte_encode(input, expected) = (io = IOBuffer(); vbyte_encode(io, unsigned(input)); @test take!(io) == expected)
@@ -133,3 +136,5 @@ test_vbyte_roundtrip(input) = (io = PipeBuffer(); vbyte_encode(io, unsigned(inpu
         end
     end
 end
+
+end  # module TestVbyte

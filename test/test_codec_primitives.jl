@@ -1,7 +1,10 @@
+module TestCodecPrimitives
+
+include("setup.jl")
+
 using ProtoBufDescriptors: Codecs
 using .Codecs: encode, decode, ProtoEncoder, ProtoDecoder, vbyte_encode, vbyte_decode,
     zigzag_encode, zigzag_decode
-using Test
 
 function roundtrip(::Type{T}, x::T) where {T}
     io = IOBuffer()
@@ -99,3 +102,5 @@ end
         end
     end
 end
+
+end  # module TestCodecPrimitives
