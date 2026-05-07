@@ -1,0 +1,24 @@
+i32: -1
+i64: 1234567890123
+u32: 4000000000
+u64: 18000000000000000000
+s32: -100
+s64: -100000000000
+f32: 0xCAFEBABE
+f64: 0xDEADBEEFCAFEBABE
+sf32: -2147483648
+sf64: -9223372036854775807
+f: 3.14
+d: 2.71828
+bb: true
+ss: "héllo"
+by: "\xff\x00\xab"
+color: BLUE
+nested { a: 7 note: "deep" }
+ri: 1
+ri: 2
+ri: 3
+rs: "x"
+rs: "y"
+rn { a: 10 note: "p" }
+rn { a: 20 note: "q" }

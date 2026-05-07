@@ -1,0 +1,42 @@
+syntax = "proto3";
+package corpus;
+
+enum Color {
+  RED = 0;
+  GREEN = 1;
+  BLUE = 2;
+}
+
+message Inner {
+  int32  a    = 1;
+  string note = 2;
+}
+
+message Wide {
+  // varint scalars
+  int32  i32 = 1;
+  int64  i64 = 2;
+  uint32 u32 = 3;
+  uint64 u64 = 4;
+  // zigzag
+  sint32 s32 = 5;
+  sint64 s64 = 6;
+  // fixed
+  fixed32  f32  = 7;
+  fixed64  f64  = 8;
+  sfixed32 sf32 = 9;
+  sfixed64 sf64 = 10;
+  // float / double / bool / string / bytes
+  float    f  = 11;
+  double   d  = 12;
+  bool     bb = 13;
+  string   ss = 14;
+  bytes    by = 15;
+  // enum + nested message
+  Color color  = 16;
+  Inner nested = 17;
+  // repeated scalars (packed) and a repeated message
+  repeated int32  ri = 18;
+  repeated string rs = 19;
+  repeated Inner  rn = 20;
+}

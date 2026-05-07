@@ -1,0 +1,13 @@
+syntax = "proto2";
+package p2;
+
+message Inner {
+  required int32 v = 1;
+}
+
+message Wrap {
+  required string name   = 1;
+  required Inner  nested = 2;
+  optional int32  maybe  = 3;
+  optional string hint   = 4;
+}

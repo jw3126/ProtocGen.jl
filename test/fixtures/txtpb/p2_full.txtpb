@@ -1,0 +1,4 @@
+name: "the-name"
+nested { v: 7 }
+maybe: 0
+hint: "hi"

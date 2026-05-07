@@ -1,0 +1,6 @@
+counts: { key: "a" value: 1 }
+counts: { key: "b" value: 2 }
+labels: { key: 10 value: "ten" }
+labels: { key: 20 value: "twenty" }
+items: { key: "x" value { v: 7 } }
+items: { key: "y" value { v: 8 } }

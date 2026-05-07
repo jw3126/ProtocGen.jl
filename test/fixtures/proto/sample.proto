@@ -1,0 +1,17 @@
+syntax = "proto3";
+package sample;
+
+message Inner {
+  int32 a = 1;
+}
+
+message Outer {
+  string name = 1;
+  optional int32 maybe = 2;
+  Inner nested = 3;
+  oneof choice {
+    int32  ci = 4;
+    string cs = 5;
+  }
+  repeated int64 packed_ints = 6;
+}

@@ -57,7 +57,7 @@ end
 # bootstrap convention.
 # ----------------------------------------------------------------------------
 
-struct LocalNames
+Base.@kwdef struct LocalNames
     package::String              # e.g. "sample"; "" if no package
     syntax::String               # "proto2" or "proto3"
     messages::Set{String}        # fully-qualified names like ".sample.Outer.Inner"
@@ -113,7 +113,15 @@ function _gather_names(file::FileDescriptorProto)
         jl_names[efqn] = ename
         enum_defs[efqn] = e
     end
-    return LocalNames(package, syntax, messages, enums, jl_names, enum_defs, map_entries)
+    return LocalNames(;
+        package,
+        syntax,
+        messages,
+        enums,
+        jl_names,
+        enum_defs,
+        map_entries,
+    )
 end
 
 function _resolve_typename(type_name::String, names::LocalNames)
@@ -132,18 +140,18 @@ end
 # string-building.
 # ----------------------------------------------------------------------------
 
-struct FieldModel
+Base.@kwdef struct FieldModel
     proto_name::String          # snake_case as in .proto
     jl_fieldname::String        # Julia field name (escaped if needed)
     number::Int                 # field tag
-    is_repeated::Bool
-    is_message::Bool
-    is_enum::Bool
-    is_map::Bool                # `map<K,V>` — emitted as `Dict{K,V}`
-    is_required::Bool           # proto2 `required`
+    is_repeated::Bool = false
+    is_message::Bool = false
+    is_enum::Bool = false
+    is_map::Bool = false        # `map<K,V>` — emitted as `Dict{K,V}`
+    is_required::Bool = false   # proto2 `required`
     jl_type::String             # the type used in the struct field declaration
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
-    wire_annotation::String     # "" / "Val{:fixed}" / "Val{:zigzag}"
+    wire_annotation::String = "" # "" / "Val{:fixed}" / "Val{:zigzag}"
     init_value::String          # initializer used inside decode body
     default_value::String       # default exposed via PB.default_values
     encode_skip::String         # predicate used at encode-time to skip the field
@@ -186,9 +194,18 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             init_val = "Dict{$(k_type),$(v_type)}()"
             default  = "Dict{$(k_type),$(v_type)}()"
             skip     = "!isempty(_x.$(jl_fieldname))"
-            return FieldModel(proto_name, jl_fieldname, number, true, false, false,
-                              true, false,
-                              jl_type, jl_type, "", init_val, default, skip)
+            return FieldModel(;
+                proto_name,
+                jl_fieldname,
+                number,
+                is_repeated = true,
+                is_map = true,
+                jl_type,
+                elem_jl_type = jl_type,
+                init_value = init_val,
+                default_value = default,
+                encode_skip = skip,
+            )
         end
         elem = _resolve_typename(ref_name, names)
         if is_repeated
@@ -210,9 +227,19 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default   = "nothing"
             skip      = "!isnothing(_x.$(jl_fieldname))"
         end
-        return FieldModel(proto_name, jl_fieldname, number, is_repeated, true, false,
-                          false, is_required,
-                          jl_type, elem, "", init_val, default, skip)
+        return FieldModel(;
+            proto_name,
+            jl_fieldname,
+            number,
+            is_repeated,
+            is_message = true,
+            is_required,
+            jl_type,
+            elem_jl_type = elem,
+            init_value = init_val,
+            default_value = default,
+            encode_skip = skip,
+        )
     elseif is_enum
         elem = _resolve_typename(something(field.type_name, ""), names)
         elem_t = "$(elem).T"
@@ -229,9 +256,19 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default  = init_val
             skip     = is_required ? "true" : "_x.$(jl_fieldname) != $(default)"
         end
-        return FieldModel(proto_name, jl_fieldname, number, is_repeated, false, true,
-                          false, is_required,
-                          jl_type, elem_t, "", init_val, default, skip)
+        return FieldModel(;
+            proto_name,
+            jl_fieldname,
+            number,
+            is_repeated,
+            is_enum = true,
+            is_required,
+            jl_type,
+            elem_jl_type = elem_t,
+            init_value = init_val,
+            default_value = default,
+            encode_skip = skip,
+        )
     else
         scalar_jl, wire = _scalar_jl_type_and_wire(ftype)
         if is_repeated
@@ -267,9 +304,19 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
                 skip = "_x.$(jl_fieldname) != $(init_val)"
             end
         end
-        return FieldModel(proto_name, jl_fieldname, number, is_repeated, false, false,
-                          false, is_required,
-                          jl_type, scalar_jl, wire, init_val, default, skip)
+        return FieldModel(;
+            proto_name,
+            jl_fieldname,
+            number,
+            is_repeated,
+            is_required,
+            jl_type,
+            elem_jl_type = scalar_jl,
+            wire_annotation = wire,
+            init_value = init_val,
+            default_value = default,
+            encode_skip = skip,
+        )
     end
 end
 
@@ -347,7 +394,7 @@ end
 # plain Phase-5 `Union{Nothing,T}`.
 # ----------------------------------------------------------------------------
 
-struct OneofModel
+Base.@kwdef struct OneofModel
     proto_name::String
     jl_fieldname::String
     members::Vector{FieldModel}
@@ -394,7 +441,11 @@ function _build_oneofs(msg::DescriptorProto, names::LocalNames, synthetic::Set{I
         idx0 in synthetic && continue
         haskey(members_by_idx, idx0) || continue
         oname = something(decl.name, "")
-        push!(oneofs, OneofModel(oname, _jl_fieldname(oname), members_by_idx[idx0]))
+        push!(oneofs, OneofModel(;
+            proto_name = oname,
+            jl_fieldname = _jl_fieldname(oname),
+            members = members_by_idx[idx0],
+        ))
     end
     return oneofs
 end

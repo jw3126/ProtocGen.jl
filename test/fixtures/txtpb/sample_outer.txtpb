@@ -1,0 +1,7 @@
+name: "from-protoc"
+maybe: 99
+nested { a: 7 }
+ci: 13
+packed_ints: 10
+packed_ints: 20
+packed_ints: 30

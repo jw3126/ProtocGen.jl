@@ -7,6 +7,11 @@ function is_ci()
     return get(ENV, "CI", "") in ("true", "True")
 end
 
+# Test fixtures live in `test/fixtures/pb/` as committed binary blobs
+# regenerated from `test/fixtures/{proto,txtpb}/` by `test/fixtures/regen.jl`.
+const FIXTURES = joinpath(@__DIR__, "fixtures", "pb")
+fixture(name) = read(joinpath(FIXTURES, name))
+
 @testset "ProtoBufDescriptors" begin
     @testset "smoke" begin
         @test isdefined(ProtoBufDescriptors, :PACKAGE_VERSION)

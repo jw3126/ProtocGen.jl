@@ -172,6 +172,12 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 - `test_codegen.jl` also covers maps end-to-end (`Dict{String,Int32}`,
   `Dict{Int32,String}`, `Dict{String,SubMessage}`) and the real oneof on
   `sample.Outer`.
+- Test fixtures live in `test/fixtures/`: `proto/*.proto` (schemas),
+  `txtpb/*.txtpb` (protoc-encode inputs), `pb/*.pb` (committed binary
+  outputs that tests load via `fixture("name.pb")` from runtests.jl).
+  `test/fixtures/regen.jl` rebuilds the `pb/` files from the
+  `proto/`/`txtpb/` sources via `protoc`. Tests stay `protoc`-free at
+  run time; fixtures are reproducible from declarative inputs.
 - **`test/test_encode.jl` and `test/test_decode.jl` were NOT ported** — they
   exercise the codec via generated structs and depend on `protojl` /
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.

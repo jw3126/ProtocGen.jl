@@ -1,0 +1,12 @@
+syntax = "proto3";
+package maps;
+
+message Item {
+  int32 v = 1;
+}
+
+message Bag {
+  map<string, int32>  counts = 1;
+  map<int32,  string> labels = 2;
+  map<string, Item>   items  = 3;
+}
