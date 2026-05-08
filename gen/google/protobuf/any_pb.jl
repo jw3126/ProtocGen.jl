@@ -9,10 +9,10 @@ struct Any
     type_url::String
     value::Vector{UInt8}
 end
-PB.default_values(::Type{Any}) = (;type_url = "", value = UInt8[])
-PB.field_numbers(::Type{Any}) = (;type_url = 1, value = 2)
+PB.default_values(::Core.Type{Any}) = (;type_url = "", value = UInt8[])
+PB.field_numbers(::Core.Type{Any}) = (;type_url = 1, value = 2)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Any}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Any}, _endpos::Int=0, _group::Bool=false)
     type_url = ""
     value = UInt8[]
     while !PB.message_done(_d, _endpos, _group)

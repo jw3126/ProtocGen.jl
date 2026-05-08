@@ -7,10 +7,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 struct Empty
 end
-PB.default_values(::Type{Empty}) = (;)
-PB.field_numbers(::Type{Empty}) = (;)
+PB.default_values(::Core.Type{Empty}) = (;)
+PB.field_numbers(::Core.Type{Empty}) = (;)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         Base.skip(_d, wire_type)

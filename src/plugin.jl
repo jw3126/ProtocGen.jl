@@ -27,12 +27,16 @@ function generate(request::_GC.CodeGeneratorRequest)
         name = something(f.name, "")
         by_name[name] = f
     end
+    # Universe spans every entry in `proto_file` — that is the to-generate
+    # files plus their transitive imports. Cross-file `type_name`
+    # references in any generated file resolve against this shared table.
+    universe = Codegen.gather_universe(request.proto_file)
     files = _GC.var"CodeGeneratorResponse.File"[]
     for path in request.file_to_generate
         haskey(by_name, path) || continue
         proto = by_name[path]
         out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
-        content = Codegen.codegen(proto)
+        content = Codegen.codegen(proto, universe)
         push!(files, _GC.var"CodeGeneratorResponse.File"(out_name, nothing, content, nothing))
     end
     return _GC.CodeGeneratorResponse(

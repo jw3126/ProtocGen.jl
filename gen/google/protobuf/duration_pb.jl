@@ -9,10 +9,10 @@ struct Duration
     seconds::Int64
     nanos::Int32
 end
-PB.default_values(::Type{Duration}) = (;seconds = zero(Int64), nanos = zero(Int32))
-PB.field_numbers(::Type{Duration}) = (;seconds = 1, nanos = 2)
+PB.default_values(::Core.Type{Duration}) = (;seconds = zero(Int64), nanos = zero(Int32))
+PB.field_numbers(::Core.Type{Duration}) = (;seconds = 1, nanos = 2)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Duration}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Duration}, _endpos::Int=0, _group::Bool=false)
     seconds = zero(Int64)
     nanos = zero(Int32)
     while !PB.message_done(_d, _endpos, _group)

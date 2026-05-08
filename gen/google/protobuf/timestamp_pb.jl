@@ -9,10 +9,10 @@ struct Timestamp
     seconds::Int64
     nanos::Int32
 end
-PB.default_values(::Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32))
-PB.field_numbers(::Type{Timestamp}) = (;seconds = 1, nanos = 2)
+PB.default_values(::Core.Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32))
+PB.field_numbers(::Core.Type{Timestamp}) = (;seconds = 1, nanos = 2)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Timestamp}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Timestamp}, _endpos::Int=0, _group::Bool=false)
     seconds = zero(Int64)
     nanos = zero(Int32)
     while !PB.message_done(_d, _endpos, _group)

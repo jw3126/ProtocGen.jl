@@ -51,15 +51,18 @@ end
 
 # ----------------------------------------------------------------------------
 # Name resolution. The proto FieldDescriptorProto.type_name is fully qualified
-# like ".pkg.Outer.Inner". We only handle types defined within the
-# current FileDescriptorProto. Cross-file imports are deferred.
-# Nested types are emitted at top level using `var"Outer.Inner"` to mirror the
-# bootstrap convention.
+# like ".pkg.Outer.Inner". A `Universe` collects FQN→jl_name mappings across
+# all input files (every entry in CodeGeneratorRequest.proto_file), so a
+# cross-file reference resolves the same way as a local one — the codegen
+# emitters never need to know whether a referenced type was defined in
+# `file` or in one of `file`'s imports. `LocalNames` is a per-file view that
+# pairs the universe with the current file's syntax and package; everything
+# but `package` and `syntax` is a shared reference.
+# Nested types are emitted at top level using `var"Outer.Inner"` to mirror
+# the bootstrap convention.
 # ----------------------------------------------------------------------------
 
-Base.@kwdef struct LocalNames
-    package::String              # e.g. "sample"; "" if no package
-    syntax::String               # "proto2" or "proto3"
+Base.@kwdef struct Universe
     messages::Set{String}        # fully-qualified names like ".sample.Outer.Inner"
     enums::Set{String}           # fully-qualified names like ".sample.MyEnum"
     jl_names::Dict{String,String}  # FQN -> Julia identifier ("Outer" or var"Outer.Inner")
@@ -67,28 +70,42 @@ Base.@kwdef struct LocalNames
     map_entries::Dict{String,DescriptorProto}    # FQN -> map_entry synthetic message
 end
 
+# Per-file context. Tables come from the shared universe; only `package`,
+# `syntax`, and `cycle` are file-local. The `messages`/`enums`/etc. fields
+# exist as direct accessors so the existing `_resolve_typename(name, names)`
+# style keeps working without a sweeping rename. `cycle` is the set of
+# message FQNs that participate in a recursive dependency within this
+# file — empty for almost everything, populated for `struct.proto`'s
+# Struct↔Value↔ListValue cycle. Field-type resolution consults it to
+# decide whether to emit the concrete name or the abstract supertype.
+Base.@kwdef struct LocalNames
+    package::String              # e.g. "sample"; "" if no package
+    syntax::String               # "proto2" or "proto3"
+    messages::Set{String}
+    enums::Set{String}
+    jl_names::Dict{String,String}
+    enum_defs::Dict{String,EnumDescriptorProto}
+    map_entries::Dict{String,DescriptorProto}
+    cycle::Set{String} = Set{String}()  # message FQNs in a recursion cycle
+end
+
 function _is_map_entry(msg::DescriptorProto)
     o = msg.options
     return o !== nothing && o.map_entry === true
 end
 
-function _gather_names(file::FileDescriptorProto)
+# Walk one file and add its messages/enums to the universe's tables in place.
+function _add_file_to_universe!(u::Universe, file::FileDescriptorProto)
     package = something(file.package, "")
-    syntax = something(file.syntax, "proto2")
-    messages = Set{String}()
-    enums = Set{String}()
-    jl_names = Dict{String,String}()
-    enum_defs = Dict{String,EnumDescriptorProto}()
-    map_entries = Dict{String,DescriptorProto}()
     prefix = isempty(package) ? "" : ".$(package)"
 
     function visit_message(msg::DescriptorProto, parent_proto::String, parent_jl::String)
         proto_name = string(parent_proto, ".", something(msg.name, ""))
         jl_name = isempty(parent_jl) ? something(msg.name, "") : string(parent_jl, ".", something(msg.name, ""))
-        push!(messages, proto_name)
-        jl_names[proto_name] = jl_name
+        push!(u.messages, proto_name)
+        u.jl_names[proto_name] = jl_name
         if _is_map_entry(msg)
-            map_entries[proto_name] = msg
+            u.map_entries[proto_name] = msg
         end
         for nested in msg.nested_type
             visit_message(nested, proto_name, jl_name)
@@ -97,9 +114,9 @@ function _gather_names(file::FileDescriptorProto)
             ename = something(e.name, "")
             efqn = string(proto_name, ".", ename)
             ejl = string(jl_name, ".", ename)
-            push!(enums, efqn)
-            jl_names[efqn] = ejl
-            enum_defs[efqn] = e
+            push!(u.enums, efqn)
+            u.jl_names[efqn] = ejl
+            u.enum_defs[efqn] = e
         end
     end
 
@@ -109,19 +126,49 @@ function _gather_names(file::FileDescriptorProto)
     for e in file.enum_type
         ename = something(e.name, "")
         efqn = string(prefix, ".", ename)
-        push!(enums, efqn)
-        jl_names[efqn] = ename
-        enum_defs[efqn] = e
+        push!(u.enums, efqn)
+        u.jl_names[efqn] = ename
+        u.enum_defs[efqn] = e
     end
-    return LocalNames(;
-        package,
-        syntax,
-        messages,
-        enums,
-        jl_names,
-        enum_defs,
-        map_entries,
+    return u
+end
+
+# Build a Universe from every file the codegen request supplies. The plugin
+# passes all entries of `request.proto_file` here (which includes the
+# transitive imports protoc considered relevant), not just the files
+# `file_to_generate` will produce code for.
+function gather_universe(files)
+    u = Universe(;
+        messages = Set{String}(),
+        enums = Set{String}(),
+        jl_names = Dict{String,String}(),
+        enum_defs = Dict{String,EnumDescriptorProto}(),
+        map_entries = Dict{String,DescriptorProto}(),
     )
+    for f in files
+        _add_file_to_universe!(u, f)
+    end
+    return u
+end
+
+# Per-file view. Tables are shared references with the universe; `package`
+# and `syntax` come from the file itself.
+function _make_local_names(universe::Universe, file::FileDescriptorProto)
+    return LocalNames(;
+        package = something(file.package, ""),
+        syntax = something(file.syntax, "proto2"),
+        messages = universe.messages,
+        enums = universe.enums,
+        jl_names = universe.jl_names,
+        enum_defs = universe.enum_defs,
+        map_entries = universe.map_entries,
+    )
+end
+
+# Single-file convenience: build a Universe containing just `file`. Useful
+# for tests and for the legacy `codegen(file)` entry point.
+function _gather_names(file::FileDescriptorProto)
+    return _make_local_names(gather_universe([file]), file)
 end
 
 function _resolve_typename(type_name::String, names::LocalNames)
@@ -132,7 +179,26 @@ function _resolve_typename(type_name::String, names::LocalNames)
     jl = names.jl_names[type_name]
     # `Foo` stays as-is; `Foo.Bar` needs var"Foo.Bar" because the dot is not a
     # legal identifier character. The bootstrap follows the same convention.
-    return occursin('.', jl) ? "var\"$(jl)\"" : jl
+    base = occursin('.', jl) ? "var\"$(jl)\"" : jl
+    # Cycle participants get their abstract supertype as the visible name.
+    # `struct.proto` is the only WKT that needs this — Struct.fields refers
+    # to Value, which refers back to Struct via its `struct_value` oneof
+    # member, so neither can be defined first concretely. The abstract
+    # types are emitted upfront and a forwarding `decode(d, ::AbstractX)`
+    # method routes back to the concrete type.
+    return type_name in names.cycle ? _abstract_name(base) : base
+end
+
+# Map a concrete generated type name to the abstract supertype name we
+# emit for cycle participants. `Foo` → `AbstractFoo`, `var"Foo.Bar"` →
+# `var"AbstractFoo.Bar"`. The supertype lives in the same Julia module
+# as the struct.
+function _abstract_name(jl::String)
+    if startswith(jl, "var\"") && endswith(jl, "\"")
+        inner = jl[5:end-1]
+        return string("var\"Abstract", inner, "\"")
+    end
+    return string("Abstract", jl)
 end
 
 # ----------------------------------------------------------------------------
@@ -514,10 +580,13 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
-function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames)
+function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames,
+                       parent_proto::String = isempty(names.package) ? "" : ".$(names.package)")
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
+    proto_fqn = string(parent_proto, ".", name)
+    is_cycle_participant = proto_fqn in names.cycle
 
     # Emit nested enums and nested messages first so they're defined before
     # this struct (which references them). Skip synthetic map_entry messages —
@@ -528,7 +597,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     end
     for nested in msg.nested_type
         _is_map_entry(nested) && continue
-        _emit_message(io, nested, jl_name_plain, names)
+        _emit_message(io, nested, jl_name_plain, names, proto_fqn)
     end
 
     synthetic = _synthetic_oneof_indices(msg)
@@ -543,8 +612,14 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         push!(plain_fields, _model_field(f, names))
     end
 
-    # struct: plain fields + one slot per real oneof.
-    println(io, "struct ", jl_name)
+    # struct: plain fields + one slot per real oneof. Cycle participants
+    # are tagged with their abstract supertype so other participants can
+    # type their fields against the abstract.
+    if is_cycle_participant
+        println(io, "struct ", jl_name, " <: ", _abstract_name(jl_name))
+    else
+        println(io, "struct ", jl_name)
+    end
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
     end
@@ -554,7 +629,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "end")
 
     # Metadata.
-    print(io, "PB.default_values(::Type{", jl_name, "}) = (;")
+    print(io, "PB.default_values(::Core.Type{", jl_name, "}) = (;")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
@@ -565,7 +640,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     print(io, join(pieces, ", "))
     println(io, ")")
 
-    print(io, "PB.field_numbers(::Type{", jl_name, "}) = (;")
+    print(io, "PB.field_numbers(::Core.Type{", jl_name, "}) = (;")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(f.number)")
@@ -579,7 +654,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, ")")
 
     if !isempty(real_oneofs)
-        print(io, "PB.oneof_field_types(::Type{", jl_name, "}) = (;")
+        print(io, "PB.oneof_field_types(::Core.Type{", jl_name, "}) = (;")
         oneof_pieces = String[]
         for o in real_oneofs
             inner = join(("$(m.jl_fieldname) = $(m.elem_jl_type)" for m in o.members), ", ")
@@ -594,7 +669,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io)
 
     # decode.
-    println(io, "function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
+    println(io, "function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, " = ", f.init_value)
         if f.is_required
@@ -827,7 +902,7 @@ function _emit_reserved_fields(io::IO, jl_name::String, msg::DescriptorProto)
         "String[]" :
         string("[", join(("\"$(n)\"" for n in names), ", "), "]")
 
-    println(io, "PB.reserved_fields(::Type{", jl_name, "}) = (names = ", name_str, ", numbers = ", range_str, ")")
+    println(io, "PB.reserved_fields(::Core.Type{", jl_name, "}) = (names = ", name_str, ", numbers = ", range_str, ")")
 end
 
 function _emit_encode_field(io::IO, f::FieldModel)
@@ -913,38 +988,78 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
         push!(order, fqn)
     end
 
-    deps = Dict(fqn => filter(d -> d != fqn && d in keys(by_fqn),
+    deps = Dict(fqn => filter(d -> d in keys(by_fqn),
                               _toplevel_message_deps(by_fqn[fqn], names))
                 for fqn in order)
 
-    sorted = String[]
-    visiting = Set{String}()
-    visited = Set{String}()
-
-    function dfs(node)
-        node in visited && return
-        node in visiting && error("codegen: recursive message dependency at $(node) — cycles are not yet supported")
-        push!(visiting, node)
-        for d in deps[node]
-            dfs(d)
+    # First pass: find cycle participants. A node is a cycle participant if
+    # it can reach itself through `deps`. We DFS from each node and flag
+    # any back-edge target as cyclic; transitively, any node on the back
+    # edge's path becomes cyclic too. struct.proto's Value↔Struct↔ListValue
+    # form one such cycle.
+    cycle_participants = Set{String}()
+    let visiting = Set{String}(), visited = Set{String}(), path = String[]
+        function dfs1(node)
+            node in visited && return
+            if node in visiting
+                # Found a back edge to `node`. Everything currently in
+                # `path` from `node` onwards is on the cycle.
+                idx = findlast(==(node), path)
+                if idx !== nothing
+                    for i in idx:length(path)
+                        push!(cycle_participants, path[i])
+                    end
+                end
+                return
+            end
+            push!(visiting, node)
+            push!(path, node)
+            for d in deps[node]
+                dfs1(d)
+            end
+            pop!(path)
+            delete!(visiting, node)
+            push!(visited, node)
         end
-        delete!(visiting, node)
-        push!(visited, node)
-        push!(sorted, node)
+        for fqn in order
+            dfs1(fqn)
+        end
     end
 
-    for fqn in order
-        dfs(fqn)
+    # Second pass: topo-sort with cycle edges removed. Edges into cycle
+    # participants stay (so they're emitted after their non-cyclic
+    # dependencies); edges *between* cycle participants are dropped (the
+    # abstract supertype makes ordering between them irrelevant).
+    sorted = String[]
+    let visiting = Set{String}(), visited = Set{String}()
+        function dfs2(node)
+            node in visited && return
+            push!(visiting, node)
+            for d in deps[node]
+                # Skip edges that lead back into the cycle from inside it.
+                (node in cycle_participants && d in cycle_participants) && continue
+                d in visiting && continue
+                dfs2(d)
+            end
+            delete!(visiting, node)
+            push!(visited, node)
+            push!(sorted, node)
+        end
+        for fqn in order
+            dfs2(fqn)
+        end
     end
-    return [by_fqn[fqn] for fqn in sorted]
+    return [by_fqn[fqn] for fqn in sorted], cycle_participants
 end
 
 # ----------------------------------------------------------------------------
 # File emission.
 # ----------------------------------------------------------------------------
 
-function codegen(file::FileDescriptorProto)
-    names = _gather_names(file)
+codegen(file::FileDescriptorProto) = codegen(file, gather_universe([file]))
+
+function codegen(file::FileDescriptorProto, universe::Universe)
+    names = _make_local_names(universe, file)
     io = IOBuffer()
     proto_name = something(file.name, "<unknown>")
     syntax = something(file.syntax, "proto2")
@@ -959,8 +1074,47 @@ function codegen(file::FileDescriptorProto)
     for e in file.enum_type
         _emit_enum(io, e, "")
     end
-    for msg in _topo_sort(file, names)
-        _emit_message(io, msg, "", names)
+    sorted_msgs, cycle_participants = _topo_sort(file, names)
+    # Build a cycle-aware `LocalNames` view. _resolve_typename consults
+    # `names.cycle` to pick concrete vs abstract for every type reference.
+    cycle_names = LocalNames(;
+        package = names.package,
+        syntax = names.syntax,
+        messages = names.messages,
+        enums = names.enums,
+        jl_names = names.jl_names,
+        enum_defs = names.enum_defs,
+        map_entries = names.map_entries,
+        cycle = cycle_participants,
+    )
+    # Forward `abstract type` for every cycle participant so the structs
+    # in the cycle can reference each other through the abstract
+    # supertype. struct.proto's Value↔Struct↔ListValue is the only WKT
+    # that needs this.
+    if !isempty(cycle_participants)
+        println(io, "# Forward declarations for cyclic message types. Each cycle")
+        println(io, "# participant has an abstract supertype; field types that")
+        println(io, "# reference cycle participants resolve to the abstract.")
+        for fqn in sort!(collect(cycle_participants))
+            jl_plain = names.jl_names[fqn]
+            jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
+            abs_jl = _abstract_name(jl)
+            println(io, "abstract type ", abs_jl, " end")
+        end
+        println(io)
+    end
+    for msg in sorted_msgs
+        _emit_message(io, msg, "", cycle_names)
+    end
+    # Forwarding decode methods so that decoding into Vector{Abstract<X>}
+    # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.
+    if !isempty(cycle_participants)
+        for fqn in sort!(collect(cycle_participants))
+            jl_plain = names.jl_names[fqn]
+            jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
+            abs_jl = _abstract_name(jl)
+            println(io, "PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, ", jl, ", _endpos, _group)")
+        end
     end
 
     return String(take!(io))

@@ -8,10 +8,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 struct FieldMask
     paths::Vector{String}
 end
-PB.default_values(::Type{FieldMask}) = (;paths = Vector{String}())
-PB.field_numbers(::Type{FieldMask}) = (;paths = 1)
+PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}())
+PB.field_numbers(::Core.Type{FieldMask}) = (;paths = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
     paths = PB.BufferedVector{String}()
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)

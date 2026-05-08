@@ -8,10 +8,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 struct SourceContext
     file_name::String
 end
-PB.default_values(::Type{SourceContext}) = (;file_name = "")
-PB.field_numbers(::Type{SourceContext}) = (;file_name = 1)
+PB.default_values(::Core.Type{SourceContext}) = (;file_name = "")
+PB.field_numbers(::Core.Type{SourceContext}) = (;file_name = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
     file_name = ""
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)

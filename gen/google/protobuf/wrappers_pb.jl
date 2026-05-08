@@ -8,10 +8,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 struct DoubleValue
     value::Float64
 end
-PB.default_values(::Type{DoubleValue}) = (;value = zero(Float64))
-PB.field_numbers(::Type{DoubleValue}) = (;value = 1)
+PB.default_values(::Core.Type{DoubleValue}) = (;value = zero(Float64))
+PB.field_numbers(::Core.Type{DoubleValue}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float64)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -38,10 +38,10 @@ end
 struct FloatValue
     value::Float32
 end
-PB.default_values(::Type{FloatValue}) = (;value = zero(Float32))
-PB.field_numbers(::Type{FloatValue}) = (;value = 1)
+PB.default_values(::Core.Type{FloatValue}) = (;value = zero(Float32))
+PB.field_numbers(::Core.Type{FloatValue}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float32)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -68,10 +68,10 @@ end
 struct Int64Value
     value::Int64
 end
-PB.default_values(::Type{Int64Value}) = (;value = zero(Int64))
-PB.field_numbers(::Type{Int64Value}) = (;value = 1)
+PB.default_values(::Core.Type{Int64Value}) = (;value = zero(Int64))
+PB.field_numbers(::Core.Type{Int64Value}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int64)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -98,10 +98,10 @@ end
 struct UInt64Value
     value::UInt64
 end
-PB.default_values(::Type{UInt64Value}) = (;value = zero(UInt64))
-PB.field_numbers(::Type{UInt64Value}) = (;value = 1)
+PB.default_values(::Core.Type{UInt64Value}) = (;value = zero(UInt64))
+PB.field_numbers(::Core.Type{UInt64Value}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt64)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -128,10 +128,10 @@ end
 struct Int32Value
     value::Int32
 end
-PB.default_values(::Type{Int32Value}) = (;value = zero(Int32))
-PB.field_numbers(::Type{Int32Value}) = (;value = 1)
+PB.default_values(::Core.Type{Int32Value}) = (;value = zero(Int32))
+PB.field_numbers(::Core.Type{Int32Value}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int32)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -158,10 +158,10 @@ end
 struct UInt32Value
     value::UInt32
 end
-PB.default_values(::Type{UInt32Value}) = (;value = zero(UInt32))
-PB.field_numbers(::Type{UInt32Value}) = (;value = 1)
+PB.default_values(::Core.Type{UInt32Value}) = (;value = zero(UInt32))
+PB.field_numbers(::Core.Type{UInt32Value}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt32)
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -188,10 +188,10 @@ end
 struct BoolValue
     value::Bool
 end
-PB.default_values(::Type{BoolValue}) = (;value = false)
-PB.field_numbers(::Type{BoolValue}) = (;value = 1)
+PB.default_values(::Core.Type{BoolValue}) = (;value = false)
+PB.field_numbers(::Core.Type{BoolValue}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
     value = false
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -218,10 +218,10 @@ end
 struct StringValue
     value::String
 end
-PB.default_values(::Type{StringValue}) = (;value = "")
-PB.field_numbers(::Type{StringValue}) = (;value = 1)
+PB.default_values(::Core.Type{StringValue}) = (;value = "")
+PB.field_numbers(::Core.Type{StringValue}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
     value = ""
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -248,10 +248,10 @@ end
 struct BytesValue
     value::Vector{UInt8}
 end
-PB.default_values(::Type{BytesValue}) = (;value = UInt8[])
-PB.field_numbers(::Type{BytesValue}) = (;value = 1)
+PB.default_values(::Core.Type{BytesValue}) = (;value = UInt8[])
+PB.field_numbers(::Core.Type{BytesValue}) = (;value = 1)
 
-function PB.decode(_d::PB.AbstractProtoDecoder, ::Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)
+function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)
     value = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
