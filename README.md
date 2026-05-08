@@ -81,7 +81,7 @@ b = MyProtos.foo.bar.Baz(...)
 ```
 
 Cross-package imports inside the generated files are emitted as Julia
-*relative* imports (`import ..bar as foo_bar`, `import ...other_pkg`),
+_relative_ imports (`import ..bar as foo_bar`, `import ...other_pkg`),
 so the same generated tree works regardless of which wrapping module
 you mount it under. WKT references (`google.protobuf.Timestamp`,
 `google.protobuf.Any`, etc.) are absolute and always resolve to
@@ -113,8 +113,8 @@ back_j = decode_json(MyProtos.foo.bar.Baz, js;
 ### Self-bootstrap
 
 The descriptor types in `gen/` (`descriptor.proto`, `compiler/plugin.proto`,
-and the 11 well-known types) are produced by *this package's own
-codegen*. To regenerate them after a codegen change:
+and the 11 well-known types) are produced by _this package's own
+codegen_. To regenerate them after a codegen change:
 
 ```sh
 julia --project=. gen/regen.jl
@@ -131,7 +131,6 @@ The wire codec (`src/codec/`) is copied with light modifications from
 [ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl), copyright (c) 2022
 RelationalAI, Tomáš Drvoštěp, and contributors, MIT-licensed. The descriptor
 type bootstrap was generated using ProtoBuf.jl's `protojl` and committed to
-this repo. After Phase 8, descriptor types are regenerated from the package's
-own codegen and ProtoBuf.jl is no longer involved at runtime or build time.
+this repo. Also ProtoBuf.jl was used for the initial bootstrap.
 
 See [LICENSE.md](LICENSE.md) for the full licenses.
