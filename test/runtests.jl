@@ -23,6 +23,7 @@ using Test
     include("test_proto2.jl")
     include("test_codegen_bugs.jl")
     include("test_conformance_corpus.jl")
+    include("test_wkt.jl")
 
     @testset "Aqua" begin
         Aqua.test_all(ProtoBufDescriptors)

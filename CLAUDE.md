@@ -68,7 +68,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 4 | Codegen happy path (proto3, no presence) | DONE |
 | 5 | Presence — `Union{Nothing,T}` (the headline feature) | DONE |
 | 6 | proto2 `required`, maps, oneofs, packed, groups | DONE (groups deferred) |
-| 7 | Well-known types | NEXT |
+| 7 | Well-known types | PARTIAL (7/11 — see below) |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | pending |
 | 9 | Conformance + golden corpus | pending |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
@@ -226,7 +226,32 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.
 - CI matrix mirrors ProtoBuf.jl: 1.10 / 1 / nightly × Linux / Windows / macOS ×
   x64 / aarch64.
-- 1574 / 1574 tests pass.
+- Phase 7 (well-known types) ships 7 of the 11 WKTs:
+  `any`, `duration`, `empty`, `field_mask`, `source_context`,
+  `timestamp`, `wrappers`. These are the dependency-free WKTs and our
+  existing codegen handles them as-is (no cross-file imports needed).
+  `gen/regen_wkt.jl` invokes our `protoc-gen-julia` plugin against the
+  `.proto` sources in `gen/proto/google/protobuf/` and writes the
+  generated bindings to `gen/google/protobuf/<name>_pb.jl`. They live
+  in the same Julia module (`ProtoBufDescriptors.google.protobuf`) as
+  the bootstrap `descriptor_pb.jl`. No name conflicts. `Any` shadows
+  `Base.Any` only inside the submodule, which is safe because nothing
+  inside the module references `Base.Any` by bare name.
+  Deferred to a later mini-phase (Phase 7b):
+  - `api.proto`, `type.proto` — need cross-file imports in codegen
+    (they reference `google/protobuf/source_context.proto`,
+    `google/protobuf/any.proto`).
+  - `struct.proto` — needs recursion handling for the
+    `Value ↔ ListValue ↔ Struct` cycle. Codegen currently errors out
+    on cycles ("recursive message dependency at ... — Phase 4 doesn't
+    handle cycles yet"); this'll need either `mutable struct` for
+    cycle participants or an abstract-type forward-declaration trick.
+- `test/test_wkt.jl` round-trips each WKT type, exercising the
+  Timestamp/Duration sign-extended-int64 encode (catches the negative
+  enum encode regression by parallel construction), the Empty
+  zero-byte encoding, FieldMask repeated string, an Any wrapping
+  arbitrary bytes, and every wrapper variant.
+- 1598 / 1598 tests pass.
 
 ### Known bootstrap caveats
 
