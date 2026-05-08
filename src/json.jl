@@ -6,13 +6,14 @@
 # (`field_numbers`, `oneof_field_types`, `default_values`) plus the
 # codegen-emitted `json_field_names`.
 #
-# Phase 12a covers: scalars (including int64/uint64 → JSON string and
+# Phase 12a covered: scalars (including int64/uint64 → JSON string and
 # bytes → base64 string), float NaN/±Infinity → JSON string, nested
 # messages, repeated, enums as canonical name strings (parsed from
 # either string or integer), and proto3-style omit-defaults on encode.
-# Maps, oneof parent-flattening, and the `ignore_unknown_fields` flag
-# land in Phase 12b. WKT special forms (Timestamp, Duration, Any, …)
-# land in Phase 12c.
+# Phase 12b layered on: oneof active-member parent flattening, maps
+# (with stringified keys per spec), and the `ignore_unknown_fields`
+# parse option (default off — strict). WKT special forms (Timestamp,
+# Duration, Any, …) land in Phase 12c.
 
 import JSON
 
@@ -123,22 +124,31 @@ function encode_json(msg::AbstractProtoBufMessage)
 end
 
 """
-    decode_json(::Type{T}, source) -> T
+    decode_json(::Type{T}, source; ignore_unknown_fields = false) -> T
 
 Parse a protobuf-JSON document into a `T <: AbstractProtoBufMessage`.
 `source` may be an `AbstractString`, an `IO`, or an already-parsed
 JSON value (a `Dict{String,Any}` produced by `JSON.parse`).
+
+By default a JSON key that doesn't map to any field of `T` (or any
+nested message type) raises `ArgumentError`, matching the spec's
+strict default. Pass `ignore_unknown_fields = true` to silently drop
+them (this is what conformance JSON_IGNORE_UNKNOWN_PARSING_TEST asks
+for).
 """
-function decode_json(::Type{T}, src::AbstractString) where {T<:AbstractProtoBufMessage}
-    return decode_json(T, JSON.parse(src))
+function decode_json(::Type{T}, src::AbstractString;
+                     ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
+    return decode_json(T, JSON.parse(src); ignore_unknown_fields)
 end
 
-function decode_json(::Type{T}, src::IO) where {T<:AbstractProtoBufMessage}
-    return decode_json(T, JSON.parse(src))
+function decode_json(::Type{T}, src::IO;
+                     ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
+    return decode_json(T, JSON.parse(src); ignore_unknown_fields)
 end
 
-function decode_json(::Type{T}, json::AbstractDict) where {T<:AbstractProtoBufMessage}
-    return _decode_json_message(T, json)
+function decode_json(::Type{T}, json::AbstractDict;
+                     ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
+    return _decode_json_message(T, json; ignore_unknown_fields)
 end
 
 # -----------------------------------------------------------------------------
@@ -146,7 +156,8 @@ end
 # -----------------------------------------------------------------------------
 
 function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
-    keys = json_field_names(T)
+    keys   = json_field_names(T)
+    oneofs = oneof_field_types(T)
     print(io, '{')
     first = true
     for jl_name in fieldnames(T)
@@ -154,6 +165,19 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
         # `nothing` always means "field not set" (presence-bearing fields
         # default to `nothing`, plain proto3 scalars never get `nothing`).
         v === nothing && continue
+        # Real (non-synthetic) oneofs: collapse into the parent JSON
+        # object — emit ONLY the active member at the parent level. The
+        # JSON has no key corresponding to the oneof field itself.
+        if hasproperty(oneofs, jl_name)
+            o = v::OneOf
+            json_key = getproperty(keys, o.name)
+            first || print(io, ',')
+            first = false
+            JSON.print(io, json_key)
+            print(io, ':')
+            _encode_json_value(io, o.value)
+            continue
+        end
         # proto3 emits non-default-valued fields only by default.
         _is_json_default(v) && continue
         json_key = getproperty(keys, jl_name)
@@ -270,12 +294,45 @@ function _encode_json_value(io::IO, v::AbstractProtoBufMessage)
     return nothing
 end
 
+# Map. Per spec, map keys are stringified regardless of underlying type
+# (bool → "true"/"false", any integer → decimal). Values use the regular
+# value dispatch.
+function _encode_json_value(io::IO, d::AbstractDict)
+    print(io, '{')
+    first = true
+    for (k, v) in d
+        first || print(io, ',')
+        first = false
+        _emit_map_key(io, k)
+        print(io, ':')
+        _encode_json_value(io, v)
+    end
+    print(io, '}')
+    return nothing
+end
+
+function _emit_map_key(io::IO, k::Bool)
+    print(io, k ? "\"true\"" : "\"false\"")
+    return nothing
+end
+function _emit_map_key(io::IO, k::Integer)
+    print(io, '"', k, '"')
+    return nothing
+end
+function _emit_map_key(io::IO, k::AbstractString)
+    JSON.print(io, k)  # writes the quoted, escaped form
+    return nothing
+end
+
 # -----------------------------------------------------------------------------
 # Decode side — message walker
 # -----------------------------------------------------------------------------
 
-function _decode_json_message(::Type{T}, json::AbstractDict) where {T<:AbstractProtoBufMessage}
-    keys = json_field_names(T)
+function _decode_json_message(::Type{T}, json::AbstractDict;
+                              ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
+    keys   = json_field_names(T)
+    oneofs = oneof_field_types(T)
+
     # Build a JSON-key → Julia-field-name map. Per spec, parsers must
     # accept both the camelCase (`json_name`) form and the original
     # snake_case form on input; emit only camelCase on output.
@@ -283,6 +340,18 @@ function _decode_json_message(::Type{T}, json::AbstractDict) where {T<:AbstractP
     for jl_name in propertynames(keys)
         json_to_jl[getproperty(keys, jl_name)] = jl_name
         json_to_jl[String(jl_name)] = jl_name
+    end
+
+    # Inverse oneof lookup: member-julia-name → (parent-julia-name, member-type).
+    # `keys` already exposes member names at the top level — when a JSON
+    # key resolves to a member we need to redirect the decoded value to
+    # the parent oneof field, wrapped in `OneOf`.
+    oneof_member_lookup = Dict{Symbol,Tuple{Symbol,Type}}()
+    for parent in propertynames(oneofs)
+        members = getproperty(oneofs, parent)
+        for m in propertynames(members)
+            oneof_member_lookup[m] = (parent, getproperty(members, m))
+        end
     end
 
     defaults = default_values(T)
@@ -298,15 +367,29 @@ function _decode_json_message(::Type{T}, json::AbstractDict) where {T<:AbstractP
 
         jl_name = get(json_to_jl, json_key, nothing)
         if jl_name === nothing
-            # Phase 12b: respect `ignore_unknown_fields`; for now skip.
-            continue
+            ignore_unknown_fields && continue
+            throw(ArgumentError(
+                "unknown field \"$(json_key)\" while decoding $(T); " *
+                "set `ignore_unknown_fields = true` to skip"))
         end
 
-        # Presence-bearing fields are typed `Union{Nothing,X}`. JSON
-        # `null` was already filtered above, so for the actual decode we
-        # only care about the non-`Nothing` half.
-        FT = Base.nonnothingtype(fieldtype(T, jl_name))
-        vals[jl_name] = _decode_json_value(FT, json_val)
+        member = get(oneof_member_lookup, jl_name, nothing)
+        if member !== nothing
+            (parent_name, member_type) = member
+            # Decoding an active oneof member: wrap in `OneOf` and
+            # store at the parent field. The parent field type uses a
+            # covariant `OneOf{<:Union{…}}` bound, so `OneOf{ConcreteT}`
+            # is assignable.
+            decoded = _decode_json_value(member_type, json_val;
+                                         ignore_unknown_fields = ignore_unknown_fields)
+            vals[parent_name] = OneOf(jl_name, decoded)
+        else
+            # Plain field. Strip the presence wrapper; JSON `null` was
+            # already filtered above.
+            FT = Base.nonnothingtype(fieldtype(T, jl_name))
+            vals[jl_name] = _decode_json_value(FT, json_val;
+                                               ignore_unknown_fields = ignore_unknown_fields)
+        end
     end
 
     args = ntuple(i -> vals[fieldname(T, i)], fieldcount(T))
@@ -317,27 +400,31 @@ end
 # Decode side — value dispatch
 # -----------------------------------------------------------------------------
 
-function _decode_json_value(::Type{Bool}, v::Bool)
+# All `_decode_json_value` methods accept a uniform `kw...` so the
+# `ignore_unknown_fields` flag (currently the only thing that flows
+# through) can recurse cleanly. Leaf methods just discard it.
+
+function _decode_json_value(::Type{Bool}, v::Bool; kw...)
     return v
 end
 
 # Smaller integers. Accept either JSON number or numeric string.
-function _decode_json_value(::Type{T}, v::Real) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
+function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
     return T(v)
 end
-function _decode_json_value(::Type{T}, v::AbstractString) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
+function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
     return parse(T, v)
 end
 
 # 64-bit integers — accept string (canonical) or number.
-function _decode_json_value(::Type{T}, v::AbstractString) where {T<:Union{Int64,UInt64}}
+function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Union{Int64,UInt64}}
     return parse(T, v)
 end
-function _decode_json_value(::Type{T}, v::Real) where {T<:Union{Int64,UInt64}}
+function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int64,UInt64}}
     return T(v)
 end
 
-function _decode_json_value(::Type{T}, v::AbstractString) where {T<:AbstractFloat}
+function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:AbstractFloat}
     if v == "NaN"
         return T(NaN)
     elseif v == "Infinity"
@@ -348,37 +435,60 @@ function _decode_json_value(::Type{T}, v::AbstractString) where {T<:AbstractFloa
         return parse(T, v)
     end
 end
-function _decode_json_value(::Type{T}, v::Real) where {T<:AbstractFloat}
+function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:AbstractFloat}
     return T(v)
 end
 
-function _decode_json_value(::Type{String}, v::AbstractString)
+function _decode_json_value(::Type{String}, v::AbstractString; kw...)
     return String(v)
 end
 
 # bytes — base64-decode.
-function _decode_json_value(::Type{Vector{UInt8}}, v::AbstractString)
+function _decode_json_value(::Type{Vector{UInt8}}, v::AbstractString; kw...)
     return _base64_decode(v)
 end
 
 # Enums: accept canonical name (string) or numeric value.
-function _decode_json_value(::Type{E}, v::AbstractString) where {E<:Base.Enum}
+function _decode_json_value(::Type{E}, v::AbstractString; kw...) where {E<:Base.Enum}
     return getfield(parentmodule(E), Symbol(v))::E
 end
-function _decode_json_value(::Type{E}, v::Real) where {E<:Base.Enum}
+function _decode_json_value(::Type{E}, v::Real; kw...) where {E<:Base.Enum}
     return E(v)
 end
 
 # Repeated.
-function _decode_json_value(::Type{Vector{T}}, v::AbstractVector) where {T}
+function _decode_json_value(::Type{Vector{T}}, v::AbstractVector; kw...) where {T}
     out = Vector{T}(undef, length(v))
     @inbounds for i in eachindex(v)
-        out[i] = _decode_json_value(T, v[i])
+        out[i] = _decode_json_value(T, v[i]; kw...)
     end
     return out
 end
 
 # Nested submessage.
-function _decode_json_value(::Type{T}, v::AbstractDict) where {T<:AbstractProtoBufMessage}
-    return _decode_json_message(T, v)
+function _decode_json_value(::Type{T}, v::AbstractDict; kw...) where {T<:AbstractProtoBufMessage}
+    return _decode_json_message(T, v; kw...)
+end
+
+# Map. The Julia field type is `OrderedDict{K,V}` (codegen default) but
+# we accept any `AbstractDict{K,V}`. Per spec, all map keys arrive as
+# JSON strings — re-parse into `K` here.
+function _decode_json_value(::Type{D}, v::AbstractDict; kw...) where {K,V,D<:AbstractDict{K,V}}
+    out = D()
+    for (jk, jv) in v
+        out[_decode_map_key(K, jk)] = _decode_json_value(V, jv; kw...)
+    end
+    return out
+end
+
+function _decode_map_key(::Type{Bool}, s::AbstractString)
+    s == "true"  && return true
+    s == "false" && return false
+    throw(ArgumentError("invalid bool map key: $(repr(s))"))
+end
+function _decode_map_key(::Type{T}, s::AbstractString) where {T<:Integer}
+    return parse(T, s)
+end
+function _decode_map_key(::Type{String}, s::AbstractString)
+    return String(s)
 end

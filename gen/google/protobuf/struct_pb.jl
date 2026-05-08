@@ -183,5 +183,8 @@ function PB._encoded_size(_x::ListValue)
 end
 
 PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractListValue}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, ListValue, _endpos, _group)
+PB._decode_json_message(::Core.Type{AbstractListValue}, json::AbstractDict; kw...) = PB._decode_json_message(ListValue, json; kw...)
 PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractStruct}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, Struct, _endpos, _group)
+PB._decode_json_message(::Core.Type{AbstractStruct}, json::AbstractDict; kw...) = PB._decode_json_message(Struct, json; kw...)
 PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractValue}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, Value, _endpos, _group)
+PB._decode_json_message(::Core.Type{AbstractValue}, json::AbstractDict; kw...) = PB._decode_json_message(Value, json; kw...)

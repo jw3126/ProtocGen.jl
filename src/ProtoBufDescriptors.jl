@@ -74,11 +74,16 @@ function json_field_names(::Type{T}) where {T}
     return (;)
 end
 
+# `json.jl` defines `_decode_json_message`, which the generated bootstrap
+# files extend (forwarding methods so abstract cycle supertypes route to
+# the concrete struct). It has to load *before* `gen/google/google.jl`
+# pulls those files in.
+include("json.jl")
+
 include("../gen/google/google.jl")
 
 include("codegen.jl")
 include("plugin.jl")
-include("json.jl")
 include("testing.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder

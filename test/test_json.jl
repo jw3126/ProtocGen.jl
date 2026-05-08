@@ -1,11 +1,11 @@
-# JSON mapping — Phase 12a tests.
+# JSON mapping — Phase 12a / 12b tests.
 #
 # The bootstrap WKT types double as a handy fixture set: they cover every
 # scalar wire form (Int64 / Int32 / Bool / String / Bytes / Float / Enum)
-# and various aggregations (repeated, nested submessage). For now we
-# exercise the *generic* walker only — Phase 12c lands the WKT-specific
-# canonical forms (Timestamp → "2025-…", Duration → "1.5s", …) and these
-# tests will move to a dedicated `test_json_wkt.jl`.
+# and various aggregations (repeated, nested submessage, map, oneof). For
+# now we exercise the *generic* walker only — Phase 12c lands the
+# WKT-specific canonical forms (Timestamp → "2025-…", Duration → "1.5s",
+# …) and those tests will move to a dedicated `test_json_wkt.jl`.
 
 module TestJSON
 
@@ -22,7 +22,7 @@ const _G  = ProtoBufDescriptors.google.protobuf
 
 _parsed(x) = JSON.parse(encode_json(x))
 
-@testset "JSON Phase 12a" begin
+@testset "JSON" begin
 
     # -------------------------------------------------------------------------
     @testset "scalars: 32-bit ints emitted as JSON numbers" begin
@@ -159,12 +159,86 @@ _parsed(x) = JSON.parse(encode_json(x))
         @test decode_json(_G.SourceContext, encode_json(sc)).file_name == "foo.proto"
     end
 
-    @testset "unknown JSON keys are skipped (Phase 12b will add strict mode)" begin
-        # Toss in extras; current behavior is to skip silently.
-        back = decode_json(_G.Timestamp,
-            "{\"seconds\": 5, \"nanos\": 6, \"unknown_field\": [1,2,3], \"another\": \"x\"}")
+    @testset "strict mode rejects unknown JSON keys; ignore_unknown_fields skips" begin
+        bad = "{\"seconds\": 5, \"nanos\": 6, \"unknown_field\": [1,2,3]}"
+        # Default = strict.
+        @test_throws ArgumentError decode_json(_G.Timestamp, bad)
+        # Opt in to lenient.
+        back = decode_json(_G.Timestamp, bad; ignore_unknown_fields = true)
         @test back.seconds == 5
         @test back.nanos == 6
+    end
+
+    @testset "oneof: active member is flattened into parent JSON" begin
+        # Value.kind: oneof of 6 members — exercise three.
+        v_str = _G.Value(ProtoBufDescriptors.OneOf(:string_value, "hi"))
+        @test JSON.parse(encode_json(v_str)) == Dict("stringValue" => "hi")
+        v_num = _G.Value(ProtoBufDescriptors.OneOf(:number_value, 3.5))
+        @test JSON.parse(encode_json(v_num)) == Dict("numberValue" => 3.5)
+        v_bool = _G.Value(ProtoBufDescriptors.OneOf(:bool_value, true))
+        @test JSON.parse(encode_json(v_bool)) == Dict("boolValue" => true)
+
+        # Round-trip every variant.
+        for v in (v_str, v_num, v_bool)
+            back = decode_json(_G.Value, encode_json(v))
+            @test back.kind isa ProtoBufDescriptors.OneOf
+            @test back.kind.name == v.kind.name
+            @test back.kind.value == v.kind.value
+        end
+    end
+
+    @testset "oneof: unset → JSON omits the parent key entirely" begin
+        v = _G.Value(nothing)
+        @test JSON.parse(encode_json(v)) == Dict{String,Any}()
+        back = decode_json(_G.Value, encode_json(v))
+        @test back.kind === nothing
+    end
+
+    @testset "maps: string-keyed map round-trips through JSON object" begin
+        # Struct.fields :: OrderedDict{String, Value}
+        od = ProtoBufDescriptors.OrderedDict{String,_G.Value}(
+            "a" => _G.Value(ProtoBufDescriptors.OneOf(:number_value, 1.0)),
+            "b" => _G.Value(ProtoBufDescriptors.OneOf(:string_value, "x")),
+        )
+        s = _G.Struct(od)
+        encoded = encode_json(s)
+        @test JSON.parse(encoded) == Dict(
+            "fields" => Dict("a" => Dict("numberValue" => 1.0),
+                             "b" => Dict("stringValue" => "x")),
+        )
+        back = decode_json(_G.Struct, encoded)
+        @test sort(collect(keys(back.fields))) == ["a", "b"]
+        @test back.fields["a"].kind.value == 1.0
+        @test back.fields["b"].kind.value == "x"
+    end
+
+    @testset "map keys: stringification on encode, parsing on decode" begin
+        # Exercise via the value-level dispatch directly so we don't have
+        # to hand-construct a corpus message with each key type.
+        let io = IOBuffer()
+            ProtoBufDescriptors._encode_json_value(io, Dict{Bool,String}(true => "t", false => "f"))
+            d = JSON.parse(String(take!(io)))
+            @test d == Dict("true" => "t", "false" => "f")
+        end
+        let io = IOBuffer()
+            ProtoBufDescriptors._encode_json_value(io, Dict{Int32,String}(Int32(1) => "one", Int32(-2) => "neg"))
+            d = JSON.parse(String(take!(io)))
+            @test d == Dict("1" => "one", "-2" => "neg")
+        end
+        # Decode side: invalid bool key raises.
+        @test_throws ArgumentError ProtoBufDescriptors._decode_map_key(Bool, "yes")
+        @test ProtoBufDescriptors._decode_map_key(Int32, "42") === Int32(42)
+        @test ProtoBufDescriptors._decode_map_key(Bool, "true") === true
+    end
+
+    @testset "ignore_unknown_fields propagates into nested decoders" begin
+        # Struct.fields[*] is decoded via the nested-message path. An
+        # unknown key on a nested Value should be tolerated when the
+        # flag is set on the outer call.
+        json = """{"fields": {"a": {"numberValue": 1.0, "unknownInner": 99}}}"""
+        @test_throws ArgumentError decode_json(_G.Struct, json)
+        back = decode_json(_G.Struct, json; ignore_unknown_fields = true)
+        @test back.fields["a"].kind.value == 1.0
     end
 
 end

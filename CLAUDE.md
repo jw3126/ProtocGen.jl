@@ -73,7 +73,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a done) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a + 12b done) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -382,6 +382,31 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   new runtime dep; base64 is implemented inline (a few dozen LOC) to
   avoid wrestling with stdlib resolution under Julia 1.12.
 - 1713 / 1713 julia tests pass (1670 + 43 new JSON tests).
+- Phase 12b layered the structurally-distinct wire quirks onto the
+  walker:
+  - **Oneof parent flattening**: encode emits the active member at
+    parent level (no wrapper key); decode detects oneof-member JSON
+    keys and rewraps in `OneOf(name, value)` against the parent field.
+    The lookup is built fresh per-call from `oneof_field_types(T)`.
+  - **Maps**: per spec, all map keys are JSON strings — so
+    `_emit_map_key` stringifies (`true`/`false` literal, decimal int,
+    JSON-escaped string) and `_decode_map_key` parses back into the
+    original `K`. Map encode/decode dispatches on `AbstractDict{K,V}`,
+    matching our binary path.
+  - **`ignore_unknown_fields` parse option**: default is **strict**
+    (unknown JSON key → `ArgumentError`), matching the spec.
+    Decoders thread the flag through `; kw...` so it propagates into
+    nested message / map-value decode.
+  - **Cycle abstracts and JSON**: codegen emits an invariant-`Type{X}`
+    forwarding `_decode_json_message` per cycle abstract supertype
+    (`AbstractValue → Value`, `AbstractStruct → Struct`,
+    `AbstractListValue → ListValue`). Invariant (no `<:`) is critical
+    — `<:` would also match the concrete struct and recurse forever.
+  - **Module load order**: `src/json.jl` now includes *before*
+    `gen/google/google.jl` so the generated forwarding methods can
+    extend `_decode_json_message`.
+- 1739 / 1739 julia tests pass (1713 + 26 new 12b tests covering
+  oneof flatten / maps / strict-vs-lenient unknown fields).
 
 ### Known bootstrap caveats
 

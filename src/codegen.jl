@@ -1340,12 +1340,20 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.
+    # The same pattern routes JSON decode (Phase 12b) — `Struct.fields`
+    # is `OrderedDict{String,AbstractValue}` and the JSON walker has to
+    # land on `Value` to reconstruct.
     if !isempty(cycle_participants)
         for fqn in sort!(collect(cycle_participants))
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
             println(io, "PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, ", jl, ", _endpos, _group)")
+            # NOTE: invariant `Type{X}` (no `<:`) so the forwarding fires
+            # only for the abstract supertype itself; the concrete struct
+            # falls through to the generic walker via the
+            # `T <: AbstractProtoBufMessage` method on `_decode_json_message`.
+            println(io, "PB._decode_json_message(::Core.Type{", abs_jl, "}, json::AbstractDict; kw...) = PB._decode_json_message(", jl, ", json; kw...)")
         end
     end
 
