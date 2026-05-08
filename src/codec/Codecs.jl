@@ -20,6 +20,13 @@ function message_done(d::AbstractProtoDecoder, endpos::Int, group::Bool)
         done = peek(io) == UInt8(END_GROUP)
         done && skip(io, 1)
     else
+        # If the previous iteration's field decode/skip overshot the
+        # message's declared end, fail loudly instead of silently
+        # accepting it as "done". This catches truncated nested
+        # messages whose unknown-field skip walked past `endpos`.
+        if endpos > 0 && position(io) > endpos
+            throw(EOFError())
+        end
         done = d.message_done(io) || (endpos > 0 && position(io) >= endpos)
     end
     return done

@@ -1,6 +1,10 @@
 function decode_tag(d::AbstractProtoDecoder)
     b = vbyte_decode(get_stream(d), UInt32)
     field_number = b >> 3
+    # Field number 0 is reserved by the protobuf spec — it cannot
+    # appear on the wire. Reject explicitly so we don't silently
+    # accept malformed input.
+    field_number == 0 && error("decode_tag: tag has illegal field_number 0")
     wire_type = WireType(b & 0x07)
     return field_number, wire_type
 end
@@ -392,11 +396,16 @@ end
 @inline function Base.skip(d::AbstractProtoDecoder, wire_type::WireType)
     io = get_stream(d)
     if wire_type == VARINT
+        # `read(io, UInt8)` errors on EOF mid-byte, which is the right
+        # behavior for a truncated varint.
         while read(io, UInt8) >= 0x80 end
     elseif wire_type == FIXED64
+        bytesavailable(io) >= 8 || throw(EOFError())
         skip(io, 8)
     elseif wire_type == LENGTH_DELIMITED
         bytelen = vbyte_decode(io, UInt32)
+        bytesavailable(io) >= bytelen ||
+            throw(EOFError())
         skip(io, bytelen)
     elseif wire_type == START_GROUP
         while peek(io) != UInt8(END_GROUP)
@@ -404,6 +413,7 @@ end
         end
         skip(io, 1)
     elseif wire_type == FIXED32
+        bytesavailable(io) >= 4 || throw(EOFError())
         skip(io, 4)
     else wire_type == END_GROUP
         error("Encountered END_GROUP wiretype while skipping")

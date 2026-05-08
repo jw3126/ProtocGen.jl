@@ -32,7 +32,10 @@ end
     b < 0x80 && return (x | (b << 28))
 
     x |= (b & 0x7F) << 28
-    # TODO: we shouldn't get here... log? throw? don't eat other bytes >= 0x80?
+    # 5-byte limit theoretically; but the codec deliberately tolerates a
+    # full 10-byte sign-extended UInt64 here so it can truncate to a
+    # negative Int32 (the protobuf int32 wire format encodes negatives
+    # this way). The UInt64 path enforces the real upper bound.
     return x
 end
 
@@ -75,8 +78,10 @@ end
     x |= (b & 0x7F) << 56
     b = T(read(io, UInt8))
     b < 0x80 && return (x | (b << 63))
-    # TODO: we shouldn't get here... log? throw? eat other bytes >= 0x80?
-    return x
+    # 10-byte limit for UInt64/Int64 varints — bit 64 set on the 10th
+    # byte still produces a representable value, but any continuation
+    # bit means the wire value is malformed.
+    error("vbyte_decode: varint exceeds 10 bytes for $(T)")
 end
 
 @inline function vbyte_encode(io::IO, x::UInt32)

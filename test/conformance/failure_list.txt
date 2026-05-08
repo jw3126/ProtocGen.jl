@@ -7,32 +7,36 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (91 total — 277 → 112 after map-entry decoder fix,
-# 112 → 91 after BOOL leniency fix):
+# Categories (53 total — 277 → 112 after map-entry decoder fix,
+# 112 → 91 after BOOL leniency, 91 → 53 after parser strictness pass
+# (decode_tag rejects field 0; skip-unknown checks bytesavailable;
+# message_done errors on overshoot; UInt64 vbyte rejects 11-byte+)):
 #
-#   * ~30 PrematureEof* / IllegalZeroFieldNum_*: malformed binary inputs
-#     the spec wants rejected; our codec silently accepts and skips.
-#     Same gap shows up as "JsonOutput" mirrors when the malformed
-#     binary feeds a JSON output request.
+#   * ~14 RepeatedScalar* / ValidDataOneof.MESSAGE.Merge / ValidDataRepeated
+#     UINT32 tail. Last-wins / merge-as-singular for repeated scalars
+#     and submessages when interleaved with unknowns; UINT32
+#     sign-extended-to-10-byte round-trip mismatches with protoc.
 #
-#   * RepeatedScalar* / ValidDataOneof.MESSAGE.Merge / ValidDataRepeated
-#     UINT32 tail (~14). Last-wins / merge-as-singular for repeated
-#     scalars / submessages when interleaved with unknowns; UINT32
-#     sign-extended-to-10-byte round-trip.
+#   * ~6 ValidDataScalar.UINT32[3,8,9] (each in proto2 + proto3, with
+#     ProtobufOutput + JsonOutput mirrors).
 #
-#   * proto2 ENUM zero-default drop, plus a handful of ValidDataScalar
-#     UINT32 edges.
+#   * ~4 PrematureEofInDelimitedDataForKnown{NonRepeated,Repeated}Value.BYTES
+#     and 2 UnknownVarint.ProtobufOutput — leftover lenient-parser cases
+#     in known-field paths the strictness pass didn't reach.
 #
-#   * JSON-input edges (~15): whitespace inside number-as-string,
+#   * 2 proto2 ENUM[0] drop, 1 proto2 ValidDataScalar tail.
+#
+#   * ~15 JSON-input edges: whitespace inside number-as-string,
 #     Float / Double overflow, Duration / Timestamp range, AnyNested,
 #     ValueAcceptNull, OneofFieldDuplicate, RepeatedFieldWrongElementType,
-#     EnumFieldUnknownValue.
+#     EnumFieldUnknownValue. Each is a separate JSON-walker check.
 #
-# The underlying gaps:
+# Underlying gaps:
 #
-#   (a) Lenient parser — accepts malformed inputs the spec rejects.
-#   (b) Repeated-scalar / oneof merge semantics for unknown-tag tails.
-#   (c) JSON edge-case strictness — whitespace, overflow, WKT bounds.
+#   (a) Repeated-scalar / oneof merge semantics for unknown-tag tails.
+#   (b) UINT32 wire-encoding edge cases (sign-ext, 10-byte form).
+#   (c) Some lenient-parser holes in known-field length-delimited paths.
+#   (d) JSON edge-case strictness — whitespace, overflow, WKT bounds.
 #
 # All real spec-conformance bugs; allowlisted so the harness lands green
 # and any *new* failure surfaces as a regression. Tracked for follow-up
@@ -40,27 +44,8 @@
 #
 Required.DurationProtoInputTooLarge.JsonOutput
 Required.DurationProtoInputTooSmall.JsonOutput
-Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_0
-Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_1
-Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_2
-Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_3
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.DOUBLE
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.FIXED32
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.FIXED64
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.FLOAT
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.SFIXED32
-Required.Proto2.ProtobufInput.PrematureEofBeforeUnknownValue.SFIXED64
 Required.Proto2.ProtobufInput.PrematureEofInDelimitedDataForKnownNonRepeatedValue.BYTES
 Required.Proto2.ProtobufInput.PrematureEofInDelimitedDataForKnownRepeatedValue.BYTES
-Required.Proto2.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.BYTES
-Required.Proto2.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.MESSAGE
-Required.Proto2.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.STRING
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.DOUBLE
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.FIXED32
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.FIXED64
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.FLOAT
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED32
-Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED64
 Required.Proto2.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
 Required.Proto2.ProtobufInput.RepeatedScalarSelectsLast.UINT32.ProtobufOutput
 Required.Proto2.ProtobufInput.UnknownVarint.ProtobufOutput
@@ -87,27 +72,8 @@ Required.Proto3.JsonInput.RepeatedFieldWrongElementTypeExpectingIntegersGotBool
 Required.Proto3.JsonInput.TimestampJsonInputTooSmall
 Required.Proto3.JsonInput.ValueAcceptNull.JsonOutput
 Required.Proto3.JsonInput.ValueAcceptNull.ProtobufOutput
-Required.Proto3.ProtobufInput.IllegalZeroFieldNum_Case_0
-Required.Proto3.ProtobufInput.IllegalZeroFieldNum_Case_1
-Required.Proto3.ProtobufInput.IllegalZeroFieldNum_Case_2
-Required.Proto3.ProtobufInput.IllegalZeroFieldNum_Case_3
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.DOUBLE
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.FIXED32
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.FIXED64
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.FLOAT
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.SFIXED32
-Required.Proto3.ProtobufInput.PrematureEofBeforeUnknownValue.SFIXED64
 Required.Proto3.ProtobufInput.PrematureEofInDelimitedDataForKnownNonRepeatedValue.BYTES
 Required.Proto3.ProtobufInput.PrematureEofInDelimitedDataForKnownRepeatedValue.BYTES
-Required.Proto3.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.BYTES
-Required.Proto3.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.MESSAGE
-Required.Proto3.ProtobufInput.PrematureEofInDelimitedDataForUnknownValue.STRING
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.DOUBLE
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.FIXED32
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.FIXED64
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.FLOAT
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED32
-Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED64
 Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.JsonOutput
 Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
 Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.UINT32.JsonOutput
