@@ -5,6 +5,8 @@ import ProtoBufDescriptors as PB
 using ProtoBufDescriptors: OneOf, OrderedDict
 using ProtoBufDescriptors.EnumX: @enumx
 
+export Syntax, Type, Field, Enum, EnumValue, Option
+
 @enumx Syntax SYNTAX_PROTO2=0 SYNTAX_PROTO3=1
 
 struct Option

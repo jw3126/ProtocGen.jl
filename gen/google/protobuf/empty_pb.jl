@@ -5,6 +5,8 @@ import ProtoBufDescriptors as PB
 using ProtoBufDescriptors: OneOf, OrderedDict
 using ProtoBufDescriptors.EnumX: @enumx
 
+export Empty
+
 struct Empty
 end
 PB.default_values(::Core.Type{Empty}) = (;)

@@ -5,6 +5,8 @@ import ProtoBufDescriptors as PB
 using ProtoBufDescriptors: OneOf, OrderedDict
 using ProtoBufDescriptors.EnumX: @enumx
 
+export SourceContext
+
 struct SourceContext
     file_name::String
 end

@@ -5,6 +5,8 @@ import ProtoBufDescriptors as PB
 using ProtoBufDescriptors: OneOf, OrderedDict
 using ProtoBufDescriptors.EnumX: @enumx
 
+export Timestamp
+
 struct Timestamp
     seconds::Int64
     nanos::Int32

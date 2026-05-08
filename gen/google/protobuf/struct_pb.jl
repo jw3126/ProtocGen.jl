@@ -5,6 +5,8 @@ import ProtoBufDescriptors as PB
 using ProtoBufDescriptors: OneOf, OrderedDict
 using ProtoBufDescriptors.EnumX: @enumx
 
+export NullValue, Struct, Value, ListValue
+
 @enumx NullValue NULL_VALUE=0
 
 # Forward declarations for cyclic message types. Each cycle

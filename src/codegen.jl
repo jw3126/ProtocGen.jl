@@ -1071,6 +1071,23 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     println(io, "using ProtoBufDescriptors.EnumX: @enumx")
     println(io)
 
+    # Export every top-level message and enum so `using <module>` reaches
+    # them. Matches the bootstrap convention (gen/google/protobuf/
+    # descriptor_pb.jl exports the same way) and is what user code
+    # importing a generated `_pb.jl` will expect.
+    exports = String[]
+    for e in file.enum_type
+        push!(exports, something(e.name, ""))
+    end
+    for msg in file.message_type
+        _is_map_entry(msg) && continue
+        push!(exports, something(msg.name, ""))
+    end
+    if !isempty(exports)
+        println(io, "export ", join(exports, ", "))
+        println(io)
+    end
+
     for e in file.enum_type
         _emit_enum(io, e, "")
     end

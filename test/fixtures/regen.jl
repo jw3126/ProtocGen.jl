@@ -10,10 +10,15 @@
 # makes tests independent of `protoc` at run time while still being
 # regenerable from declarative inputs.
 
-const HERE  = @__DIR__
-const PROTO = joinpath(HERE, "proto")
-const TXTPB = joinpath(HERE, "txtpb")
-const PB    = joinpath(HERE, "pb")
+const HERE       = @__DIR__
+const PROTO      = joinpath(HERE, "proto")
+const TXTPB      = joinpath(HERE, "txtpb")
+const PB         = joinpath(HERE, "pb")
+# Test fixtures that import WKTs (e.g. `unittest_well_known_types.proto`)
+# need protoc to find `google/protobuf/*.proto` somewhere — point it at
+# our vendored copies under `gen/proto`. Always passing both paths is
+# harmless for fixtures that don't import.
+const WKT_PROTO  = joinpath(HERE, "..", "..", "gen", "proto")
 
 # (output_pb, source_proto, message, textproto_input).
 # Each entry produces one binary by piping `txtpb` through
@@ -65,16 +70,19 @@ function main()
     protoc = find_protoc()
     isdir(PB) || mkpath(PB)
 
+    # `--include_imports` bundles transitive dependency descriptors into
+    # the same FileDescriptorSet, so the codegen Universe sees imported
+    # types (the WKT bindings, etc.) without a separate fetch.
     for proto in DESCRIPTOR_SETS
         out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
-        run(`$protoc --proto_path=$PROTO --descriptor_set_out=$out $proto`)
+        run(`$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --descriptor_set_out=$out $proto`)
         println("wrote $(relpath(out, HERE))")
     end
 
     for (out_name, proto, msg, txtpb_name) in PAYLOADS
         out = joinpath(PB, out_name)
         in_path = joinpath(TXTPB, txtpb_name)
-        cmd = pipeline(`$protoc --encode=$msg --proto_path=$PROTO $proto`,
+        cmd = pipeline(`$protoc --encode=$msg --proto_path=$PROTO --proto_path=$WKT_PROTO $proto`,
                        stdin = in_path, stdout = out)
         run(cmd)
         println("wrote $(relpath(out, HERE))")
