@@ -7,22 +7,21 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (112 total — was 277 before the map-entry decoder fix,
-# which cleared all 165 ValidDataMap.* cases):
+# Categories (91 total — 277 → 112 after map-entry decoder fix,
+# 112 → 91 after BOOL leniency fix):
 #
 #   * ~30 PrematureEof* / IllegalZeroFieldNum_*: malformed binary inputs
 #     the spec wants rejected; our codec silently accepts and skips.
 #     Same gap shows up as "JsonOutput" mirrors when the malformed
 #     binary feeds a JSON output request.
 #
-#   * ~17 ValidDataScalar.*: BOOL with a varint payload >1 not accepted
-#     as `true` (spec: any non-zero is true); proto2 ENUM zero-default
-#     drop; UINT32 wire edge cases.
+#   * RepeatedScalar* / ValidDataOneof.MESSAGE.Merge / ValidDataRepeated
+#     UINT32 tail (~14). Last-wins / merge-as-singular for repeated
+#     scalars / submessages when interleaved with unknowns; UINT32
+#     sign-extended-to-10-byte round-trip.
 #
-#   * RepeatedScalarMessageMerge / RepeatedScalarSelectsLast (~6) and
-#     ValidDataOneof.MESSAGE.Merge / ValidDataRepeated tail (~10).
-#     Last-wins / merge-as-singular for repeated scalars / submessages
-#     when interleaved with unknowns.
+#   * proto2 ENUM zero-default drop, plus a handful of ValidDataScalar
+#     UINT32 edges.
 #
 #   * JSON-input edges (~15): whitespace inside number-as-string,
 #     Float / Double overflow, Duration / Timestamp range, AnyNested,
@@ -32,7 +31,7 @@
 # The underlying gaps:
 #
 #   (a) Lenient parser — accepts malformed inputs the spec rejects.
-#   (b) BOOL strictness — rejects nonzero varints other than 1.
+#   (b) Repeated-scalar / oneof merge semantics for unknown-tag tails.
 #   (c) JSON edge-case strictness — whitespace, overflow, WKT bounds.
 #
 # All real spec-conformance bugs; allowlisted so the harness lands green
@@ -63,19 +62,12 @@ Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.FLOAT
 Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED32
 Required.Proto2.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED64
 Required.Proto2.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
-Required.Proto2.ProtobufInput.RepeatedScalarSelectsLast.BOOL.ProtobufOutput
 Required.Proto2.ProtobufInput.RepeatedScalarSelectsLast.UINT32.ProtobufOutput
 Required.Proto2.ProtobufInput.UnknownVarint.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataOneof.MESSAGE.Merge.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataRepeated.BOOL.UnpackedInput.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataRepeated.UINT32.PackedInput.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataRepeated.UINT32.UnpackedInput.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataScalar.BOOL[2].ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataScalar.BOOL[3].ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataScalar.BOOL[4].ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataScalar.BOOL[5].ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataScalar.BOOL[6].ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataScalar.ENUM[0].ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataScalar.UINT32[3].ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataScalar.UINT32[8].ProtobufOutput
@@ -118,8 +110,6 @@ Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED32
 Required.Proto3.ProtobufInput.PrematureEofInsideUnknownValue.SFIXED64
 Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.JsonOutput
 Required.Proto3.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
-Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.BOOL.JsonOutput
-Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.BOOL.ProtobufOutput
 Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.UINT32.JsonOutput
 Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.UINT32.ProtobufOutput
 Required.Proto3.ProtobufInput.UnknownVarint.ProtobufOutput
@@ -127,22 +117,10 @@ Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.JsonOutput
 Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.JsonOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.UnpackedInput.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.UnpackedInput.ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.UINT32.PackedInput.JsonOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.UINT32.PackedInput.ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.UINT32.UnpackedInput.JsonOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.UINT32.UnpackedInput.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[2].JsonOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[2].ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[3].JsonOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[3].ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[4].JsonOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[4].ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[5].JsonOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[5].ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[6].JsonOutput
-Required.Proto3.ProtobufInput.ValidDataScalar.BOOL[6].ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataScalar.UINT32[3].JsonOutput
 Required.Proto3.ProtobufInput.ValidDataScalar.UINT32[3].ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataScalar.UINT32[8].JsonOutput

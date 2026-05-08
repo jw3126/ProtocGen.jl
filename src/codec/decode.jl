@@ -23,7 +23,12 @@ function decode(d::AbstractProtoDecoder, ::Type{T}, ::Type{Val{:zigzag}}) where 
     z = zigzag_decode(v)
     return reinterpret(T, z)
 end
-decode(d::AbstractProtoDecoder, ::Type{Bool}) = Bool(read(get_stream(d), UInt8))
+# Bool wire format: a varint where 0 → false, any non-zero → true.
+# Spec is unambiguous on the "any non-zero" part; senders are also
+# allowed to write the varint in non-canonical (oversized, up to 10
+# bytes) form. Read as a UInt64 varint and check zero, matching what
+# the `Int32`/`Enum` decoders already do for their values.
+decode(d::AbstractProtoDecoder, ::Type{Bool}) = vbyte_decode(get_stream(d), UInt64) != zero(UInt64)
 function decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Enum{Int32},Enum{UInt32}}}
     # protoc sign-extends negative enum values to int64 on the wire (10-byte
     # varint). Read as UInt64 then truncate so we consume the full payload.
