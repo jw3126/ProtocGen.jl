@@ -58,6 +58,7 @@ const DESCRIPTOR_SETS = [
     "maps_fx.proto",
     "test_messages_proto2_patched.proto",
     "test_messages_proto3_patched.proto",
+    "unittest_well_known_types.proto",
 ]
 
 function find_protoc()

@@ -136,6 +136,18 @@ end
     f = response.file[1]
     @test f.name == "test_messages_proto3_patched_pb.jl"
 
+    # The proto3 patched file is now near-verbatim upstream — the only
+    # remaining patch is the AliasedEnum block. WKT-typed fields and
+    # recursive_message / corecursive are restored, exercising the
+    # Phase 7b/7c path: cross-package import emission, recursion via
+    # abstract supertypes, and forwarding decode methods.
+    @test occursin("import ProtoBufDescriptors.google.protobuf as google_protobuf",
+                   f.content)
+    @test occursin("optional_timestamp::Union{Nothing,google_protobuf.Timestamp}",
+                   f.content)
+    @test occursin("recursive_message::Union{Nothing,AbstractTestAllTypesProto3}",
+                   f.content)
+
     p3 = eval_generated(f.content, :GeneratedConfP3)
     M = p3.TestAllTypesProto3
 

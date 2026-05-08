@@ -68,7 +68,20 @@ Base.@kwdef struct Universe
     jl_names::Dict{String,String}  # FQN -> Julia identifier ("Outer" or var"Outer.Inner")
     enum_defs::Dict{String,EnumDescriptorProto}  # FQN -> the enum's descriptor
     map_entries::Dict{String,DescriptorProto}    # FQN -> map_entry synthetic message
+    package_of::Dict{String,String}              # FQN -> proto package ("google.protobuf")
 end
+
+# Map from proto package name to Julia module path. Cross-package references
+# in generated code are emitted as `<alias>.<TypeName>` and the file head
+# carries `import <julia_module> as <alias>` per package, where <alias> is
+# the package name with dots → underscores. The WKT entry is hardcoded;
+# real users with multi-package proto trees will eventually configure this
+# via a plugin parameter (Phase 7c+ / Phase 11).
+const WKT_PACKAGE_MAP = Dict{String,String}(
+    "google.protobuf" => "ProtoBufDescriptors.google.protobuf",
+)
+
+_package_alias(pkg::String) = replace(pkg, "." => "_")
 
 # Per-file context. Tables come from the shared universe; only `package`,
 # `syntax`, and `cycle` are file-local. The `messages`/`enums`/etc. fields
@@ -86,6 +99,7 @@ Base.@kwdef struct LocalNames
     jl_names::Dict{String,String}
     enum_defs::Dict{String,EnumDescriptorProto}
     map_entries::Dict{String,DescriptorProto}
+    package_of::Dict{String,String}  # FQN -> proto package
     cycle::Set{String} = Set{String}()  # message FQNs in a recursion cycle
 end
 
@@ -104,6 +118,7 @@ function _add_file_to_universe!(u::Universe, file::FileDescriptorProto)
         jl_name = isempty(parent_jl) ? something(msg.name, "") : string(parent_jl, ".", something(msg.name, ""))
         push!(u.messages, proto_name)
         u.jl_names[proto_name] = jl_name
+        u.package_of[proto_name] = package
         if _is_map_entry(msg)
             u.map_entries[proto_name] = msg
         end
@@ -117,6 +132,7 @@ function _add_file_to_universe!(u::Universe, file::FileDescriptorProto)
             push!(u.enums, efqn)
             u.jl_names[efqn] = ejl
             u.enum_defs[efqn] = e
+            u.package_of[efqn] = package
         end
     end
 
@@ -129,6 +145,7 @@ function _add_file_to_universe!(u::Universe, file::FileDescriptorProto)
         push!(u.enums, efqn)
         u.jl_names[efqn] = ename
         u.enum_defs[efqn] = e
+        u.package_of[efqn] = package
     end
     return u
 end
@@ -144,6 +161,7 @@ function gather_universe(files)
         jl_names = Dict{String,String}(),
         enum_defs = Dict{String,EnumDescriptorProto}(),
         map_entries = Dict{String,DescriptorProto}(),
+        package_of = Dict{String,String}(),
     )
     for f in files
         _add_file_to_universe!(u, f)
@@ -162,6 +180,7 @@ function _make_local_names(universe::Universe, file::FileDescriptorProto)
         jl_names = universe.jl_names,
         enum_defs = universe.enum_defs,
         map_entries = universe.map_entries,
+        package_of = universe.package_of,
     )
 end
 
@@ -186,7 +205,21 @@ function _resolve_typename(type_name::String, names::LocalNames)
     # member, so neither can be defined first concretely. The abstract
     # types are emitted upfront and a forwarding `decode(d, ::AbstractX)`
     # method routes back to the concrete type.
-    return type_name in names.cycle ? _abstract_name(base) : base
+    if type_name in names.cycle
+        return _abstract_name(base)
+    end
+    # Cross-package: qualify with the imported alias. A user file
+    # importing `google/protobuf/timestamp.proto` references
+    # `.google.protobuf.Timestamp` which lives in package
+    # `google.protobuf`; that package gets its alias `google_protobuf`,
+    # and the type renders as `google_protobuf.Timestamp`. The file head
+    # carries the matching `import ... as google_protobuf`. Within the
+    # same package, refs stay bare.
+    pkg = get(names.package_of, type_name, "")
+    if !isempty(pkg) && pkg != names.package
+        return string(_package_alias(pkg), ".", base)
+    end
+    return base
 end
 
 # Map a concrete generated type name to the abstract supertype name we
@@ -1056,6 +1089,37 @@ end
 # File emission.
 # ----------------------------------------------------------------------------
 
+# Collect every proto package referenced from `file` that is *not* the
+# current file's own package. These map 1:1 to `import ... as <alias>`
+# lines emitted at the top of the generated file.
+function _collect_cross_packages(file::FileDescriptorProto, names::LocalNames)
+    pkgs = Set{String}()
+    function visit_msg(msg::DescriptorProto)
+        # Map entry types are emitted inline as OrderedDict; their key/
+        # value type refs need to flow through the same cross-package
+        # check. We re-resolve via the FQN so map<K,V> with a V from
+        # another package qualifies its V.
+        for f in msg.field
+            tn = something(f.type_name, "")
+            isempty(tn) && continue
+            pkg = get(names.package_of, tn, "")
+            if !isempty(pkg) && pkg != names.package
+                push!(pkgs, pkg)
+            end
+            # Map entry messages are children of `msg` but their fields'
+            # type_names also need scanning. The recursive `nested_type`
+            # walk below handles them.
+        end
+        for nested in msg.nested_type
+            visit_msg(nested)
+        end
+    end
+    for msg in file.message_type
+        visit_msg(msg)
+    end
+    return pkgs
+end
+
 codegen(file::FileDescriptorProto) = codegen(file, gather_universe([file]))
 
 function codegen(file::FileDescriptorProto, universe::Universe)
@@ -1069,6 +1133,26 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     println(io, "import ProtoBufDescriptors as PB")
     println(io, "using ProtoBufDescriptors: OneOf, OrderedDict")
     println(io, "using ProtoBufDescriptors.EnumX: @enumx")
+
+    # Cross-package imports. Walk the file's referenced FQNs to find
+    # external packages, look each up in the package map, and emit
+    # `import <julia_module> as <alias>` so `_resolve_typename` can
+    # render cross-package refs as `<alias>.<TypeName>`. WKTs are the
+    # only entries in the map today; user packages need a plugin
+    # parameter (Phase 7c+ / Phase 11).
+    cross_packages = _collect_cross_packages(file, names)
+    if !isempty(cross_packages)
+        println(io)
+        for pkg in sort!(collect(cross_packages))
+            haskey(WKT_PACKAGE_MAP, pkg) || error(
+                "codegen: proto package `$(pkg)` is referenced from $(proto_name) " *
+                "but has no entry in WKT_PACKAGE_MAP. Add a mapping or extend " *
+                "the map with a plugin parameter (not yet supported).",
+            )
+            jlmod = WKT_PACKAGE_MAP[pkg]
+            println(io, "import ", jlmod, " as ", _package_alias(pkg))
+        end
+    end
     println(io)
 
     # Export every top-level message and enum so `using <module>` reaches
@@ -1102,6 +1186,7 @@ function codegen(file::FileDescriptorProto, universe::Universe)
         jl_names = names.jl_names,
         enum_defs = names.enum_defs,
         map_entries = names.map_entries,
+        package_of = names.package_of,
         cycle = cycle_participants,
     )
     # Forward `abstract type` for every cycle participant so the structs

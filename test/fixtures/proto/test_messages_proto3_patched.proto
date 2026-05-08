@@ -1,37 +1,16 @@
-// PATCHED COPY of Google's proto3 conformance test message.
+// Near-verbatim copy of Google's `test_messages_proto3.proto` (matching
+// the version vendored in ProtoBuf.jl@master). The only deviation from
+// upstream is the removal of `AliasedEnum` (uses `option allow_alias =
+// true;` — multiple names mapping to the same number, which `EnumX`
+// does not support) and the field that referenced it
+// (`optional_aliased_enum = 23`). Specifically:
 //
-// Source: github.com/protocolbuffers/protobuf
-//   src/google/protobuf/test_messages_proto3.proto
-//   (matches the version vendored in ProtoBuf.jl@master/test/test_protos/google/
-//   protobuf/test_messages_proto3.proto)
+//   - lines 77-86 of upstream: `enum AliasedEnum { option allow_alias = true; ... }`
+//   - line  110 of upstream: `AliasedEnum optional_aliased_enum = 23;`
 //
-// Removed (relative to upstream) — all features deferred or out of scope for
-// ProtoBufDescriptors v1:
-//   - well-known type imports + every WKT-typed field
-//       lines  48-53: `import "google/protobuf/{any,duration,field_mask,
-//                      struct,timestamp,wrappers}.proto"`
-//       line  206: `google.protobuf.NullValue oneof_null_value = 120;`
-//       lines 210-228: optional/repeated wrappers (BoolValue/Int32Value/...)
-//       lines 230-244: optional/repeated Duration/Timestamp/FieldMask/Struct/
-//                      Any/Value/NullValue/ListValue
-//   - recursive / co-recursive messages (codegen does not yet handle cycles)
-//       line  67: `TestAllTypesProto3 corecursive = 2;` inside NestedMessage
-//       line 115: `TestAllTypesProto3 recursive_message = 27;`
-//   - `AliasedEnum` (uses `option allow_alias = true;` — multiple values
-//                    map to the same number; @enumx does not support that)
-//       lines  77-86, 110: enum + the field that referenced it
-//
-// Everything else is unchanged. Field numbers, names, types, reserved ranges,
-// and `option ...` lines are preserved verbatim so this file round-trips
-// against upstream wire bytes.
-//
-// Note: in proto3 these fields lack the `optional` keyword, so they have
-// implicit (no-presence) semantics — scalar zero is indistinguishable from
-// unset, matching upstream. This file therefore does NOT exercise our
-// proto3 explicit-`optional` codepath; that is covered by `sample.proto`
-// and `test_presence.jl`.
-//
-// Original copyright header preserved below.
+// All WKT references and recursive_message / corecursive are preserved
+// — Phase 7b/7c make those work end-to-end. Original copyright header
+// preserved below.
 
 // Protocol Buffers - Google's data interchange format
 // Copyright 2008 Google Inc.  All rights reserved.
@@ -62,6 +41,13 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Test schema for proto3 messages.  This test schema is used by:
+//
+// - benchmarks
+// - fuzz tests
+// - conformance tests
+//
 
 syntax = "proto3";
 
@@ -69,15 +55,30 @@ package protobuf_test_messages.proto3;
 
 option java_package = "com.google.protobuf_test_messages.proto3";
 option objc_class_prefix = "Proto3";
+
+// This is the default, but we specify it here explicitly.
 option optimize_for = SPEED;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
 option cc_enable_arenas = true;
 
-// PATCH: removed imports of any/duration/field_mask/struct/timestamp/wrappers.
-
+// This proto includes every type of field in both singular and repeated
+// forms.
+//
+// Also, crucially, all messages and enums in this file are eventually
+// submessages of this message.  So for example, a fuzz test of TestAllTypes
+// could trigger bugs that occur in any message type in this file.  We verify
+// this stays true in a unit test.
 message TestAllTypesProto3 {
   message NestedMessage {
     int32 a = 1;
-    // PATCH: removed `TestAllTypesProto3 corecursive = 2;` (recursion).
+    TestAllTypesProto3 corecursive = 2;
   }
 
   enum NestedEnum {
@@ -87,7 +88,7 @@ message TestAllTypesProto3 {
     NEG = -1;  // Intentionally negative.
   }
 
-  // PATCH: removed `AliasedEnum` (option allow_alias).
+  // PATCH: removed `AliasedEnum` (option allow_alias unsupported by EnumX).
 
   // Singular
   int32 optional_int32 = 1;
@@ -116,7 +117,7 @@ message TestAllTypesProto3 {
   string optional_string_piece = 24 [ctype = STRING_PIECE];
   string optional_cord = 25 [ctype = CORD];
 
-  // PATCH: removed `TestAllTypesProto3 recursive_message = 27;` (recursion).
+  TestAllTypesProto3 recursive_message = 27;
 
   // Repeated
   repeated int32 repeated_int32 = 31;
@@ -207,11 +208,45 @@ message TestAllTypesProto3 {
     float oneof_float = 117;
     double oneof_double = 118;
     NestedEnum oneof_enum = 119;
-    // PATCH: removed `google.protobuf.NullValue oneof_null_value = 120;`.
+    google.protobuf.NullValue oneof_null_value = 120;
   }
 
-  // PATCH: removed `Well-known types` block (BoolValue/Int32Value/... wrappers,
-  // Duration, Timestamp, FieldMask, Struct, Any, Value, NullValue, ListValue).
+  // Well-known types
+  google.protobuf.BoolValue optional_bool_wrapper = 201;
+  google.protobuf.Int32Value optional_int32_wrapper = 202;
+  google.protobuf.Int64Value optional_int64_wrapper = 203;
+  google.protobuf.UInt32Value optional_uint32_wrapper = 204;
+  google.protobuf.UInt64Value optional_uint64_wrapper = 205;
+  google.protobuf.FloatValue optional_float_wrapper = 206;
+  google.protobuf.DoubleValue optional_double_wrapper = 207;
+  google.protobuf.StringValue optional_string_wrapper = 208;
+  google.protobuf.BytesValue optional_bytes_wrapper = 209;
+
+  repeated google.protobuf.BoolValue repeated_bool_wrapper = 211;
+  repeated google.protobuf.Int32Value repeated_int32_wrapper = 212;
+  repeated google.protobuf.Int64Value repeated_int64_wrapper = 213;
+  repeated google.protobuf.UInt32Value repeated_uint32_wrapper = 214;
+  repeated google.protobuf.UInt64Value repeated_uint64_wrapper = 215;
+  repeated google.protobuf.FloatValue repeated_float_wrapper = 216;
+  repeated google.protobuf.DoubleValue repeated_double_wrapper = 217;
+  repeated google.protobuf.StringValue repeated_string_wrapper = 218;
+  repeated google.protobuf.BytesValue repeated_bytes_wrapper = 219;
+
+  google.protobuf.Duration optional_duration = 301;
+  google.protobuf.Timestamp optional_timestamp = 302;
+  google.protobuf.FieldMask optional_field_mask = 303;
+  google.protobuf.Struct optional_struct = 304;
+  google.protobuf.Any optional_any = 305;
+  google.protobuf.Value optional_value = 306;
+  google.protobuf.NullValue optional_null_value = 307;
+
+  repeated google.protobuf.Duration repeated_duration = 311;
+  repeated google.protobuf.Timestamp repeated_timestamp = 312;
+  repeated google.protobuf.FieldMask repeated_fieldmask = 313;
+  repeated google.protobuf.Struct repeated_struct = 324;
+  repeated google.protobuf.Any repeated_any = 315;
+  repeated google.protobuf.Value repeated_value = 316;
+  repeated google.protobuf.ListValue repeated_list_value = 317;
 
   // Test field-name-to-JSON-name convention.
   // (protobuf says names can be any valid C/C++ identifier.)

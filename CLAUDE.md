@@ -262,7 +262,37 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   SourceContext; Api/Method/Mixin (cross-file Type refs); Struct/Value/
   ListValue with every Value.kind variant inside a nested ListValue
   (exercises the cycle).
-- 1630 / 1630 tests pass.
+- Phase 7c (cross-package import emission) lands the missing piece for
+  user-generated files that reference types from another proto package.
+  Codegen now tracks the package of every FQN in the universe, and
+  `_resolve_typename` qualifies cross-package refs as
+  `<package_alias>.<TypeName>` where the alias is the package name with
+  dots → underscores (`google.protobuf` → `google_protobuf`). The file
+  head carries an `import <julia_module> as <alias>` line per imported
+  package. The mapping from proto package → Julia module path is a
+  hardcoded `WKT_PACKAGE_MAP` for `google.protobuf` →
+  `ProtoBufDescriptors.google.protobuf`; user-defined packages would
+  need a plugin parameter (deferred until real users ask for it). The
+  hardcoded map is enough to consume any user proto that imports WKTs.
+- `test/test_corpus_wkt.jl` exercises the verbatim
+  `unittest_well_known_types.proto` from Google's golden corpus —
+  the first fully-verbatim corpus file in the suite. Fields like
+  `any_field`, `type_field`, `timestamp_field` resolve to
+  `google_protobuf.Any`, `google_protobuf.Type`,
+  `google_protobuf.Timestamp` etc., sidestepping the ambiguity with
+  `Core.Any` / `Core.Type` that broke the pre-Phase-7c attempt.
+- `test/fixtures/proto/test_messages_proto3_patched.proto` is now
+  near-verbatim upstream; the only patch is removing AliasedEnum (uses
+  `option allow_alias`, unsupported by EnumX). WKT-typed fields and
+  `recursive_message` / `corecursive` are restored. The conformance
+  test exercises both cross-package import (`google_protobuf.Timestamp`
+  etc.) and recursion (`recursive_message::Union{Nothing,
+  AbstractTestAllTypesProto3}`).
+- `unittest_proto3.proto` is still deferred (Phase 7c+ / 11) — it
+  imports another non-WKT package (`protobuf_unittest_import`) which
+  the hardcoded WKT map can't accommodate without a plugin parameter
+  or per-test map configuration.
+- 1658 / 1658 tests pass.
 
 ### Known bootstrap caveats
 
