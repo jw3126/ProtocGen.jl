@@ -217,8 +217,15 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
             _encode_json_value(io, o.value)
             continue
         end
-        # proto3 emits non-default-valued fields only by default.
-        _is_json_default(v) && continue
+        # Default-skip applies to plain proto3 scalars (typed bare).
+        # Presence-bearing fields (`Union{Nothing,X}` — proto3 explicit
+        # `optional`, proto2 `optional`, singular submessages) carry
+        # presence: a non-`nothing` value is always emitted, even if it
+        # equals the type's default (`""`, `0`, `false`, etc.). The
+        # `nothing` case was already filtered above.
+        if !_field_is_presence_bearing(T, jl_name) && _is_json_default(v)
+            continue
+        end
         json_key = getproperty(keys, jl_name)
         first || print(io, ',')
         first = false
@@ -228,6 +235,13 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
     end
     print(io, '}')
     return nothing
+end
+
+# A field is presence-bearing iff its declared type is `Union{Nothing, X}`
+# — i.e., codegen typed it that way to capture set-vs-unset.
+@inline function _field_is_presence_bearing(::Type{T}, name::Symbol) where {T}
+    ft = fieldtype(T, name)
+    return ft isa Union && Nothing <: ft
 end
 
 # Skip-on-default predicate. Mirrors protoc's default emission policy:

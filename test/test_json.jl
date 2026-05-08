@@ -130,6 +130,22 @@ end
         @test _parsed(_make(T)) == Dict{String,Any}()
     end
 
+    @testset "presence is preserved on JSON encode even at default value" begin
+        # FieldDescriptorProto.name :: Union{Nothing,String}. Setting it
+        # to "" is presence-asserted (different from unset = nothing)
+        # and MUST emit on JSON per the protobuf spec. The Phase 12a
+        # default-skip predicate would otherwise drop it; the fix in
+        # `_encode_json_message` is to disable default-skip for fields
+        # whose declared type is `Union{Nothing,X}`.
+        f_set   = _make(_G.FieldDescriptorProto; name = "")
+        f_unset = _make(_G.FieldDescriptorProto)  # name stays nothing
+        @test  haskey(_parsed(f_set),   "name") && _parsed(f_set)["name"]   == ""
+        @test !haskey(_parsed(f_unset), "name")
+        # Round-trip preserves the empty-string presence.
+        @test decode_json(_G.FieldDescriptorProto, encode_json(f_set)).name == ""
+        @test decode_json(_G.FieldDescriptorProto, encode_json(f_unset)).name === nothing
+    end
+
     @testset "JSON null on a presence-bearing field → use default" begin
         back = decode_json(_G.FieldDescriptorProto,
             "{\"name\": \"foo\", \"number\": null}")

@@ -7,8 +7,9 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (279 total — 188 binary inherited from Phase 9, +91 JSON
-# added once the testee started running JSON tests in Phase 12d):
+# Categories (278 total — 188 binary inherited from Phase 9, +91 JSON
+# added in Phase 12d, −1 fixed by the proto3-explicit-optional
+# presence-on-default-value JSON encode fix):
 #
 #   * Binary (Phase 9 baseline, 188 cases):
 #     - 111 ValidDataMap.*: empty entry handling (MissingDefault),
@@ -32,8 +33,8 @@
 #       (overflow handling), Duration / Timestamp Json input
 #       Too{Large,Small}, OneofFieldDuplicate, ValueAcceptNull,
 #       AnyNested, RepeatedFieldWrongElementType, EnumFieldUnknownValue.
-#     - StoresDefaultPrimitive.Validator: round-trips the value but
-#       diverges on the Validator step that compares against expected.
+#     - (StoresDefaultPrimitive.Validator was here pre-fix — passes now
+#       that explicit-optional fields with a default value emit on JSON.)
 #
 # The underlying gaps stayed the same:
 #
@@ -59,7 +60,6 @@
 #
 Required.DurationProtoInputTooLarge.JsonOutput
 Required.DurationProtoInputTooSmall.JsonOutput
-Required.Proto2.JsonInput.StoresDefaultPrimitive.Validator
 Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_0
 Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_1
 Required.Proto2.ProtobufInput.IllegalZeroFieldNum_Case_2
