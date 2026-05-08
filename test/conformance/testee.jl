@@ -78,6 +78,8 @@ const MESSAGE_TYPE = Dict{String,Type}(
 )
 
 const WF_PROTOBUF = Conf.WireFormat.PROTOBUF
+const WF_JSON     = Conf.WireFormat.JSON
+const TC_JSON_IGNORE_UNKNOWN = Conf.TestCategory.JSON_IGNORE_UNKNOWN_PARSING_TEST
 
 function read_le_uint32(io)::Union{Nothing,UInt32}
     bs = read(io, 4)
@@ -125,14 +127,14 @@ function handle_request(req)
         return Conf.ConformanceResponse(PBD.OneOf(:parse_error, "no payload in request"))
     end
 
-    if payload.name !== :protobuf_payload
+    # JSPB / TEXT_FORMAT input remain skipped; binary and JSON we handle.
+    if !(payload.name in (:protobuf_payload, :json_payload))
         return skipped_response(
-            "input format $(payload.name) not supported by ProtoBufDescriptors v1 (binary only)")
+            "input format $(payload.name) not supported by ProtoBufDescriptors v1 (binary + JSON only)")
     end
-
-    if req.requested_output_format != WF_PROTOBUF
+    if !(req.requested_output_format in (WF_PROTOBUF, WF_JSON))
         return skipped_response(
-            "output format $(req.requested_output_format) not supported by ProtoBufDescriptors v1 (binary only)")
+            "output format $(req.requested_output_format) not supported by ProtoBufDescriptors v1 (binary + JSON only)")
     end
 
     T = get(MESSAGE_TYPE, req.message_type, nothing)
@@ -141,19 +143,34 @@ function handle_request(req)
             "unknown message_type: $(req.message_type)"))
     end
 
+    # ---- Parse ----
     msg = try
-        pb_decode(T, payload.value)
+        if payload.name === :protobuf_payload
+            pb_decode(T, payload.value)
+        else
+            ignore_unknown = req.test_category == TC_JSON_IGNORE_UNKNOWN
+            PBD.decode_json(T, payload.value; ignore_unknown_fields = ignore_unknown)
+        end
     catch e
         return Conf.ConformanceResponse(PBD.OneOf(:parse_error, sprint(showerror, e)))
     end
 
-    out = try
-        pb_encode(msg)
-    catch e
-        return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)))
+    # ---- Serialize ----
+    if req.requested_output_format == WF_PROTOBUF
+        bytes = try
+            pb_encode(msg)
+        catch e
+            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)))
+        end
+        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, bytes))
+    else  # WF_JSON
+        json = try
+            PBD.encode_json(msg)
+        catch e
+            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)))
+        end
+        return Conf.ConformanceResponse(PBD.OneOf(:json_payload, json))
     end
-
-    return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, out))
 end
 
 function main()

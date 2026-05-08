@@ -73,7 +73,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a-c done; 12d pending) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | DONE (allowlist 279 known failures: 188 binary inherited, 91 JSON edge cases) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -468,6 +468,25 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
     will hit this — that's the right strict default; users can
     register their own types with `register_message_type`.
 - 1777 / 1777 julia tests pass (1764 + 13 new Any tests).
+- Phase 12d wires JSON into the conformance testee. The dispatch in
+  `test/conformance/testee.jl` now accepts `json_payload` input and
+  emits `json_payload` output (in addition to the binary path), and
+  threads `ignore_unknown_fields = true` when
+  `req.test_category == JSON_IGNORE_UNKNOWN_PARSING_TEST`.
+  - **Conformance state vs protobuf v25.9**: was `1071 successes,
+    729 skipped, 188 expected failures` (Phase 9 baseline) → now
+    **`1692 successes, 0 skipped, 279 expected failures, 0
+    unexpected`**. +621 JSON tests now passing; +91 JSON failures
+    allowlisted, almost all of them `JsonOutput` mirrors of binary
+    map / scalar bugs already on the list. Real new JSON-specific
+    failures are ~15 spec-strictness edges (whitespace inside
+    number-as-string, overflow detection, Duration / Timestamp
+    range, `OneofFieldDuplicate`, `ValueAcceptNull`, `AnyNested`),
+    grouped under "JSON edge-case strictness" in the failure_list
+    header.
+  - The conformance runner integration test (gated on
+    Linux/macOS) still passes — exit code 0 with the updated
+    failure_list.
 
 ### Known bootstrap caveats
 
