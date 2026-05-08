@@ -1,17 +1,3 @@
-// Near-verbatim copy of Google's `test_messages_proto3.proto` (matching
-// the version vendored in ProtoBuf.jl@master). The only deviation from
-// upstream is the removal of `AliasedEnum` (uses `option allow_alias =
-// true;` — multiple names mapping to the same number, which `EnumX`
-// does not support) and the field that referenced it
-// (`optional_aliased_enum = 23`). Specifically:
-//
-//   - lines 77-86 of upstream: `enum AliasedEnum { option allow_alias = true; ... }`
-//   - line  110 of upstream: `AliasedEnum optional_aliased_enum = 23;`
-//
-// All WKT references and recursive_message / corecursive are preserved
-// — Phase 7b/7c make those work end-to-end. Original copyright header
-// preserved below.
-
 // Protocol Buffers - Google's data interchange format
 // Copyright 2008 Google Inc.  All rights reserved.
 // https://developers.google.com/protocol-buffers/
@@ -88,7 +74,16 @@ message TestAllTypesProto3 {
     NEG = -1;  // Intentionally negative.
   }
 
-  // PATCH: removed `AliasedEnum` (option allow_alias unsupported by EnumX).
+  enum AliasedEnum {
+    option allow_alias = true;
+
+    ALIAS_FOO = 0;
+    ALIAS_BAR = 1;
+    ALIAS_BAZ = 2;
+    MOO = 2;
+    moo = 2;
+    bAz = 2;
+  }
 
   // Singular
   int32 optional_int32 = 1;
@@ -112,7 +107,7 @@ message TestAllTypesProto3 {
 
   NestedEnum optional_nested_enum = 21;
   ForeignEnum optional_foreign_enum = 22;
-  // PATCH: removed `AliasedEnum optional_aliased_enum = 23;`.
+  AliasedEnum optional_aliased_enum = 23;
 
   string optional_string_piece = 24 [ctype = STRING_PIECE];
   string optional_cord = 25 [ctype = CORD];

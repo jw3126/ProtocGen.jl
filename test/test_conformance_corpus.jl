@@ -128,28 +128,41 @@ end
 
 @testset "conformance corpus — proto3" begin
     response = run_codegen(
-        "test_messages_proto3_patched.pb",
-        ["test_messages_proto3_patched.proto"],
+        "test_messages_proto3.pb",
+        ["test_messages_proto3.proto"],
     )
     @test response.error === nothing
     @test length(response.file) == 1
     f = response.file[1]
-    @test f.name == "test_messages_proto3_patched_pb.jl"
+    @test f.name == "test_messages_proto3_pb.jl"
 
-    # The proto3 patched file is now near-verbatim upstream — the only
-    # remaining patch is the AliasedEnum block. WKT-typed fields and
-    # recursive_message / corecursive are restored, exercising the
-    # Phase 7b/7c path: cross-package import emission, recursion via
-    # abstract supertypes, and forwarding decode methods.
+    # The proto3 conformance file is now verbatim upstream. AliasedEnum
+    # uses `option allow_alias = true;` — codegen emits the canonical
+    # names via @enumx and the aliases as `const`s inside the enum
+    # module, all binding to the same enum *instance*. The other
+    # features under test: cross-package import emission for WKT-typed
+    # fields, abstract supertype + forwarding decode for the
+    # `recursive_message` / `corecursive` cycle.
     @test occursin("import ProtoBufDescriptors.google.protobuf as google_protobuf",
                    f.content)
     @test occursin("optional_timestamp::Union{Nothing,google_protobuf.Timestamp}",
                    f.content)
     @test occursin("recursive_message::Union{Nothing,AbstractTestAllTypesProto3}",
                    f.content)
+    @test occursin("@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
+                   f.content)
+    @test occursin("Core.eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
+                   f.content)
 
     p3 = eval_generated(f.content, :GeneratedConfP3)
     M = p3.TestAllTypesProto3
+    AE = p3.var"TestAllTypesProto3.AliasedEnum"
+    # Aliases bind to the same instance as the canonical name.
+    @test AE.MOO === AE.ALIAS_BAZ
+    @test AE.moo === AE.ALIAS_BAZ
+    @test AE.bAz === AE.ALIAS_BAZ
+    # Display canonicalizes (`Symbol(MOO)` returns `:ALIAS_BAZ`).
+    @test Symbol(AE.MOO) === :ALIAS_BAZ
 
     @test ProtoBufDescriptors.reserved_fields(M) ==
         (names = String[], numbers = Union{Int,UnitRange{Int}}[501:510])
@@ -184,6 +197,10 @@ end
     @test full.optional_foreign_message.c == Int32(99)
     @test full.optional_nested_enum  == p3.var"TestAllTypesProto3.NestedEnum".NEG
     @test full.optional_foreign_enum == p3.ForeignEnum.FOREIGN_BAR
+    # Aliased enum: txtpb sets the field to `MOO`, which is an alias for
+    # `ALIAS_BAZ`. Decoded value is the canonical instance.
+    @test full.optional_aliased_enum === AE.ALIAS_BAZ
+    @test full.optional_aliased_enum === AE.MOO   # by definition of the alias
 
     # Repeated.
     @test full.repeated_int32 == Int32[1, 2, 3]

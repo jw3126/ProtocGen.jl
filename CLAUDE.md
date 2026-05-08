@@ -308,7 +308,16 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   abstract emission — that's how `test_messages_proto3.proto`'s
   `NestedMessage.corecursive::TestAllTypesProto3` and
   `struct.proto`'s `Value ↔ Struct ↔ ListValue` cycle are handled.
-- 1658 / 1658 tests pass.
+- `option allow_alias = true;` on enums is supported (Phase 9): the
+  first occurrence of each numeric value is the canonical name and goes
+  into the `@enumx` declaration; subsequent names with the same number
+  are emitted as `Core.eval(EnumMod, :(const Alias = Canonical))` lines
+  inside the enum's baremodule. `Foo.Alias === Foo.Canonical` and
+  `Symbol(Foo.Alias)` returns the canonical name (matching protoc's
+  display behavior). With this in place,
+  `test/fixtures/proto/test_messages_proto3.proto` ships verbatim
+  upstream — the `_patched` suffix is gone.
+- 1666 / 1666 tests pass.
 
 ### Known bootstrap caveats
 

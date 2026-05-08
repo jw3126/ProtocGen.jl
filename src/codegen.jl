@@ -971,8 +971,44 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String)
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
-    members = join((string(something(v.name, ""), "=", Int(something(v.number, Int32(0)))) for v in e.value), " ")
+
+    allow_alias = e.options !== nothing && e.options.allow_alias === true
+    if !allow_alias
+        members = join((string(something(v.name, ""), "=", Int(something(v.number, Int32(0)))) for v in e.value), " ")
+        println(io, "@enumx ", jl_name, " ", members)
+        println(io)
+        return
+    end
+
+    # `option allow_alias = true;` lets multiple symbolic names map to the
+    # same numeric value. EnumX (like Julia's `@enum`) rejects duplicates,
+    # so we partition: the *first* name per number is canonical and goes
+    # into the `@enumx` declaration; subsequent names with the same number
+    # are emitted as `const`s inside the enum module via `eval`. They
+    # bind to the same enum *instance* as the canonical, so
+    # `Foo.MOO === Foo.ALIAS_BAZ` and `Symbol(Foo.MOO)` returns
+    # `:ALIAS_BAZ` (canonical wins on display, matching protoc).
+    seen = Dict{Int,String}()  # number -> canonical name
+    canonicals = Tuple{String,Int}[]
+    aliases = Tuple{String,String}[]  # (alias, canonical)
+    for v in e.value
+        vname = something(v.name, "")
+        vnum = Int(something(v.number, Int32(0)))
+        if haskey(seen, vnum)
+            push!(aliases, (vname, seen[vnum]))
+        else
+            seen[vnum] = vname
+            push!(canonicals, (vname, vnum))
+        end
+    end
+    members = join((string(n, "=", num) for (n, num) in canonicals), " ")
     println(io, "@enumx ", jl_name, " ", members)
+    # `Core.eval(Mod, expr)` rather than `Mod.eval(expr)` because EnumX
+    # builds the enum module as a `baremodule`, which doesn't import
+    # `Base.eval`.
+    for (alias, canonical) in aliases
+        println(io, "Core.eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
+    end
     println(io)
 end
 

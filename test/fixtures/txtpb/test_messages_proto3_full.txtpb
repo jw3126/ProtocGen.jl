@@ -23,6 +23,7 @@ optional_foreign_message { c: 99 }
 
 optional_nested_enum: NEG
 optional_foreign_enum: FOREIGN_BAR
+optional_aliased_enum: MOO  # alias for ALIAS_BAZ — wire value 2
 
 optional_string_piece: "piece"
 optional_cord: "cord"
