@@ -7,57 +7,37 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (277 total — 188 binary inherited from Phase 9, +91 JSON
-# added in Phase 12d, −1 fixed by the proto3-explicit-optional
-# presence-on-default-value JSON encode fix, −1 unblocked by restoring
-# proto2 corecursive / recursive_message in the corpus):
+# Categories (112 total — was 277 before the map-entry decoder fix,
+# which cleared all 165 ValidDataMap.* cases):
 #
-#   * Binary (Phase 9 baseline, 188 cases):
-#     - 111 ValidDataMap.*: empty entry handling (MissingDefault),
-#       duplicate key/value within an entry (DuplicateKey/Value), and
-#       value-before-key field order (Unordered) — all rejected by our
-#       codec's strict map-entry decoder.
-#     -  17 ValidDataScalar.*: BOOL with a varint payload >1 not
-#       accepted as `true` (spec: any non-zero is true); proto2 ENUM
-#       zero-default drop; UINT32 wire edge cases.
-#     -  ~30 PrematureEof* / IllegalZeroFieldNum_*: malformed inputs
-#       the spec wants rejected — we silently accept and skip.
-#     -  rest: RepeatedScalar*, UnknownVarint, ValidDataOneof tail.
+#   * ~30 PrematureEof* / IllegalZeroFieldNum_*: malformed binary inputs
+#     the spec wants rejected; our codec silently accepts and skips.
+#     Same gap shows up as "JsonOutput" mirrors when the malformed
+#     binary feeds a JSON output request.
 #
-#   * JSON (Phase 12d, 91 new cases):
-#     - ~70 JsonOutput mirrors of the binary failures above (same
-#       root-cause map / scalar bugs, just routed through the JSON
-#       output path).
-#     - ~15 JSON-input edge cases not exercised by the binary path:
-#       Int32FieldLeadingSpace / TrailingSpace (whitespace inside
-#       number-as-string strings), Float/Double FieldTooLarge / TooSmall
-#       (overflow handling), Duration / Timestamp Json input
-#       Too{Large,Small}, OneofFieldDuplicate, ValueAcceptNull,
-#       AnyNested, RepeatedFieldWrongElementType, EnumFieldUnknownValue.
-#     - (StoresDefaultPrimitive.Validator was here pre-fix — passes now
-#       that explicit-optional fields with a default value emit on JSON.)
+#   * ~17 ValidDataScalar.*: BOOL with a varint payload >1 not accepted
+#     as `true` (spec: any non-zero is true); proto2 ENUM zero-default
+#     drop; UINT32 wire edge cases.
 #
-# The underlying gaps stayed the same:
+#   * RepeatedScalarMessageMerge / RepeatedScalarSelectsLast (~6) and
+#     ValidDataOneof.MESSAGE.Merge / ValidDataRepeated tail (~10).
+#     Last-wins / merge-as-singular for repeated scalars / submessages
+#     when interleaved with unknowns.
 #
-#   (a) Lenient parser. Our codec accepts several malformed-input cases
-#       the spec wants rejected (premature EOF, illegal zero field
-#       number, oversized BOOL varints). Same gap shows up as both
-#       "Should have failed to parse, but didn't" (binary) and "JSON
-#       parse should have rejected …" (JSON).
+#   * JSON-input edges (~15): whitespace inside number-as-string,
+#     Float / Double overflow, Duration / Timestamp range, AnyNested,
+#     ValueAcceptNull, OneofFieldDuplicate, RepeatedFieldWrongElementType,
+#     EnumFieldUnknownValue.
 #
-#   (b) Map-entry edge cases. The synthetic *Entry message decoder
-#       asserts position-equality at end-of-entry and EOFs on a
-#       zero-length entry. Spec allows missing key/value (use
-#       defaults), duplicate fields (last-wins), arbitrary field order.
+# The underlying gaps:
 #
-#   (c) JSON edge-case strictness. Whitespace inside number-as-string
-#       fields, overflow detection, and a few WKT input boundaries
-#       (Duration / Timestamp range) need explicit rejection paths in
-#       the JSON walker.
+#   (a) Lenient parser — accepts malformed inputs the spec rejects.
+#   (b) BOOL strictness — rejects nonzero varints other than 1.
+#   (c) JSON edge-case strictness — whitespace, overflow, WKT bounds.
 #
-# All three are real spec-conformance bugs; Phase 9 + 12d allowlist
-# them so the harness lands green and any *new* failure surfaces as a
-# regression. They are tracked for a follow-up codec pass.
+# All real spec-conformance bugs; allowlisted so the harness lands green
+# and any *new* failure surfaces as a regression. Tracked for follow-up
+# codec passes.
 #
 Required.DurationProtoInputTooLarge.JsonOutput
 Required.DurationProtoInputTooSmall.JsonOutput
@@ -86,61 +66,6 @@ Required.Proto2.ProtobufInput.RepeatedScalarMessageMerge.ProtobufOutput
 Required.Proto2.ProtobufInput.RepeatedScalarSelectsLast.BOOL.ProtobufOutput
 Required.Proto2.ProtobufInput.RepeatedScalarSelectsLast.UINT32.ProtobufOutput
 Required.Proto2.ProtobufInput.UnknownVarint.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.BOOL.BOOL.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED32.FIXED32.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.FIXED64.FIXED64.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.DOUBLE.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.DOUBLE.Unordered.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.FLOAT.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.FLOAT.Unordered.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT32.INT32.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.INT64.INT64.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT32.SINT32.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.SINT64.SINT64.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.BYTES.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.Unordered.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.Unordered.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.STRING.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT32.UINT32.MissingDefault.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.UINT64.UINT64.MissingDefault.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataOneof.MESSAGE.Merge.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataRepeated.BOOL.UnpackedInput.ProtobufOutput
@@ -198,116 +123,6 @@ Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.BOOL.ProtobufOutput
 Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.UINT32.JsonOutput
 Required.Proto3.ProtobufInput.RepeatedScalarSelectsLast.UINT32.ProtobufOutput
 Required.Proto3.ProtobufInput.UnknownVarint.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.BOOL.BOOL.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED32.FIXED32.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.FIXED64.FIXED64.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.Unordered.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.DOUBLE.Unordered.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.Unordered.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.FLOAT.Unordered.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT32.INT32.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.INT64.INT64.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED32.SFIXED32.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SFIXED64.SFIXED64.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT32.SINT32.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.SINT64.SINT64.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.BYTES.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.Unordered.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.ENUM.Unordered.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.Unordered.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.MESSAGE.Unordered.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.STRING.STRING.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT32.UINT32.MissingDefault.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateKeyInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateKeyInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateValueInMapEntry.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.MissingDefault.JsonOutput
-Required.Proto3.ProtobufInput.ValidDataMap.UINT64.UINT64.MissingDefault.ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.JsonOutput
 Required.Proto3.ProtobufInput.ValidDataOneof.MESSAGE.Merge.ProtobufOutput
 Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.JsonOutput

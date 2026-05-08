@@ -33,30 +33,71 @@ function decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Enum{Int32
     return Core.bitcast(T, reinterpret(Int32, val))
 end
 decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Float64,Float32}} = read(get_stream(d), T)
+# ----------------------------------------------------------------------------
+# Map-entry decode.
+#
+# A map<K,V> field is wire-encoded as a `repeated` synthetic message whose
+# entries each carry an `optional K key = 1; optional V value = 2;`. Per the
+# spec the entry is a regular protobuf message — i.e., fields can appear in
+# either order, can repeat (last wins), and can be missing entirely (use
+# the type's default). We therefore loop over the entry's fields,
+# dispatching on field number, instead of expecting exactly two tags in
+# fixed order.
+# ----------------------------------------------------------------------------
+
+# Type-default for a map key/value cell. Scalars get their identity zero;
+# strings / bytes / enums get the obvious empty / numeric-zero forms;
+# message-typed values fall through to the helper below.
+@inline _map_default(::Type{T}) where {T<:Union{Float64,Float32,Int32,Int64,UInt32,UInt64,Bool}} = zero(T)
+@inline _map_default(::Type{String})              = ""
+@inline _map_default(::Type{Vector{UInt8}})       = UInt8[]
+@inline _map_default(::Type{T}) where {T<:Enum}   = T(0)
+
+# Default for a message-typed map value: the all-defaults instance,
+# obtained by running the type's own decoder against an empty buffer
+# (which writes every default and reads no bytes).
+@inline function _empty_message(::Type{T}) where {T}
+    return decode(ProtoDecoder(IOBuffer(UInt8[])), T, 0, false)
+end
+
 function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V<:_ScalarTypesEnum}
     io = get_stream(d)
     pair_len = vbyte_decode(io, UInt32)
     pair_end_pos = position(io) + pair_len
-    field_number, wire_type = decode_tag(d)
-    key = decode(d, K)
-    field_number, wire_type = decode_tag(d)
-    val = decode(d, V)
-    @assert position(io) == pair_end_pos
+    key = _map_default(K)
+    val = _map_default(V)
+    while position(io) < pair_end_pos
+        field_number, wire_type = decode_tag(d)
+        if field_number == 1
+            key = decode(d, K)
+        elseif field_number == 2
+            val = decode(d, V)
+        else
+            Base.skip(d, wire_type)
+        end
+    end
     buffer[key] = val
-    nothing
+    return nothing
 end
 
 function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V}
     io = get_stream(d)
     pair_len = vbyte_decode(io, UInt32)
     pair_end_pos = position(io) + pair_len
-    field_number, wire_type = decode_tag(d)
-    key = decode(d, K)
-    field_number, wire_type = decode_tag(d)
-    val = decode(d, Ref{V})
-    @assert position(io) == pair_end_pos
+    key = _map_default(K)
+    val = _empty_message(V)
+    while position(io) < pair_end_pos
+        field_number, wire_type = decode_tag(d)
+        if field_number == 1
+            key = decode(d, K)
+        elseif field_number == 2
+            val = decode(d, Ref{V})
+        else
+            Base.skip(d, wire_type)
+        end
+    end
     buffer[key] = val
-    nothing
+    return nothing
 end
 
 for T in (:(:fixed), :(:zigzag))
@@ -64,26 +105,40 @@ for T in (:(:fixed), :(:zigzag))
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
-        field_number, wire_type = decode_tag(d)
-        key = decode(d, K)
-        field_number, wire_type = decode_tag(d)
-        val = decode(d, V, Val{$(T)})
-        @assert position(io) == pair_end_pos
+        key = _map_default(K)
+        val = _map_default(V)
+        while position(io) < pair_end_pos
+            field_number, wire_type = decode_tag(d)
+            if field_number == 1
+                key = decode(d, K)
+            elseif field_number == 2
+                val = decode(d, V, Val{$(T)})
+            else
+                Base.skip(d, wire_type)
+            end
+        end
         buffer[key] = val
-        nothing
+        return nothing
     end
 
     @eval function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
-        field_number, wire_type = decode_tag(d)
-        key = decode(d, K, Val{$(T)})
-        field_number, wire_type = decode_tag(d)
-        val = decode(d, V)
-        @assert position(io) == pair_end_pos
+        key = _map_default(K)
+        val = _map_default(V)
+        while position(io) < pair_end_pos
+            field_number, wire_type = decode_tag(d)
+            if field_number == 1
+                key = decode(d, K, Val{$(T)})
+            elseif field_number == 2
+                val = decode(d, V)
+            else
+                Base.skip(d, wire_type)
+            end
+        end
         buffer[key] = val
-        nothing
+        return nothing
     end
 end
 
@@ -92,13 +147,20 @@ for T in (:(:fixed), :(:zigzag)), S in (:(:fixed), :(:zigzag))
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
-        field_number, wire_type = decode_tag(d)
-        key = decode(d, K, Val{$(T)})
-        field_number, wire_type = decode_tag(d)
-        val = decode(d, V, Val{$(S)})
-        @assert position(io) == pair_end_pos
+        key = _map_default(K)
+        val = _map_default(V)
+        while position(io) < pair_end_pos
+            field_number, wire_type = decode_tag(d)
+            if field_number == 1
+                key = decode(d, K, Val{$(T)})
+            elseif field_number == 2
+                val = decode(d, V, Val{$(S)})
+            else
+                Base.skip(d, wire_type)
+            end
+        end
         buffer[key] = val
-        nothing
+        return nothing
     end
 end
 
