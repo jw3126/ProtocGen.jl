@@ -60,6 +60,11 @@ function load_generated_modules()
     )
     out = Dict{String,Module}()
     for f in response.file
+        # Plugin also emits a `_pb_includes.jl` driver when more than
+        # one input is requested; the testee doesn't need it (we eval
+        # each output into its own anonymous module instead of using
+        # the driver).
+        haskey(name_for, f.name) || continue
         m = Module(name_for[f.name])
         Core.eval(m, Meta.parseall(f.content))
         out[f.name] = m

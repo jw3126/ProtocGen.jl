@@ -468,6 +468,31 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
     will hit this — that's the right strict default; users can
     register their own types with `register_message_type`.
 - 1777 / 1777 julia tests pass (1764 + 13 new Any tests).
+- Cross-package imports + driver file (no Phase number — drop-in
+  improvement to codegen):
+  - `Codegen._relative_import_path(from_pkg, to_pkg)` computes the
+    Julia leading-dot relative-import path between proto packages
+    (1 dot = current module, 2 dots = parent, …). Used as a
+    fallback for any cross-package reference not in
+    `WKT_PACKAGE_MAP` — so user packages no longer require a
+    runtime map entry.
+  - `Codegen.codegen_driver(file_to_generate, by_name)` emits a
+    `_pb_includes.jl` driver with two halves: an empty-module
+    skeleton matching the union of proto packages, then
+    `Core.include(_PB_ROOT.<pkg>, joinpath(_PB_DIR, …))` calls in
+    topological-dependency order. The user includes the driver
+    inside whatever wrapping module they want (e.g.
+    `module Services; include("…/_pb_includes.jl"); end`); the
+    skeleton + relative imports make the placement self-contained.
+    `_PB_DIR` / `_PB_ROOT` are captured at driver-load time so the
+    driver works regardless of cwd or where the user mounts it.
+  - The plugin emits `_pb_includes.jl` only when more than one
+    `.proto` is being generated (single-file requests still produce
+    one `_pb.jl` and nothing else).
+  - Validated end-to-end against the real toolpath/services schema
+    (23 .proto files across 6 packages including cross-package
+    refs) — the entire tree generates, loads, and round-trips
+    binary + JSON without any `WKT_PACKAGE_MAP` runtime hack.
 - Phase 12d wires JSON into the conformance testee. The dispatch in
   `test/conformance/testee.jl` now accepts `json_payload` input and
   emits `json_payload` output (in addition to the binary path), and

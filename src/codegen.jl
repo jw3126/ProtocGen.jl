@@ -83,6 +83,38 @@ const WKT_PACKAGE_MAP = Dict{String,String}(
 
 _package_alias(pkg::String) = replace(pkg, "." => "_")
 
+# Compute the Julia *relative* import path from the source proto package
+# `from_pkg` to the target proto package `to_pkg`, given that each proto
+# package is laid out as a nested Julia module hierarchy with the same
+# component names. The result is a leading-dotted dotted name suitable for
+# `import <result> as <alias>`.
+#
+# Mechanics: Julia's leading-dot convention is "1 dot = current module,
+# 2 dots = parent, …, N dots = N−1 levels up". So to reach a sibling
+# proto package, we go up to the deepest common ancestor (= length of
+# common prefix) and then descend into the target's remaining components.
+#
+#   from              to               result
+#   programs.jobs     assets.types     ...assets.types       (3 dots = up 2)
+#   programs.jobs     programs.types   ..types               (2 dots = up 1)
+#   common            programs.types   ..programs.types
+#   ""  (root)        programs.types   .programs.types       (1 dot = current)
+#
+# The same-package case (from_pkg == to_pkg) shouldn't arrive here at all
+# — codegen filters out self-references before computing imports.
+function _relative_import_path(from_pkg::AbstractString, to_pkg::AbstractString)
+    from_parts = isempty(from_pkg) ? String[] : split(String(from_pkg), '.')
+    to_parts   = isempty(to_pkg)   ? String[] : split(String(to_pkg),   '.')
+    common = 0
+    while common < length(from_parts) && common < length(to_parts) &&
+          from_parts[common + 1] == to_parts[common + 1]
+        common += 1
+    end
+    dots = (length(from_parts) - common) + 1
+    rest = join(@view(to_parts[common + 1:end]), '.')
+    return repeat('.', dots) * rest
+end
+
 # Per-file context. Tables come from the shared universe; only `package`,
 # `syntax`, and `cycle` are file-local. The `messages`/`enums`/etc. fields
 # exist as direct accessors so the existing `_resolve_typename(name, names)`
@@ -1273,22 +1305,27 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     println(io, "using ProtoBufDescriptors.EnumX: @enumx")
 
     # Cross-package imports. Walk the file's referenced FQNs to find
-    # external packages, look each up in the package map, and emit
-    # `import <julia_module> as <alias>` so `_resolve_typename` can
-    # render cross-package refs as `<alias>.<TypeName>`. WKTs are the
-    # only entries in the map today; user packages need a plugin
-    # parameter (Phase 7c+ / Phase 11).
+    # external packages and emit one import line per package so
+    # `_resolve_typename` can render cross-package refs as
+    # `<alias>.<TypeName>`. Two strategies, in order:
+    #   1. WKT_PACKAGE_MAP — absolute redirect for packages that live
+    #      outside the user's tree. Today's only entry is
+    #      google.protobuf → ProtoBufDescriptors.google.protobuf.
+    #   2. Relative import — assume the user puts every other proto
+    #      package as a nested Julia module under a single common root,
+    #      with names matching the proto package components. Codegen
+    #      doesn't need to know where the user mounts that root.
     cross_packages = _collect_cross_packages(file, names)
     if !isempty(cross_packages)
         println(io)
         for pkg in sort!(collect(cross_packages))
-            haskey(WKT_PACKAGE_MAP, pkg) || error(
-                "codegen: proto package `$(pkg)` is referenced from $(proto_name) " *
-                "but has no entry in WKT_PACKAGE_MAP. Add a mapping or extend " *
-                "the map with a plugin parameter (not yet supported).",
-            )
-            jlmod = WKT_PACKAGE_MAP[pkg]
-            println(io, "import ", jlmod, " as ", _package_alias(pkg))
+            if haskey(WKT_PACKAGE_MAP, pkg)
+                jlmod = WKT_PACKAGE_MAP[pkg]
+                println(io, "import ", jlmod, " as ", _package_alias(pkg))
+            else
+                relpath = _relative_import_path(names.package, pkg)
+                println(io, "import ", relpath, " as ", _package_alias(pkg))
+            end
         end
     end
     println(io)
@@ -1366,6 +1403,123 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     end
 
     return String(take!(io))
+end
+
+# ----------------------------------------------------------------------------
+# Driver file — emitted alongside the per-file _pb.jl outputs by the protoc
+# plugin. It declares the nested module skeleton matching the union of
+# proto packages in the request, and `include`s each generated file in
+# topological dependency order. The user includes the driver from wherever
+# they want their proto namespace rooted:
+#
+#     module Services
+#         include("services_pb_includes.jl")
+#     end
+#
+# Per-file outputs use *relative* imports for cross-package refs (see
+# `_relative_import_path`), so the driver-rooted layout is the only thing
+# users need to set up — no per-package mapping required.
+# ----------------------------------------------------------------------------
+
+function codegen_driver(file_to_generate::Vector{String},
+                        by_name::Dict{String,FileDescriptorProto})
+    # Topo sort the to-generate set by `dependency` so includes load in
+    # dependency order. WKT and other already-loaded deps are filtered out.
+    in_set = Set(file_to_generate)
+    deps = Dict{String,Vector{String}}()
+    for path in file_to_generate
+        haskey(by_name, path) || continue
+        f = by_name[path]
+        deps[path] = [d for d in f.dependency if d in in_set]
+    end
+    order = String[]
+    remaining = Set(keys(deps))
+    while !isempty(remaining)
+        ready = sort!([n for n in remaining if all(d -> d in order, deps[n])])
+        isempty(ready) && error("codegen_driver: dependency cycle in $remaining")
+        append!(order, ready)
+        foreach(n -> delete!(remaining, n), ready)
+    end
+
+    # Collect the full package hierarchy that needs declaring up-front
+    # (every package + every prefix on the way to it).
+    pkg_set = Set{String}()
+    for path in order
+        pkg = something(by_name[path].package, "")
+        node = ""
+        for part in (isempty(pkg) ? String[] : split(pkg, '.'))
+            node = isempty(node) ? String(part) : "$node.$part"
+            push!(pkg_set, node)
+        end
+    end
+
+    io = IOBuffer()
+    println(io, "# Generated by ProtoBufDescriptors. Do not edit.")
+    println(io, "# Driver file: declares the proto-package module skeleton")
+    println(io, "# and includes each generated `_pb.jl` in topological order.")
+    println(io, "# Include this file from wherever you want the namespace rooted.")
+    println(io)
+    println(io, "const _PB_DIR  = @__DIR__")
+    println(io, "const _PB_ROOT = @__MODULE__")
+    println(io)
+
+    # Emit empty skeleton modules (nested) so cross-module references in
+    # the per-file outputs resolve before any `_pb.jl` is loaded.
+    println(io, "# --- module skeleton ---")
+    _emit_empty_skeleton(io, _build_skeleton_tree(pkg_set), "", 0)
+    println(io)
+
+    # Emit `Core.include(<module>, <abs path>)` for each file in topo
+    # order. This evaluates the file in its target module regardless of
+    # where the driver sits in the dispatcher's module stack.
+    println(io, "# --- file includes (topological order) ---")
+    for path in order
+        f = by_name[path]
+        pkg = something(f.package, "")
+        out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
+        mod_expr = isempty(pkg) ? "_PB_ROOT" : "_PB_ROOT." * pkg
+        # `Core.include(M, file)` evaluates `file` in module `M` and uses
+        # the current `task_local_storage()[:SOURCE_PATH]` for relative
+        # path resolution — so wrap with `joinpath(_PB_DIR, …)` to make
+        # the include path resolve against this driver file's directory.
+        println(io, "Core.include(", mod_expr,
+                ", joinpath(_PB_DIR, ", repr(out_name), "))")
+    end
+
+    return String(take!(io))
+end
+
+# Skeleton tree: every internal node is a package component. We don't
+# attach includes to nodes — those are emitted separately in topo order.
+struct _SkeletonNode
+    children::Dict{String,_SkeletonNode}
+end
+_SkeletonNode() = _SkeletonNode(Dict{String,_SkeletonNode}())
+
+function _build_skeleton_tree(pkg_set::Set{String})
+    root = _SkeletonNode()
+    for pkg in pkg_set
+        node = root
+        for part in split(pkg, '.')
+            node = get!(node.children, String(part), _SkeletonNode())
+        end
+    end
+    return root
+end
+
+function _emit_empty_skeleton(io::IO, node::_SkeletonNode, name::String, depth::Int)
+    indent = "    " ^ depth
+    if !isempty(name)
+        println(io, indent, "module ", name)
+    end
+    for child_name in sort!(collect(keys(node.children)))
+        _emit_empty_skeleton(io, node.children[child_name], child_name,
+                             isempty(name) ? depth : depth + 1)
+    end
+    if !isempty(name)
+        println(io, indent, "end # module ", name)
+    end
+    return nothing
 end
 
 end # module Codegen
