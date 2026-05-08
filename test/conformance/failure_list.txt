@@ -7,9 +7,10 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (278 total — 188 binary inherited from Phase 9, +91 JSON
+# Categories (277 total — 188 binary inherited from Phase 9, +91 JSON
 # added in Phase 12d, −1 fixed by the proto3-explicit-optional
-# presence-on-default-value JSON encode fix):
+# presence-on-default-value JSON encode fix, −1 unblocked by restoring
+# proto2 corecursive / recursive_message in the corpus):
 #
 #   * Binary (Phase 9 baseline, 188 cases):
 #     - 111 ValidDataMap.*: empty entry handling (MissingDefault),
@@ -129,7 +130,6 @@ Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.MissingDefault.ProtobufOu
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.ENUM.Unordered.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateKeyInMapEntry.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.DuplicateValueInMapEntry.ProtobufOutput
-Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.MergeValue.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.MissingDefault.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.MESSAGE.Unordered.ProtobufOutput
 Required.Proto2.ProtobufInput.ValidDataMap.STRING.STRING.DuplicateKeyInMapEntry.ProtobufOutput

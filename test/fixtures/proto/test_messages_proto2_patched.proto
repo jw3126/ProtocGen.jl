@@ -5,7 +5,7 @@
 //   (matches the version vendored in ProtoBuf.jl@master/test/test_protos/google/
 //   protobuf/test_messages_proto2.proto)
 //
-// Removed (relative to upstream) — all features deferred or out of scope for
+// Removed (relative to upstream) — features deferred / out of scope for
 // ProtoBufDescriptors v1:
 //   - extensions / extend blocks
 //       lines 188-189: `extensions 120 to 200;`
@@ -16,10 +16,11 @@
 //       lines 191-195: `optional group Data = 201 { ... }`
 //       lines 278-280: `optional group OptionalGroup = 1004 { ... }` inside
 //                      UnknownToTestAllTypes
-//   - recursive / co-recursive messages (codegen does not yet handle cycles)
-//       line  59: `optional TestAllTypesProto2 corecursive = 2;` inside
-//                 NestedMessage
-//       line  95: `optional TestAllTypesProto2 recursive_message = 27;`
+//
+// Recursion (`NestedMessage.corecursive` and `recursive_message`) was
+// removed for early v1 but restored — codegen now handles cycles via
+// the abstract-supertype pattern (same as the Value↔Struct↔ListValue
+// trio in struct.proto).
 //
 // Everything else is unchanged. Field numbers, names, types, defaults,
 // reserved ranges, and `option ...` lines are preserved verbatim so this
@@ -68,7 +69,7 @@ option cc_enable_arenas = true;
 message TestAllTypesProto2 {
   message NestedMessage {
     optional int32 a = 1;
-    // PATCH: removed `optional TestAllTypesProto2 corecursive = 2;` (recursion).
+    optional TestAllTypesProto2 corecursive = 2;
   }
 
   enum NestedEnum {
@@ -104,7 +105,7 @@ message TestAllTypesProto2 {
   optional string optional_string_piece = 24 [ctype = STRING_PIECE];
   optional string optional_cord = 25 [ctype = CORD];
 
-  // PATCH: removed `optional TestAllTypesProto2 recursive_message = 27;` (recursion).
+  optional TestAllTypesProto2 recursive_message = 27;
 
   // Repeated
   repeated int32 repeated_int32 = 31;
