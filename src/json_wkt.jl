@@ -1,0 +1,344 @@
+# JSON special forms for the well-known types (Phase 12c).
+#
+# Each WKT type has its own canonical JSON representation that bypasses
+# the generic walker. Methods here override `_encode_json_value` /
+# `_decode_json_value` (and a few `_encode_json_message` /
+# `_decode_json_message` overloads for top-level usage). Loading order:
+# this file is `include`d *after* `gen/google/google.jl` so the WKT
+# types are in scope.
+#
+# Spec reference:
+#   https://protobuf.dev/programming-guides/json/#json-options-1
+
+import Dates
+
+const _G  = google.protobuf
+const _Empty       = _G.Empty
+const _Timestamp   = _G.Timestamp
+const _Duration    = _G.Duration
+const _FieldMask   = _G.FieldMask
+const _NullValue   = _G.NullValue
+const _Struct      = _G.Struct
+const _Value       = _G.Value
+const _ListValue   = _G.ListValue
+const _Any_        = _G.var"Any"   # `Any` is a Core type; the WKT shadows it inside _G
+
+# All 9 wrapper types.
+const _BoolValue   = _G.BoolValue
+const _BytesValue  = _G.BytesValue
+const _DoubleValue = _G.DoubleValue
+const _FloatValue  = _G.FloatValue
+const _Int32Value  = _G.Int32Value
+const _Int64Value  = _G.Int64Value
+const _StringValue = _G.StringValue
+const _UInt32Value = _G.UInt32Value
+const _UInt64Value = _G.UInt64Value
+
+# -----------------------------------------------------------------------------
+# Wrappers — emit/parse just the wrapped scalar (no `{"value": …}` envelope).
+# -----------------------------------------------------------------------------
+
+# Encode side: each wrapper passes through to its wrapped value.
+function _encode_json_value(io::IO, v::_BoolValue);   _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_BytesValue);  _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_DoubleValue); _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_FloatValue);  _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_Int32Value);  _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_Int64Value);  _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_StringValue); _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_UInt32Value); _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_UInt64Value); _encode_json_value(io, v.value); end
+
+# Decode side: the JSON value is a scalar (or scalar-string), reconstruct
+# the wrapper. Typing each method against `Real` / `AbstractString` /
+# `Bool` keeps these specific enough to avoid ambiguity with the generic
+# `_decode_json_value(::Type{T}, ::AbstractDict)` for messages — Dict
+# input falls to the message walker (which accepts the
+# `{"value": …}` envelope as a friendly fallback).
+function _decode_json_value(::Type{_BoolValue},   v::Bool;           kw...); return _BoolValue(v); end
+function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...); return _StringValue(String(v)); end
+function _decode_json_value(::Type{_BytesValue},  v::AbstractString; kw...); return _BytesValue(_base64_decode(v)); end
+function _decode_json_value(::Type{_DoubleValue}, v::Real;           kw...); return _DoubleValue(Float64(v)); end
+function _decode_json_value(::Type{_DoubleValue}, v::AbstractString; kw...); return _DoubleValue(_decode_json_value(Float64, v; kw...)); end
+function _decode_json_value(::Type{_FloatValue},  v::Real;           kw...); return _FloatValue(Float32(v)); end
+function _decode_json_value(::Type{_FloatValue},  v::AbstractString; kw...); return _FloatValue(_decode_json_value(Float32, v; kw...)); end
+function _decode_json_value(::Type{_Int32Value},  v::Real;           kw...); return _Int32Value(Int32(v)); end
+function _decode_json_value(::Type{_Int32Value},  v::AbstractString; kw...); return _Int32Value(parse(Int32, v)); end
+function _decode_json_value(::Type{_Int64Value},  v::Real;           kw...); return _Int64Value(Int64(v)); end
+function _decode_json_value(::Type{_Int64Value},  v::AbstractString; kw...); return _Int64Value(parse(Int64, v)); end
+function _decode_json_value(::Type{_UInt32Value}, v::Real;           kw...); return _UInt32Value(UInt32(v)); end
+function _decode_json_value(::Type{_UInt32Value}, v::AbstractString; kw...); return _UInt32Value(parse(UInt32, v)); end
+function _decode_json_value(::Type{_UInt64Value}, v::Real;           kw...); return _UInt64Value(UInt64(v)); end
+function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...); return _UInt64Value(parse(UInt64, v)); end
+
+# -----------------------------------------------------------------------------
+# Empty — `{}`. Generic walker already produces this on encode (no fields)
+# and the AbstractDict decode path constructs an empty struct, so no
+# overrides needed here. Documented for completeness.
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# Timestamp — RFC 3339 string in UTC, e.g. "2024-05-08T15:30:00.123456789Z".
+# Fractional precision is 0/3/6/9 digits depending on trailing zeros.
+# -----------------------------------------------------------------------------
+
+function _encode_json_value(io::IO, ts::_Timestamp)
+    print(io, '"')
+    _format_rfc3339(io, ts.seconds, ts.nanos)
+    print(io, '"')
+    return nothing
+end
+
+function _decode_json_value(::Type{_Timestamp}, s::AbstractString; kw...)
+    seconds, nanos = _parse_rfc3339(s)
+    return _Timestamp(seconds, nanos)
+end
+
+function _format_rfc3339(io::IO, seconds::Integer, nanos::Integer)
+    # Convert seconds-since-Unix-epoch + nanos to a UTC datetime.
+    dt = Dates.unix2datetime(seconds)
+    print(io, Dates.format(dt, Dates.dateformat"yyyy-mm-dd\THH:MM:SS"))
+    if nanos != 0
+        # Pick the shortest of 3 / 6 / 9 digit fractional that's lossless.
+        n9 = lpad(string(nanos), 9, '0')
+        if endswith(n9, "000000")
+            print(io, '.', view(n9, 1:3))
+        elseif endswith(n9, "000")
+            print(io, '.', view(n9, 1:6))
+        else
+            print(io, '.', n9)
+        end
+    end
+    print(io, 'Z')
+    return nothing
+end
+
+function _parse_rfc3339(s::AbstractString)
+    # Accept "<date>T<time>[.fractional][Z|±hh:mm]". Reject lower-case 't'/'z'.
+    m = match(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?(Z|[+\-]\d{2}:\d{2})$", s)
+    m === nothing && throw(ArgumentError("invalid RFC 3339 timestamp: $(repr(s))"))
+    yr, mo, da, hh, mm, ss = parse.(Int, (m[1], m[2], m[3], m[4], m[5], m[6]))
+    frac = m[7]
+    nanos = if frac === nothing
+        0
+    else
+        # `.\d{1,9}` — pad to 9 digits with trailing zeros.
+        digits = frac[2:end]
+        parse(Int, rpad(digits, 9, '0'))
+    end
+    tz = m[8]
+    dt = Dates.DateTime(yr, mo, da, hh, mm, ss)
+    seconds = Int64(Dates.datetime2unix(dt))
+    if tz != "Z"
+        sign = tz[1] == '+' ? -1 : 1   # offset → subtract to get UTC
+        ohh = parse(Int, tz[2:3]); omm = parse(Int, tz[5:6])
+        seconds += sign * (ohh * 3600 + omm * 60)
+    end
+    return Int64(seconds), Int32(nanos)
+end
+
+# -----------------------------------------------------------------------------
+# Duration — string ending in 's', e.g. "1.5s", "-12s", "3.000000001s".
+# -----------------------------------------------------------------------------
+
+function _encode_json_value(io::IO, d::_Duration)
+    print(io, '"')
+    s, n = d.seconds, d.nanos
+    # Sign convention: seconds and nanos must agree on sign per spec.
+    if s < 0 || n < 0
+        print(io, '-')
+        s = -s; n = -n
+    end
+    print(io, s)
+    if n != 0
+        n9 = lpad(string(n), 9, '0')
+        if endswith(n9, "000000")
+            print(io, '.', view(n9, 1:3))
+        elseif endswith(n9, "000")
+            print(io, '.', view(n9, 1:6))
+        else
+            print(io, '.', n9)
+        end
+    end
+    print(io, "s\"")
+    return nothing
+end
+
+function _decode_json_value(::Type{_Duration}, s::AbstractString; kw...)
+    m = match(r"^(-?)(\d+)(?:\.(\d{1,9}))?s$", s)
+    m === nothing && throw(ArgumentError("invalid Duration string: $(repr(s))"))
+    sign = m[1] == "-" ? -1 : 1
+    seconds = sign * parse(Int64, m[2])
+    nanos = m[3] === nothing ? Int32(0) : Int32(sign * parse(Int, rpad(m[3], 9, '0')))
+    return _Duration(seconds, nanos)
+end
+
+# -----------------------------------------------------------------------------
+# FieldMask — single comma-separated string of camelCase paths.
+# Wire form is repeated string of snake_case paths; the JSON form picks
+# camelCase to match field-name conventions everywhere else. Conversion
+# is lower_snake → lowerCamel within each path component.
+# -----------------------------------------------------------------------------
+
+function _encode_json_value(io::IO, fm::_FieldMask)
+    print(io, '"')
+    first = true
+    for p in fm.paths
+        first || print(io, ',')
+        first = false
+        _print_camel(io, p)
+    end
+    print(io, '"')
+    return nothing
+end
+
+function _decode_json_value(::Type{_FieldMask}, s::AbstractString; kw...)
+    isempty(s) && return _FieldMask(String[])
+    paths = [_to_snake(String(p)) for p in split(s, ',')]
+    return _FieldMask(paths)
+end
+
+# snake_case → camelCase per protoc's field-name conversion rule.
+function _print_camel(io::IO, s::AbstractString)
+    upper_next = false
+    for c in s
+        if c == '_'
+            upper_next = true
+        elseif upper_next
+            print(io, uppercase(c))
+            upper_next = false
+        else
+            print(io, c)
+        end
+    end
+    return nothing
+end
+
+# camelCase → snake_case (only used on FieldMask parse).
+function _to_snake(s::AbstractString)
+    io = IOBuffer()
+    for c in s
+        if isuppercase(c)
+            print(io, '_', lowercase(c))
+        else
+            print(io, c)
+        end
+    end
+    return String(take!(io))
+end
+
+# -----------------------------------------------------------------------------
+# Struct / Value / ListValue — passthrough JSON. The cycle abstract
+# supertypes (AbstractStruct, AbstractValue, AbstractListValue) get
+# forwarding methods that route to the concrete struct, mirroring the
+# pattern codegen emits for the binary `decode` and the message-form
+# `_decode_json_message`.
+# -----------------------------------------------------------------------------
+
+const _AbstractValue     = _G.AbstractValue
+const _AbstractStruct    = _G.AbstractStruct
+const _AbstractListValue = _G.AbstractListValue
+
+# Value: emit whatever JSON value the active oneof member calls for.
+function _encode_json_value(io::IO, v::_Value)
+    if v.kind === nothing
+        print(io, "null")
+        return nothing
+    end
+    o = v.kind::OneOf
+    if o.name === :null_value
+        print(io, "null")
+    else
+        _encode_json_value(io, o.value)
+    end
+    return nothing
+end
+
+# Value decode: dispatch on the JSON value's runtime type.
+function _decode_json_value(::Type{_Value}, ::Nothing; kw...)
+    return _Value(OneOf(:null_value, _NullValue.NULL_VALUE))
+end
+function _decode_json_value(::Type{_Value}, v::Bool; kw...)
+    return _Value(OneOf(:bool_value, v))
+end
+function _decode_json_value(::Type{_Value}, v::Real; kw...)
+    return _Value(OneOf(:number_value, Float64(v)))
+end
+function _decode_json_value(::Type{_Value}, v::AbstractString; kw...)
+    return _Value(OneOf(:string_value, String(v)))
+end
+function _decode_json_value(::Type{_Value}, v::AbstractDict; kw...)
+    s = _decode_json_value(_Struct, v; kw...)
+    return _Value(OneOf(:struct_value, s))
+end
+function _decode_json_value(::Type{_Value}, v::AbstractVector; kw...)
+    lv = _decode_json_value(_ListValue, v; kw...)
+    return _Value(OneOf(:list_value, lv))
+end
+
+# Struct: emit the fields dict as a bare JSON object.
+function _encode_json_value(io::IO, s::_Struct)
+    _encode_json_value(io, s.fields)
+    return nothing
+end
+
+function _decode_json_value(::Type{_Struct}, v::AbstractDict; kw...)
+    # The struct's field type is invariant `OrderedDict{String,AbstractValue}`
+    # — entries land here as concrete `Value`, which is `<: AbstractValue`.
+    fields = OrderedDict{String,_AbstractValue}()
+    for (k, jv) in v
+        fields[String(k)] = _decode_json_value(_Value, jv; kw...)
+    end
+    return _Struct(fields)
+end
+
+# ListValue: emit the values vector as a bare JSON array.
+function _encode_json_value(io::IO, lv::_ListValue)
+    _encode_json_value(io, lv.values)
+    return nothing
+end
+
+function _decode_json_value(::Type{_ListValue}, v::AbstractVector; kw...)
+    values = _AbstractValue[_decode_json_value(_Value, x; kw...) for x in v]
+    return _ListValue(values)
+end
+
+# Cycle-abstract forwarding. Invariant `Type{X}` so calls dispatched on
+# the concrete struct don't recurse back into the forwarding method.
+# Each abstract gets a typed `::AbstractDict` overload to win against
+# the generic `_decode_json_value(::Type{T<:AbstractProtoBufMessage}, ::AbstractDict)`.
+function _decode_json_value(::Type{_AbstractValue}, v; kw...)
+    return _decode_json_value(_Value, v; kw...)
+end
+function _decode_json_value(::Type{_AbstractValue}, v::AbstractDict; kw...)
+    return _decode_json_value(_Value, v; kw...)
+end
+function _decode_json_value(::Type{_AbstractStruct}, v; kw...)
+    return _decode_json_value(_Struct, v; kw...)
+end
+function _decode_json_value(::Type{_AbstractStruct}, v::AbstractDict; kw...)
+    return _decode_json_value(_Struct, v; kw...)
+end
+function _decode_json_value(::Type{_AbstractListValue}, v; kw...)
+    return _decode_json_value(_ListValue, v; kw...)
+end
+function _decode_json_value(::Type{_AbstractListValue}, v::AbstractDict; kw...)
+    return _decode_json_value(_ListValue, v; kw...)
+end
+
+# -----------------------------------------------------------------------------
+# NullValue — JSON `null` ↔ NULL_VALUE enum singleton.
+# -----------------------------------------------------------------------------
+
+# When emitted standalone (rare — typically as a oneof member in Value),
+# always render as JSON null.
+function _encode_json_value(io::IO, ::_NullValue.T)
+    print(io, "null")
+    return nothing
+end
+
+# JSON null parses to the NULL_VALUE enum value.
+function _decode_json_value(::Type{_NullValue.T}, ::Nothing; kw...)
+    return _NullValue.NULL_VALUE
+end
+

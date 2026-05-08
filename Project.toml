@@ -3,11 +3,12 @@ uuid = "b5fc38b8-670b-4930-8529-238e2ca71835"
 keywords = ["protobuf", "protoc", "descriptor"]
 license = "MIT"
 desc = "Descriptor-driven protobuf codec and codegen for Julia"
-authors = ["Jan Weidner <jan.weidner@toolpath.com>"]
 version = "0.1.0-DEV"
+authors = ["Jan Weidner <jan.weidner@toolpath.com>"]
 
 [deps]
 BufferedStreams = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 EnumX = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
@@ -17,6 +18,7 @@ TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [compat]
 Aqua = "0.8"
 BufferedStreams = "1.2"
+Dates = "1"
 EnumX = "1"
 JET = "0.9, 0.10, 0.11"
 JSON = "0.21, 1"

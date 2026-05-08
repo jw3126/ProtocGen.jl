@@ -73,7 +73,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a + 12b done) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a + 12b + 12c-without-Any done) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -407,6 +407,42 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
     extend `_decode_json_message`.
 - 1739 / 1739 julia tests pass (1713 + 26 new 12b tests covering
   oneof flatten / maps / strict-vs-lenient unknown fields).
+- Phase 12c (10 of 11 WKTs — Any deferred) lands the WKT-specific
+  JSON forms in `src/json_wkt.jl` (loaded *after* the bootstrap so the
+  WKT types are in scope):
+  - **Wrappers** (BoolValue, BytesValue, DoubleValue, FloatValue,
+    Int32Value, Int64Value, StringValue, UInt32Value, UInt64Value):
+    emit/parse the bare wrapped scalar — no `{"value": …}` envelope.
+    On parse, a Dict still falls through to the generic walker as a
+    friendly fallback.
+  - **Empty**: emits `{}` (the generic walker already handles it
+    correctly, no override needed).
+  - **Timestamp**: RFC 3339 string, fractional precision auto-picks
+    3/6/9 trailing digits or omits when nanos == 0. Parse accepts
+    `Z` and `±hh:mm` offsets, normalizes to UTC. Implemented with
+    `Dates` (added as a runtime dep).
+  - **Duration**: `"<integer>[.<fractional>]s"` form, sign always
+    leading. Round-trips via parse regex.
+  - **FieldMask**: comma-separated, paths emitted in camelCase
+    (snake-cased internally) and the inverse on parse.
+  - **NullValue**: emits `null`, parses from `null` to NULL_VALUE.
+  - **Struct / Value / ListValue**: passthrough — Struct emits its
+    fields dict directly, ListValue emits its values vector
+    directly, Value flattens its active oneof member's value
+    one level higher than the generic walker would. Cycle abstracts
+    (`AbstractValue`, `AbstractStruct`, `AbstractListValue`) get
+    typed forwarding methods (both untyped and `::AbstractDict`)
+    that route to the concrete struct, resolving the dispatch
+    ambiguity with the generic message walker.
+  - **Top-level entry rewired**: `encode_json` now delegates through
+    `_encode_json_value`; `decode_json` through `_decode_json_value`
+    — so wrappers / Timestamp / Duration / FieldMask work even when
+    a user calls `encode_json(BoolValue(true))` directly.
+- Inline base64 stays (Julia 1.12 stdlib resolution refuses to
+  register Base64 from the General registry); Dates registers fine.
+- 1764 / 1764 julia tests pass (1739 + 25 new 12c WKT tests across
+  wrappers, Timestamp, Duration, FieldMask, Struct/Value/ListValue,
+  Empty).
 
 ### Known bootstrap caveats
 

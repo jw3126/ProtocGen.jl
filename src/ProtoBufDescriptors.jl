@@ -84,6 +84,7 @@ include("../gen/google/google.jl")
 
 include("codegen.jl")
 include("plugin.jl")
+include("json_wkt.jl")
 include("testing.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder

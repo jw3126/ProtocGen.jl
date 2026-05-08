@@ -113,7 +113,10 @@ argument, writes to it and returns `nothing`; without one, returns a
 `String`.
 """
 function encode_json(io::IO, msg::AbstractProtoBufMessage)
-    _encode_json_message(io, msg)
+    # Route through `_encode_json_value` so WKT specializations
+    # (wrappers, Timestamp, Duration, …) that override the value form
+    # also work when called at the top level.
+    _encode_json_value(io, msg)
     return nothing
 end
 
@@ -138,17 +141,20 @@ for).
 """
 function decode_json(::Type{T}, src::AbstractString;
                      ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
-    return decode_json(T, JSON.parse(src); ignore_unknown_fields)
+    return _decode_json_value(T, JSON.parse(src); ignore_unknown_fields = ignore_unknown_fields)
 end
 
 function decode_json(::Type{T}, src::IO;
                      ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
-    return decode_json(T, JSON.parse(src); ignore_unknown_fields)
+    return _decode_json_value(T, JSON.parse(src); ignore_unknown_fields = ignore_unknown_fields)
 end
 
-function decode_json(::Type{T}, json::AbstractDict;
+# Already-parsed JSON value (Dict, Array, scalar, or `nothing`). The
+# value walker handles all the WKT specializations as well as the
+# generic message form.
+function decode_json(::Type{T}, json;
                      ignore_unknown_fields::Bool = false) where {T<:AbstractProtoBufMessage}
-    return _decode_json_message(T, json; ignore_unknown_fields)
+    return _decode_json_value(T, json; ignore_unknown_fields = ignore_unknown_fields)
 end
 
 # -----------------------------------------------------------------------------
