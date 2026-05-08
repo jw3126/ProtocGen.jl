@@ -987,6 +987,53 @@ end
 # tricks; deferred until needed.
 # ----------------------------------------------------------------------------
 
+function _direct_message_deps(msg::DescriptorProto, names::LocalNames)
+    # Only the message's own fields — nested types are not visited.
+    # Self-edges from this set are *safe*: Julia parses a struct body
+    # lazily enough that `field::Union{Nothing,Foo}` inside `struct Foo`
+    # resolves correctly. This is what lets DescriptorProto.nested_type::
+    # Vector{DescriptorProto} compile without a forward declaration.
+    deps = Set{String}()
+    T = var"FieldDescriptorProto.Type"
+    for f in msg.field
+        ftype = getfield(f, Symbol("#type"))
+        if ftype === T.TYPE_MESSAGE
+            tn = something(f.type_name, "")
+            if tn in names.messages
+                push!(deps, tn)
+            end
+        end
+    end
+    return deps
+end
+
+function _nested_message_deps(msg::DescriptorProto, names::LocalNames)
+    # Only deps from the message's *nested* types (recursively). A
+    # self-edge here is unsafe because the nested struct body parses
+    # before the parent struct is defined, so `field::Foo` inside the
+    # nested type would forward-reference the parent's name.
+    deps = Set{String}()
+    T = var"FieldDescriptorProto.Type"
+    function visit(m::DescriptorProto)
+        for f in m.field
+            ftype = getfield(f, Symbol("#type"))
+            if ftype === T.TYPE_MESSAGE
+                tn = something(f.type_name, "")
+                if tn in names.messages
+                    push!(deps, tn)
+                end
+            end
+        end
+        for nested in m.nested_type
+            visit(nested)
+        end
+    end
+    for nested in msg.nested_type
+        visit(nested)
+    end
+    return deps
+end
+
 function _toplevel_message_deps(msg::DescriptorProto, names::LocalNames)
     deps = Set{String}()
     function visit(m::DescriptorProto)
@@ -1021,22 +1068,45 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
         push!(order, fqn)
     end
 
-    deps = Dict(fqn => filter(d -> d in keys(by_fqn),
-                              _toplevel_message_deps(by_fqn[fqn], names))
-                for fqn in order)
+    # Three views of the dependency graph:
+    #   `direct_deps` — only the top-level msg's own fields.
+    #   `nested_deps` — deps that surface via nested types (their bodies
+    #                   are parsed before the parent struct is defined,
+    #                   so a self-reference there forces an abstract).
+    #   `all_deps`    — direct_deps ∪ nested_deps; used for normal topo
+    #                   sort (we still need correct ordering against
+    #                   non-self deps regardless of where they came from).
+    # Cycle detection drops a self-edge iff it's a *direct-only*
+    # self-reference (safe in Julia: `struct Foo; r::Union{Nothing,Foo}; end`
+    # compiles fine).
+    direct_deps = Dict(fqn => filter(d -> d in keys(by_fqn),
+                                     _direct_message_deps(by_fqn[fqn], names))
+                       for fqn in order)
+    nested_deps = Dict(fqn => filter(d -> d in keys(by_fqn),
+                                     _nested_message_deps(by_fqn[fqn], names))
+                       for fqn in order)
+    all_deps = Dict(fqn => union(direct_deps[fqn], nested_deps[fqn]) for fqn in order)
+
+    function cycle_edges(node)
+        out = Set{String}()
+        for d in all_deps[node]
+            d == node && (d in direct_deps[node]) && !(d in nested_deps[node]) && continue
+            push!(out, d)
+        end
+        return out
+    end
 
     # First pass: find cycle participants. A node is a cycle participant if
-    # it can reach itself through `deps`. We DFS from each node and flag
-    # any back-edge target as cyclic; transitively, any node on the back
-    # edge's path becomes cyclic too. struct.proto's Value↔Struct↔ListValue
-    # form one such cycle.
+    # it can reach itself through `cycle_edges` via at least one other
+    # node, OR if it has a nested-type self-reference (which `cycle_edges`
+    # preserves). We DFS from each node and flag any back-edge target as
+    # cyclic; transitively, any node on the back edge's path becomes
+    # cyclic too.
     cycle_participants = Set{String}()
     let visiting = Set{String}(), visited = Set{String}(), path = String[]
         function dfs1(node)
             node in visited && return
             if node in visiting
-                # Found a back edge to `node`. Everything currently in
-                # `path` from `node` onwards is on the cycle.
                 idx = findlast(==(node), path)
                 if idx !== nothing
                     for i in idx:length(path)
@@ -1047,7 +1117,7 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
             end
             push!(visiting, node)
             push!(path, node)
-            for d in deps[node]
+            for d in cycle_edges(node)
                 dfs1(d)
             end
             pop!(path)
@@ -1068,9 +1138,11 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
         function dfs2(node)
             node in visited && return
             push!(visiting, node)
-            for d in deps[node]
+            for d in all_deps[node]
                 # Skip edges that lead back into the cycle from inside it.
                 (node in cycle_participants && d in cycle_participants) && continue
+                # Direct-only self-loops are safe (Julia handles them).
+                d == node && (d in direct_deps[node]) && !(d in nested_deps[node]) && continue
                 d in visiting && continue
                 dfs2(d)
             end
