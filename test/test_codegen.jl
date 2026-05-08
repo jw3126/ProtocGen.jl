@@ -101,32 +101,27 @@ end
     @test response.error === nothing
     f = response.file[1]
 
-    # Maps surface as Dict{K,V}; the synthetic *Entry messages stay invisible.
-    @test occursin("counts::Dict{String,Int32}", f.content)
-    @test occursin("labels::Dict{Int32,String}", f.content)
-    @test occursin("items::Dict{String,Item}",   f.content)
+    # Maps surface as OrderedDict{K,V}; the synthetic *Entry messages stay invisible.
+    @test occursin("counts::OrderedDict{String,Int32}", f.content)
+    @test occursin("labels::OrderedDict{Int32,String}", f.content)
+    @test occursin("items::OrderedDict{String,Item}",   f.content)
     @test !occursin("CountsEntry", f.content)
     @test !occursin("LabelsEntry", f.content)
     @test !occursin("ItemsEntry",  f.content)
 
     maps_mod = eval_generated(f.content, :GeneratedMaps)
 
-    bag = decode_latest(maps_mod.Bag, fixture("maps_sample.pb"))
+    sample_pb = fixture("maps_sample.pb")
+    bag = decode_latest(maps_mod.Bag, sample_pb)
     @test bag.counts == Dict("a" => Int32(1), "b" => Int32(2))
     @test bag.labels == Dict(Int32(10) => "ten", Int32(20) => "twenty")
     @test sort(collect(keys(bag.items))) == ["x", "y"]
     @test bag.items["x"].v == 7 && bag.items["y"].v == 8
 
-    # Round-trip — bytes need not be identical (Dict iteration order is
-    # nondeterministic, so map-entry order on the wire can differ), but the
-    # decoded values must match.
-    bag2 = decode_latest(maps_mod.Bag, encode_latest(bag))
-    @test bag.counts == bag2.counts
-    @test bag.labels == bag2.labels
-    @test length(bag.items) == length(bag2.items)
-    for (k, v) in bag.items
-        @test haskey(bag2.items, k) && bag2.items[k].v == v.v
-    end
+    # Insertion-order-preserving OrderedDict means re-encode is byte-identical
+    # to the protoc-emitted fixture: the decode order tracks the wire order,
+    # the encode iterator tracks insertion order, so we hit the same bytes.
+    @test encode_latest(bag) == sample_pb
 end
 
 end  # module TestCodegen

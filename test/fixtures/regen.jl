@@ -28,6 +28,18 @@ const PAYLOADS = [
     ("p2_minimal.pb",         "p2.proto",      "p2.Wrap",       "p2_minimal.txtpb"),
     ("rep_sample.pb",         "rep.proto",     "rep.M",         "rep_sample.txtpb"),
     ("maps_fx_sample.pb",     "maps_fx.proto", "mfx.Bag",       "maps_fx_sample.txtpb"),
+    ("test_messages_proto2_full.pb",  "test_messages_proto2_patched.proto",
+        "protobuf_test_messages.proto2.TestAllTypesProto2",
+        "test_messages_proto2_full.txtpb"),
+    ("test_messages_proto2_empty.pb", "test_messages_proto2_patched.proto",
+        "protobuf_test_messages.proto2.TestAllTypesProto2",
+        "test_messages_proto2_empty.txtpb"),
+    ("test_messages_proto3_full.pb",  "test_messages_proto3_patched.proto",
+        "protobuf_test_messages.proto3.TestAllTypesProto3",
+        "test_messages_proto3_full.txtpb"),
+    ("test_messages_proto3_empty.pb", "test_messages_proto3_patched.proto",
+        "protobuf_test_messages.proto3.TestAllTypesProto3",
+        "test_messages_proto3_empty.txtpb"),
 ]
 
 # .proto files whose FileDescriptorSet we capture (as the codegen input
@@ -39,6 +51,8 @@ const DESCRIPTOR_SETS = [
     "p2.proto",
     "rep.proto",
     "maps_fx.proto",
+    "test_messages_proto2_patched.proto",
+    "test_messages_proto3_patched.proto",
 ]
 
 function find_protoc()

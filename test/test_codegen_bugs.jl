@@ -77,16 +77,12 @@ end
     @test bag.b == Dict("k1" => UInt64(0xCAFEBABEDEADBEEF), "k2" => UInt64(1))
     @test bag.c == Dict(Int32(-3) => "neg", Int32(4) => "pos")
 
-    # Encode-side cross-check: build the same dicts ourselves, encode via
-    # the generated codec, and assert the byte length matches protoc's
-    # reference. We don't compare bytes directly because Dict iteration
-    # order is nondeterministic. The length still catches the bug because
-    # varint-of-sfixed32 differs in size from raw-4-byte sfixed32, etc.
-    bag2 = Base.invokelatest(maps_mod.Bag,
-                             Dict(Int32(-1) => Int64(1), Int32(7) => Int64(-2)),
-                             Dict("k1" => UInt64(0xCAFEBABEDEADBEEF), "k2" => UInt64(1)),
-                             Dict(Int32(-3) => "neg", Int32(4) => "pos"))
-    @test length(encode_latest(bag2)) == length(maps_sample_pb)
+    # Encode-side cross-check: re-encode the protoc-decoded `bag` and assert
+    # byte-equality against the protoc fixture. Map fields are
+    # OrderedDict, so insertion order (= wire order on decode) survives
+    # the round-trip; the per-K/V wire annotation we asserted above means
+    # varint-of-sfixed32 vs raw-4-byte sfixed32 sizes also have to agree.
+    @test encode_latest(bag) == maps_sample_pb
 end
 
 end  # module TestCodegenBugs

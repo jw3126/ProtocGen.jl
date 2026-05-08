@@ -76,7 +76,16 @@ function _encode(io::IO, x::Int32)
 end
 
 function _encode(io::IO, x::T) where {T<:Union{Enum{Int32},Enum{UInt32}}}
-    vbyte_encode(io, reinterpret(UInt32, x))
+    # protoc emits negative enum values sign-extended to int64 (10-byte
+    # varint). Mirror what `_encode(::Int32)` already does so re-encode is
+    # byte-identical to protoc; otherwise NEG=-1 round-trips as 5 bytes
+    # vs protoc's 10. ProtoBuf.jl carries the matching bug.
+    v = reinterpret(Int32, x)
+    if v < 0
+        vbyte_encode(io, reinterpret(UInt64, Int64(v)))
+    else
+        vbyte_encode(io, reinterpret(UInt32, v))
+    end
     return nothing
 end
 
@@ -135,7 +144,7 @@ function _encode(io::IO, x::Vector{T}) where {T<:Union{UInt32,UInt64,Int32,Int64
     return nothing
 end
 
-function encode(e::ProtoEncoder, i::Int, x::Dict{K,V}) where {K,V}
+function encode(e::ProtoEncoder, i::Int, x::AbstractDict{K,V}) where {K,V}
     maybe_ensure_room(e.io, 2*(length(x)+1))
     for (k, v) in x
         # encode header for key-value pair message
@@ -148,7 +157,7 @@ function encode(e::ProtoEncoder, i::Int, x::Dict{K,V}) where {K,V}
 end
 
 for T in (:(:fixed), :(:zigzag))
-    @eval function encode(e::ProtoEncoder, i::Int, x::Dict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
+    @eval function encode(e::ProtoEncoder, i::Int, x::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
         maybe_ensure_room(e.io, 2*(length(x)+1))
         for (k, v) in x
             # encode header for key-value pair message
@@ -159,7 +168,7 @@ for T in (:(:fixed), :(:zigzag))
         end
         nothing
     end
-    @eval function encode(e::ProtoEncoder, i::Int, x::Dict{K,V}, ::Type{Val{Tuple{Nothing,$(T)}}}) where {K,V}
+    @eval function encode(e::ProtoEncoder, i::Int, x::AbstractDict{K,V}, ::Type{Val{Tuple{Nothing,$(T)}}}) where {K,V}
         maybe_ensure_room(e.io, 2*(length(x)+1))
         for (k, v) in x
             # encode header for key-value pair message
@@ -173,7 +182,7 @@ for T in (:(:fixed), :(:zigzag))
 end
 
 for T in (:(:fixed), :(:zigzag)), S in (:(:fixed), :(:zigzag))
-    @eval function encode(e::AbstractProtoEncoder, i::Int, x::Dict{K,V}, ::Type{Val{Tuple{$(T),$(S)}}}) where {K,V}
+    @eval function encode(e::AbstractProtoEncoder, i::Int, x::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),$(S)}}}) where {K,V}
         maybe_ensure_room(e.io, 2*(length(x)+1))
         for (k, v) in x
             # encode header for key-value pair message
@@ -321,6 +330,6 @@ function encode(e::AbstractProtoEncoder, i::Int, x::T, ::Type{Val{:group}}) wher
 end
 
 # Resolving a method ambiguity
-function encode(::AbstractProtoEncoder, ::Int, ::Dict{K, V}, ::Type{Val{:group}}) where {K, V}
-    throw(MethodError(encode, (AbstractProtoEncoder, Int, Dict{K, V}, Val{:group})))
+function encode(::AbstractProtoEncoder, ::Int, ::AbstractDict{K, V}, ::Type{Val{:group}}) where {K, V}
+    throw(MethodError(encode, (AbstractProtoEncoder, Int, AbstractDict{K, V}, Val{:group})))
 end

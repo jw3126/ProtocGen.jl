@@ -1,8 +1,11 @@
 _max_varint_size(::Type{T}) where {T} = (sizeof(T) + (sizeof(T) >> 2))
 
 _varint_size(x) = cld((8sizeof(x) - leading_zeros(x)), 7)
-_varint_size(x::Enum) = _varint_size(reinterpret(UInt32, x))
 _varint_size(x::Int32) = x < 0 ? _varint_size(Int64(x)) : _varint_size(reinterpret(UInt32, x))
+# Negative enum values share the Int32 sign-extension rule — protoc emits
+# them as 10-byte varints, so the size calculation must agree with the
+# encoder. Dispatching through `_varint_size(::Int32)` reuses that logic.
+_varint_size(x::Enum) = _varint_size(reinterpret(Int32, x))
 _varint_size1(x) = max(1, _varint_size(x))
 
 # We don't include the field number and tag into the size, it is the responsibility of the

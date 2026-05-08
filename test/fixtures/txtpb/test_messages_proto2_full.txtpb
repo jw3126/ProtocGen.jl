@@ -1,0 +1,184 @@
+# Populated TestAllTypesProto2. Every retained field carries a non-zero,
+# non-default value so re-encode round-trip and field-by-field decode
+# assertions both have something to check against.
+optional_int32: -123
+optional_int64: -123456789012
+optional_uint32: 4123456789
+optional_uint64: 12345678901234567890
+optional_sint32: -200
+optional_sint64: -200000000000
+optional_fixed32: 0xCAFEBABE
+optional_fixed64: 0xDEADBEEFCAFEBABE
+optional_sfixed32: -2147483647
+optional_sfixed64: -9223372036854775807
+optional_float: 3.14
+optional_double: 2.718281828459045
+optional_bool: true
+optional_string: "héllo"
+optional_bytes: "\xff\x00\xab"
+
+optional_nested_message { a: 42 }
+optional_foreign_message { c: 99 }
+
+optional_nested_enum: NEG
+optional_foreign_enum: FOREIGN_BAR
+
+optional_string_piece: "piece"
+optional_cord: "cord"
+
+repeated_int32: 1
+repeated_int32: 2
+repeated_int32: 3
+repeated_int64: 100000000000
+repeated_int64: -100000000000
+repeated_uint32: 1
+repeated_uint32: 2
+repeated_uint64: 18000000000000000000
+repeated_sint32: -1
+repeated_sint32: -2
+repeated_sint64: -1
+repeated_sint64: -2
+repeated_fixed32: 0x11111111
+repeated_fixed32: 0x22222222
+repeated_fixed64: 0x1111111111111111
+repeated_sfixed32: -1
+repeated_sfixed32: 1
+repeated_sfixed64: -1
+repeated_sfixed64: 1
+repeated_float: 1.5
+repeated_float: -2.5
+repeated_double: 1.5
+repeated_double: -2.5
+repeated_bool: true
+repeated_bool: false
+repeated_string: "a"
+repeated_string: "b"
+repeated_bytes: "x"
+repeated_bytes: "y"
+
+repeated_nested_message { a: 10 }
+repeated_nested_message { a: 20 }
+repeated_foreign_message { c: 30 }
+repeated_foreign_message { c: 40 }
+
+repeated_nested_enum: FOO
+repeated_nested_enum: BAR
+repeated_nested_enum: NEG
+repeated_foreign_enum: FOREIGN_FOO
+repeated_foreign_enum: FOREIGN_BAZ
+
+repeated_string_piece: "p1"
+repeated_string_piece: "p2"
+repeated_cord: "c1"
+repeated_cord: "c2"
+
+packed_int32: 1
+packed_int32: 2
+packed_int32: 3
+packed_int64: 1
+packed_int64: 2
+packed_uint32: 1
+packed_uint32: 2
+packed_uint64: 1
+packed_uint64: 2
+packed_sint32: -1
+packed_sint32: -2
+packed_sint64: -1
+packed_sint64: -2
+packed_fixed32: 1
+packed_fixed32: 2
+packed_fixed64: 1
+packed_fixed64: 2
+packed_sfixed32: -1
+packed_sfixed32: 1
+packed_sfixed64: -1
+packed_sfixed64: 1
+packed_float: 1.5
+packed_float: 2.5
+packed_double: 1.5
+packed_double: 2.5
+packed_bool: true
+packed_bool: false
+packed_nested_enum: FOO
+packed_nested_enum: BAR
+
+unpacked_int32: 1
+unpacked_int32: 2
+unpacked_int64: 1
+unpacked_int64: 2
+unpacked_uint32: 1
+unpacked_uint32: 2
+unpacked_uint64: 1
+unpacked_uint64: 2
+unpacked_sint32: -1
+unpacked_sint32: -2
+unpacked_sint64: -1
+unpacked_sint64: -2
+unpacked_fixed32: 1
+unpacked_fixed32: 2
+unpacked_fixed64: 1
+unpacked_fixed64: 2
+unpacked_sfixed32: -1
+unpacked_sfixed32: 1
+unpacked_sfixed64: -1
+unpacked_sfixed64: 1
+unpacked_float: 1.5
+unpacked_float: 2.5
+unpacked_double: 1.5
+unpacked_double: 2.5
+unpacked_bool: true
+unpacked_bool: false
+unpacked_nested_enum: FOO
+unpacked_nested_enum: BAR
+
+map_int32_int32 { key: 1 value: 100 }
+map_int32_int32 { key: 2 value: 200 }
+map_int64_int64 { key: 1 value: 100 }
+map_uint32_uint32 { key: 7 value: 70 }
+map_uint64_uint64 { key: 7 value: 70 }
+map_sint32_sint32 { key: -1 value: -100 }
+map_sint64_sint64 { key: -1 value: -100 }
+map_fixed32_fixed32 { key: 1 value: 100 }
+map_fixed64_fixed64 { key: 1 value: 100 }
+map_sfixed32_sfixed32 { key: -1 value: -100 }
+map_sfixed64_sfixed64 { key: -1 value: -100 }
+map_int32_float { key: 1 value: 1.5 }
+map_int32_double { key: 1 value: 1.5 }
+map_bool_bool { key: true value: false }
+map_bool_bool { key: false value: true }
+map_string_string { key: "k1" value: "v1" }
+map_string_string { key: "k2" value: "v2" }
+map_string_bytes { key: "k" value: "v" }
+map_string_nested_message { key: "k" value { a: 1 } }
+map_string_foreign_message { key: "k" value { c: 1 } }
+map_string_nested_enum { key: "k" value: BAZ }
+map_string_foreign_enum { key: "k" value: FOREIGN_BAZ }
+
+oneof_string: "hello-oneof"
+
+# Defaults overridden with non-default values to verify the wire path
+# (defaults annotations affect introspection, not the wire).
+default_int32: 1
+default_int64: 1
+default_uint32: 1
+default_uint64: 1
+default_sint32: 1
+default_sint64: 1
+default_fixed32: 1
+default_fixed64: 1
+default_sfixed32: 1
+default_sfixed64: 1
+default_float: 1.0
+default_double: 1.0
+default_bool: false
+default_string: "override"
+default_bytes: "override"
+
+# A couple of the weird-naming fields. Full coverage isn't necessary —
+# decoding any of them exercises the same name-munging path.
+fieldname1: 1
+field_name2: 2
+_field_name3: 3
+field__name4_: 4
+__field_name13: 13
+FIELD_NAME11: 11

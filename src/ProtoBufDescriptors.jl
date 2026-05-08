@@ -2,6 +2,7 @@ module ProtoBufDescriptors
 
 import EnumX
 import BufferedStreams
+import OrderedCollections: OrderedDict
 using TOML
 
 const PACKAGE_VERSION = let
@@ -70,7 +71,7 @@ include("codegen.jl")
 include("plugin.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder
-export OneOf, AbstractProtoBufMessage, DecodeError
+export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values
 
 end # module

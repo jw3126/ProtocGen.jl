@@ -147,14 +147,27 @@ Base.@kwdef struct FieldModel
     is_repeated::Bool = false
     is_message::Bool = false
     is_enum::Bool = false
-    is_map::Bool = false        # `map<K,V>` — emitted as `Dict{K,V}`
+    is_map::Bool = false        # `map<K,V>` — emitted as `OrderedDict{K,V}`
     is_required::Bool = false   # proto2 `required`
+    is_packed::Bool = false     # repeated scalar/enum encoded packed (LENGTH_DELIMITED)
     jl_type::String             # the type used in the struct field declaration
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
     wire_annotation::String = "" # "" / "Val{:fixed}" / "Val{:zigzag}"
     init_value::String          # initializer used inside decode body
     default_value::String       # default exposed via PB.default_values
     encode_skip::String         # predicate used at encode-time to skip the field
+end
+
+# proto2: repeated scalars/enums are unpacked unless `[packed = true]` is set.
+# proto3: same fields are packed unless `[packed = false]` is set. The decoder
+# accepts either wire form regardless; this only affects encode emission, and
+# matters for byte-equality against protoc.
+function _is_packed_repeated(field::FieldDescriptorProto, syntax::String)
+    opts = field.options
+    if opts !== nothing && opts.packed !== nothing
+        return opts.packed
+    end
+    return syntax == "proto3"
 end
 
 function _jl_fieldname(name::String)
@@ -185,14 +198,17 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     if is_message
         ref_name = something(field.type_name, "")
         # Maps are sugar over `repeated <synthetic>Entry` where the entry has
-        # `options.map_entry = true`. Surface the field as `Dict{K,V}` and
-        # let the codec's existing Dict dispatch handle the wire format.
+        # `options.map_entry = true`. Surface the field as
+        # `OrderedDict{K,V}` (insertion-order preserving) so re-encode is
+        # byte-identical to the wire input. Codec dispatch is on
+        # `AbstractDict{K,V}` so OrderedDict flows through the same paths
+        # as the plain Dict.
         if is_repeated && haskey(names.map_entries, ref_name)
             entry = names.map_entries[ref_name]
             kv = _map_entry_kv(entry, names)
-            jl_type  = "Dict{$(kv.key_type),$(kv.val_type)}"
-            init_val = "Dict{$(kv.key_type),$(kv.val_type)}()"
-            default  = "Dict{$(kv.key_type),$(kv.val_type)}()"
+            jl_type  = "OrderedDict{$(kv.key_type),$(kv.val_type)}"
+            init_val = "OrderedDict{$(kv.key_type),$(kv.val_type)}()"
+            default  = "OrderedDict{$(kv.key_type),$(kv.val_type)}()"
             skip     = "!isempty(_x.$(jl_fieldname))"
             wire = if kv.key_wire == "Nothing" && kv.val_wire == "Nothing"
                 # Both default — codec uses the unannotated `decode!(d, ::Dict)`
@@ -271,6 +287,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             is_repeated,
             is_enum = true,
             is_required,
+            is_packed = is_repeated && _is_packed_repeated(field, names.syntax),
             jl_type,
             elem_jl_type = elem_t,
             init_value = init_val,
@@ -312,12 +329,21 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
                 skip = "_x.$(jl_fieldname) != $(init_val)"
             end
         end
+        # `is_packed` only matters for packed-eligible scalars (numerics,
+        # bool). String/bytes are length-delimited per element regardless,
+        # so packed-vs-unpacked doesn't apply — treat them as not packed
+        # so the encode path emits via the existing Vector{String}/
+        # Vector{Vector{UInt8}} codec methods that already iterate.
+        is_packed = is_repeated &&
+                    !(scalar_jl == "String" || scalar_jl == "Vector{UInt8}") &&
+                    _is_packed_repeated(field, names.syntax)
         return FieldModel(;
             proto_name,
             jl_fieldname,
             number,
             is_repeated,
             is_required,
+            is_packed,
             jl_type,
             elem_jl_type = scalar_jl,
             wire_annotation = wire,
@@ -490,7 +516,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
 
     # Emit nested enums and nested messages first so they're defined before
     # this struct (which references them). Skip synthetic map_entry messages —
-    # those are surfaced as `Dict{K,V}` on the parent field, never as a
+    # those are surfaced as `OrderedDict{K,V}` on the parent field, never as a
     # standalone Julia struct.
     for e in msg.enum_type
         _emit_enum(io, e, jl_name_plain)
@@ -627,26 +653,37 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
 
     println(io)
 
-    # encode
+    # encode + _encoded_size emit fields in field-number order so the
+    # output matches protoc byte-for-byte. proto-source order ≠
+    # number order whenever maps or out-of-order field numbers appear,
+    # and protoc encodes by tag number. Each oneof member becomes its own
+    # check at its own number; only one fires, so the cost is the same as
+    # the old chained if/elseif.
+    encode_plan = Tuple{Int,Function,Function}[]  # (number, encode!, sized!)
+    for f in plain_fields
+        push!(encode_plan, (f.number,
+            io_ -> _emit_encode_field(io_, f),
+            io_ -> _emit_encoded_size_field(io_, f)))
+    end
+    for o in real_oneofs, m in o.members
+        push!(encode_plan, (m.number,
+            io_ -> _emit_encode_oneof_member(io_, o, m),
+            io_ -> _emit_encoded_size_oneof_member(io_, o, m)))
+    end
+    sort!(encode_plan; by = first)
+
     println(io, "function PB.encode(_e::PB.AbstractProtoEncoder, _x::", jl_name, ")")
     println(io, "    initpos = position(_e.io)")
-    for f in plain_fields
-        _emit_encode_field(io, f)
-    end
-    for o in real_oneofs
-        _emit_encode_oneof(io, o)
+    for (_, emit_e, _) in encode_plan
+        emit_e(io)
     end
     println(io, "    return position(_e.io) - initpos")
     println(io, "end")
 
-    # _encoded_size
     println(io, "function PB._encoded_size(_x::", jl_name, ")")
     println(io, "    encoded_size = 0")
-    for f in plain_fields
-        _emit_encoded_size_field(io, f)
-    end
-    for o in real_oneofs
-        _emit_encoded_size_oneof(io, o)
+    for (_, _, emit_s) in encode_plan
+        emit_s(io)
     end
     println(io, "    return encoded_size")
     println(io, "end")
@@ -678,34 +715,20 @@ function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     end
 end
 
-function _emit_encode_oneof(io::IO, o::OneofModel)
+function _emit_encode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
+    args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
     println(io, "    let _o = _x.", o.jl_fieldname)
-    println(io, "        if !isnothing(_o)")
-    first_branch = true
-    for m in o.members
-        kw = first_branch ? "if" : "elseif"
-        first_branch = false
-        args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
-        println(io, "            ", kw, " _o.name === :", m.jl_fieldname)
-        println(io, "                PB.encode(_e, ", m.number, ", _o.value", args, ")")
-    end
-    println(io, "            end")
+    println(io, "        if !isnothing(_o) && _o.name === :", m.jl_fieldname)
+    println(io, "            PB.encode(_e, ", m.number, ", _o.value", args, ")")
     println(io, "        end")
     println(io, "    end")
 end
 
-function _emit_encoded_size_oneof(io::IO, o::OneofModel)
+function _emit_encoded_size_oneof_member(io::IO, o::OneofModel, m::FieldModel)
+    args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
     println(io, "    let _o = _x.", o.jl_fieldname)
-    println(io, "        if !isnothing(_o)")
-    first_branch = true
-    for m in o.members
-        kw = first_branch ? "if" : "elseif"
-        first_branch = false
-        args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
-        println(io, "            ", kw, " _o.name === :", m.jl_fieldname)
-        println(io, "                encoded_size += PB._encoded_size(_o.value, ", m.number, args, ")")
-    end
-    println(io, "            end")
+    println(io, "        if !isnothing(_o) && _o.name === :", m.jl_fieldname)
+    println(io, "            encoded_size += PB._encoded_size(_o.value, ", m.number, args, ")")
     println(io, "        end")
     println(io, "    end")
 end
@@ -770,12 +793,37 @@ end
 
 function _emit_encode_field(io::IO, f::FieldModel)
     args = isempty(f.wire_annotation) ? "" : ", $(f.wire_annotation)"
-    println(io, "    ", f.encode_skip, " && PB.encode(_e, ", f.number, ", _x.", f.jl_fieldname, args, ")")
+    if f.is_repeated && (f.is_enum ||
+                         !(f.is_message || f.is_map ||
+                           f.elem_jl_type == "String" || f.elem_jl_type == "Vector{UInt8}")) &&
+       !f.is_packed
+        # Unpacked repeated scalar/enum: protoc emits one tag-value pair
+        # per element (proto2 default, or proto3 with [packed = false]).
+        # Emit per-element so the singular scalar encode paths apply.
+        println(io, "    if !isempty(_x.", f.jl_fieldname, ")")
+        println(io, "        for _v in _x.", f.jl_fieldname)
+        println(io, "            PB.encode(_e, ", f.number, ", _v", args, ")")
+        println(io, "        end")
+        println(io, "    end")
+    else
+        println(io, "    ", f.encode_skip, " && PB.encode(_e, ", f.number, ", _x.", f.jl_fieldname, args, ")")
+    end
 end
 
 function _emit_encoded_size_field(io::IO, f::FieldModel)
     args = isempty(f.wire_annotation) ? "" : ", $(f.wire_annotation)"
-    println(io, "    ", f.encode_skip, " && (encoded_size += PB._encoded_size(_x.", f.jl_fieldname, ", ", f.number, args, "))")
+    if f.is_repeated && (f.is_enum ||
+                         !(f.is_message || f.is_map ||
+                           f.elem_jl_type == "String" || f.elem_jl_type == "Vector{UInt8}")) &&
+       !f.is_packed
+        println(io, "    if !isempty(_x.", f.jl_fieldname, ")")
+        println(io, "        for _v in _x.", f.jl_fieldname)
+        println(io, "            encoded_size += PB._encoded_size(_v, ", f.number, args, ")")
+        println(io, "        end")
+        println(io, "    end")
+    else
+        println(io, "    ", f.encode_skip, " && (encoded_size += PB._encoded_size(_x.", f.jl_fieldname, ", ", f.number, args, "))")
+    end
 end
 
 function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String)
@@ -871,7 +919,7 @@ function codegen(file::FileDescriptorProto)
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
     println(io)
     println(io, "import ProtoBufDescriptors as PB")
-    println(io, "using ProtoBufDescriptors: OneOf")
+    println(io, "using ProtoBufDescriptors: OneOf, OrderedDict")
     println(io, "using ProtoBufDescriptors.EnumX: @enumx")
     println(io)
 

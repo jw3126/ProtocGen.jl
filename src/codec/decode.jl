@@ -25,11 +25,15 @@ function decode(d::AbstractProtoDecoder, ::Type{T}, ::Type{Val{:zigzag}}) where 
 end
 decode(d::AbstractProtoDecoder, ::Type{Bool}) = Bool(read(get_stream(d), UInt8))
 function decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Enum{Int32},Enum{UInt32}}}
-    val = vbyte_decode(get_stream(d), UInt32)
+    # protoc sign-extends negative enum values to int64 on the wire (10-byte
+    # varint). Read as UInt64 then truncate so we consume the full payload.
+    # Same trick the Int32 scalar decoder uses on line 15. Upstream
+    # ProtoBuf.jl carries the matching bug.
+    val = vbyte_decode(get_stream(d), UInt64) % UInt32
     return Core.bitcast(T, reinterpret(Int32, val))
 end
 decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Float64,Float32}} = read(get_stream(d), T)
-function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}) where {K,V<:_ScalarTypesEnum}
+function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V<:_ScalarTypesEnum}
     io = get_stream(d)
     pair_len = vbyte_decode(io, UInt32)
     pair_end_pos = position(io) + pair_len
@@ -42,7 +46,7 @@ function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}) where {K,V<:_Scalar
     nothing
 end
 
-function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}) where {K,V}
+function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V}
     io = get_stream(d)
     pair_len = vbyte_decode(io, UInt32)
     pair_end_pos = position(io) + pair_len
@@ -56,7 +60,7 @@ function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}) where {K,V}
 end
 
 for T in (:(:fixed), :(:zigzag))
-    @eval function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}, ::Type{Val{Tuple{Nothing,$(T)}}}) where {K,V}
+    @eval function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{Nothing,$(T)}}}) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
@@ -69,7 +73,7 @@ for T in (:(:fixed), :(:zigzag))
         nothing
     end
 
-    @eval function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
+    @eval function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
@@ -84,7 +88,7 @@ for T in (:(:fixed), :(:zigzag))
 end
 
 for T in (:(:fixed), :(:zigzag)), S in (:(:fixed), :(:zigzag))
-    @eval function decode!(d::AbstractProtoDecoder, buffer::Dict{K,V}, ::Type{Val{Tuple{$(T),$(S)}}}) where {K,V}
+    @eval function decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),$(S)}}}) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len

@@ -1,0 +1,4 @@
+# Empty TestAllTypesProto3: every field unset. Decode must yield zero
+# values for every implicit-presence scalar (proto3 has no `optional`
+# keyword on these), empty Vector/Dict for repeated/map, `nothing` for
+# the oneof. Re-encode must produce zero bytes.

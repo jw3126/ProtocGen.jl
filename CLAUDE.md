@@ -40,7 +40,11 @@ without explicit reason.
   dropped.
 - **Groups**: deprecated proto2 wire format. Round-trip them but document as
   legacy.
-- **Maps**: detect synthesized message types via `map_entry=true`. Emit `Dict{K,V}`.
+- **Maps**: detect synthesized message types via `map_entry=true`. Emit
+  `OrderedDict{K,V}` (insertion-ordered, from OrderedCollections.jl) so
+  re-encode preserves wire order and yields byte-identical output to
+  protoc. Codec dispatches on `AbstractDict{K,V}` so user-supplied plain
+  `Dict` still works for encode (they just won't have ordering guarantees).
 - **Real oneofs** (non-synthetic): `Union{Nothing, OneOf{Union{T1,T2,...}}}`.
 - **Package shape**: monolithic for v1. Runtime/codegen split deferred to v2.
 - **Generated API**: fresh, with a small ProtoBuf.jl-compat shim for migration.
@@ -74,7 +78,8 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 
 ## Current state
 
-- `Project.toml` UUID `b5fc38b8-670b-4930-8529-238e2ca71835`. Deps: BufferedStreams, EnumX, TOML.
+- `Project.toml` UUID `b5fc38b8-670b-4930-8529-238e2ca71835`. Deps:
+  BufferedStreams, EnumX, OrderedCollections, TOML.
 - `src/codec/` is `ProtoBuf.jl/src/codec/` minus the legacy
   `LengthDelimitedProtoDecoder`/`GroupProtoDecoder` block.
 - `src/ProtoBufDescriptors.jl` re-exports the codec API, defines `OneOf` and
@@ -172,6 +177,44 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 - `test_codegen.jl` also covers maps end-to-end (`Dict{String,Int32}`,
   `Dict{Int32,String}`, `Dict{String,SubMessage}`) and the real oneof on
   `sample.Outer`.
+- `test/test_conformance_corpus.jl` runs patched copies of Google's
+  conformance protos (`test_messages_proto{2,3}_patched.proto`) through
+  codegen end-to-end. The patched files vendor upstream verbatim except
+  for the features deferred in v1; their headers list every removal
+  (extensions, groups, MessageSet, recursion, WKT-typed fields,
+  AliasedEnum). Each syntax has a "full" populated fixture (every
+  retained field non-default) and an "empty" fixture; the populated
+  case asserts spot-checked decode values across every wire-type ×
+  container shape category **and full byte-equality of re-encode against
+  the protoc fixture**, the empty case asserts presence semantics and
+  zero-byte re-encode. Authoring these protos surfaced four wire-format
+  correctness issues fixed along the way:
+  1. `decode(::Enum{Int32,UInt32})` only consumed 5-byte varints, but
+     protoc sign-extends negative enum values to 10-byte int64. Fixed
+     in `src/codec/decode.jl` to read as `UInt64` and truncate, matching
+     the trick already in place for `decode(::Int32)`.
+  2. `_encode(::Enum)` emitted 5 bytes regardless of sign. Mirrored the
+     `_encode(::Int32)` sign-extension branch so negatives serialize as
+     10 bytes (spec-compliant and protoc-byte-identical).
+  3. `_varint_size(::Enum)` was the matching size-calculation bug;
+     dispatched it through `_varint_size(::Int32)` so size and encode
+     agree.
+  4. Codegen always emitted *packed* encode for repeated scalar/enum
+     fields, regardless of the field's `[packed = …]` annotation or the
+     file syntax. proto2 defaults repeated scalars unpacked, proto3
+     defaults packed; codegen now reads `field.options.packed` (with
+     the syntax-default fallback) and emits a per-element loop for
+     unpacked fields.
+
+  ProtoBuf.jl carries items (1)–(3) as well — worth contributing upstream
+  during Phase 8.
+
+  The byte-equality assertion forced one further codegen change: encode
+  and `_encoded_size` now emit field statements **in field-number order**
+  (sorted), not proto-source order, because protoc orders the wire by
+  field number. Each oneof member becomes its own `if !isnothing(_o) &&
+  _o.name === :m` check at its own field number so it can interleave
+  correctly with plain fields.
 - Test fixtures live in `test/fixtures/`: `proto/*.proto` (schemas),
   `txtpb/*.txtpb` (protoc-encode inputs), `pb/*.pb` (committed binary
   outputs that tests load via `fixture("name.pb")` from runtests.jl).
@@ -183,7 +226,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   `test_messages_for_codec_pb.jl`. Port them in Phase 4 once codegen exists.
 - CI matrix mirrors ProtoBuf.jl: 1.10 / 1 / nightly × Linux / Windows / macOS ×
   x64 / aarch64.
-- 1441 / 1441 tests pass.
+- 1574 / 1574 tests pass.
 
 ### Known bootstrap caveats
 

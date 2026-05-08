@@ -1,0 +1,3 @@
+# Empty TestAllTypesProto2: every field unset. Decode must yield
+# `nothing` for every Union{Nothing,T} field and empty Vector/Dict for
+# every repeated/map. Re-encode must produce zero bytes.
