@@ -7,12 +7,13 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export FileDescriptorSet, FileDescriptorProto, DescriptorProto, ExtensionRangeOptions, FieldDescriptorProto, OneofDescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, ServiceDescriptorProto, MethodDescriptorProto, FileOptions, MessageOptions, FieldOptions, OneofOptions, EnumOptions, EnumValueOptions, ServiceOptions, MethodOptions, UninterpretedOption, SourceCodeInfo, GeneratedCodeInfo
 
-struct var"UninterpretedOption.NamePart"
+struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
     name_part::String
     is_extension::Bool
 end
 PB.default_values(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "", is_extension = false)
 PB.field_numbers(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = 1, is_extension = 2)
+PB.json_field_names(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "namePart", is_extension = "isExtension")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"UninterpretedOption.NamePart"}, _endpos::Int=0, _group::Bool=false)
     name_part = ""
@@ -49,7 +50,7 @@ function PB._encoded_size(_x::var"UninterpretedOption.NamePart")
     return encoded_size
 end
 
-struct UninterpretedOption
+struct UninterpretedOption <: PB.AbstractProtoBufMessage
     name::Vector{var"UninterpretedOption.NamePart"}
     identifier_value::Union{Nothing,String}
     positive_int_value::Union{Nothing,UInt64}
@@ -60,6 +61,7 @@ struct UninterpretedOption
 end
 PB.default_values(::Core.Type{UninterpretedOption}) = (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing)
 PB.field_numbers(::Core.Type{UninterpretedOption}) = (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
+PB.json_field_names(::Core.Type{UninterpretedOption}) = (;name = "name", identifier_value = "identifierValue", positive_int_value = "positiveIntValue", negative_int_value = "negativeIntValue", double_value = "doubleValue", string_value = "stringValue", aggregate_value = "aggregateValue")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UninterpretedOption}, _endpos::Int=0, _group::Bool=false)
     name = PB.BufferedVector{var"UninterpretedOption.NamePart"}()
@@ -119,7 +121,7 @@ end
 
 @enumx var"FieldOptions.JSType" JS_NORMAL=0 JS_STRING=1 JS_NUMBER=2
 
-struct FieldOptions
+struct FieldOptions <: PB.AbstractProtoBufMessage
     ctype::var"FieldOptions.CType".T
     packed::Union{Nothing,Bool}
     jstype::var"FieldOptions.JSType".T
@@ -130,6 +132,7 @@ struct FieldOptions
 end
 PB.default_values(::Core.Type{FieldOptions}) = (;ctype = var"FieldOptions.CType".STRING, packed = nothing, jstype = var"FieldOptions.JSType".JS_NORMAL, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{FieldOptions}) = (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{FieldOptions}) = (;ctype = "ctype", packed = "packed", jstype = "jstype", lazy = "lazy", deprecated = "deprecated", weak = "weak", uninterpreted_option = "uninterpretedOption")
 PB.reserved_fields(::Core.Type{FieldOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[4])
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldOptions}, _endpos::Int=0, _group::Bool=false)
@@ -190,7 +193,7 @@ end
 
 @enumx var"FieldDescriptorProto.Label" LABEL_OPTIONAL=1 LABEL_REQUIRED=2 LABEL_REPEATED=3
 
-struct FieldDescriptorProto
+struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     number::Union{Nothing,Int32}
     label::var"FieldDescriptorProto.Label".T
@@ -205,6 +208,7 @@ struct FieldDescriptorProto
 end
 PB.default_values(::Core.Type{FieldDescriptorProto}) = (;name = nothing, number = nothing, label = var"FieldDescriptorProto.Label".LABEL_OPTIONAL, var"#type" = var"FieldDescriptorProto.Type".TYPE_DOUBLE, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing)
 PB.field_numbers(::Core.Type{FieldDescriptorProto}) = (;name = 1, number = 3, label = 4, var"#type" = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
+PB.json_field_names(::Core.Type{FieldDescriptorProto}) = (;name = "name", number = "number", label = "label", var"#type" = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -282,13 +286,14 @@ end
 
 @enumx var"MethodOptions.IdempotencyLevel" IDEMPOTENCY_UNKNOWN=0 NO_SIDE_EFFECTS=1 IDEMPOTENT=2
 
-struct MethodOptions
+struct MethodOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     idempotency_level::var"MethodOptions.IdempotencyLevel".T
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{MethodOptions}) = (;deprecated = nothing, idempotency_level = var"MethodOptions.IdempotencyLevel".IDEMPOTENCY_UNKNOWN, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{MethodOptions}) = (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{MethodOptions}) = (;deprecated = "deprecated", idempotency_level = "idempotencyLevel", uninterpreted_option = "uninterpretedOption")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
@@ -324,7 +329,7 @@ function PB._encoded_size(_x::MethodOptions)
     return encoded_size
 end
 
-struct MethodDescriptorProto
+struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     input_type::Union{Nothing,String}
     output_type::Union{Nothing,String}
@@ -334,6 +339,7 @@ struct MethodDescriptorProto
 end
 PB.default_values(::Core.Type{MethodDescriptorProto}) = (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing)
 PB.field_numbers(::Core.Type{MethodDescriptorProto}) = (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
+PB.json_field_names(::Core.Type{MethodDescriptorProto}) = (;name = "name", input_type = "inputType", output_type = "outputType", options = "options", client_streaming = "clientStreaming", server_streaming = "serverStreaming")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -384,12 +390,13 @@ function PB._encoded_size(_x::MethodDescriptorProto)
     return encoded_size
 end
 
-struct ServiceOptions
+struct ServiceOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{ServiceOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{ServiceOptions}) = (;deprecated = 33, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{ServiceOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
@@ -420,13 +427,14 @@ function PB._encoded_size(_x::ServiceOptions)
     return encoded_size
 end
 
-struct ServiceDescriptorProto
+struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     method::Vector{MethodDescriptorProto}
     options::Union{Nothing,ServiceOptions}
 end
 PB.default_values(::Core.Type{ServiceDescriptorProto}) = (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing)
 PB.field_numbers(::Core.Type{ServiceDescriptorProto}) = (;name = 1, method = 2, options = 3)
+PB.json_field_names(::Core.Type{ServiceDescriptorProto}) = (;name = "name", method = "method", options = "options")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -462,11 +470,12 @@ function PB._encoded_size(_x::ServiceDescriptorProto)
     return encoded_size
 end
 
-struct ExtensionRangeOptions
+struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = "uninterpretedOption")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ExtensionRangeOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
@@ -492,11 +501,12 @@ function PB._encoded_size(_x::ExtensionRangeOptions)
     return encoded_size
 end
 
-struct OneofOptions
+struct OneofOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{OneofOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{OneofOptions}) = (;uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{OneofOptions}) = (;uninterpreted_option = "uninterpretedOption")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
@@ -522,12 +532,13 @@ function PB._encoded_size(_x::OneofOptions)
     return encoded_size
 end
 
-struct OneofDescriptorProto
+struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     options::Union{Nothing,OneofOptions}
 end
 PB.default_values(::Core.Type{OneofDescriptorProto}) = (;name = nothing, options = nothing)
 PB.field_numbers(::Core.Type{OneofDescriptorProto}) = (;name = 1, options = 2)
+PB.json_field_names(::Core.Type{OneofDescriptorProto}) = (;name = "name", options = "options")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -558,12 +569,13 @@ function PB._encoded_size(_x::OneofDescriptorProto)
     return encoded_size
 end
 
-struct EnumValueOptions
+struct EnumValueOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{EnumValueOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{EnumValueOptions}) = (;deprecated = 1, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{EnumValueOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
@@ -594,13 +606,14 @@ function PB._encoded_size(_x::EnumValueOptions)
     return encoded_size
 end
 
-struct EnumValueDescriptorProto
+struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     number::Union{Nothing,Int32}
     options::Union{Nothing,EnumValueOptions}
 end
 PB.default_values(::Core.Type{EnumValueDescriptorProto}) = (;name = nothing, number = nothing, options = nothing)
 PB.field_numbers(::Core.Type{EnumValueDescriptorProto}) = (;name = 1, number = 2, options = 3)
+PB.json_field_names(::Core.Type{EnumValueDescriptorProto}) = (;name = "name", number = "number", options = "options")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -636,13 +649,14 @@ function PB._encoded_size(_x::EnumValueDescriptorProto)
     return encoded_size
 end
 
-struct EnumOptions
+struct EnumOptions <: PB.AbstractProtoBufMessage
     allow_alias::Union{Nothing,Bool}
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
 end
 PB.default_values(::Core.Type{EnumOptions}) = (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{EnumOptions}) = (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{EnumOptions}) = (;allow_alias = "allowAlias", deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 PB.reserved_fields(::Core.Type{EnumOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[5])
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumOptions}, _endpos::Int=0, _group::Bool=false)
@@ -679,12 +693,13 @@ function PB._encoded_size(_x::EnumOptions)
     return encoded_size
 end
 
-struct var"EnumDescriptorProto.EnumReservedRange"
+struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
 end
 PB.default_values(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = nothing, var"#end" = nothing)
 PB.field_numbers(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = 1, var"#end" = 2)
+PB.json_field_names(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = "start", var"#end" = "end")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"EnumDescriptorProto.EnumReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
@@ -715,7 +730,7 @@ function PB._encoded_size(_x::var"EnumDescriptorProto.EnumReservedRange")
     return encoded_size
 end
 
-struct EnumDescriptorProto
+struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     value::Vector{EnumValueDescriptorProto}
     options::Union{Nothing,EnumOptions}
@@ -724,6 +739,7 @@ struct EnumDescriptorProto
 end
 PB.default_values(::Core.Type{EnumDescriptorProto}) = (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}())
 PB.field_numbers(::Core.Type{EnumDescriptorProto}) = (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
+PB.json_field_names(::Core.Type{EnumDescriptorProto}) = (;name = "name", value = "value", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -769,7 +785,7 @@ function PB._encoded_size(_x::EnumDescriptorProto)
     return encoded_size
 end
 
-struct MessageOptions
+struct MessageOptions <: PB.AbstractProtoBufMessage
     message_set_wire_format::Union{Nothing,Bool}
     no_standard_descriptor_accessor::Union{Nothing,Bool}
     deprecated::Union{Nothing,Bool}
@@ -778,6 +794,7 @@ struct MessageOptions
 end
 PB.default_values(::Core.Type{MessageOptions}) = (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{MessageOptions}) = (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{MessageOptions}) = (;message_set_wire_format = "messageSetWireFormat", no_standard_descriptor_accessor = "noStandardDescriptorAccessor", deprecated = "deprecated", map_entry = "mapEntry", uninterpreted_option = "uninterpretedOption")
 PB.reserved_fields(::Core.Type{MessageOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[8, 9])
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MessageOptions}, _endpos::Int=0, _group::Bool=false)
@@ -824,13 +841,14 @@ function PB._encoded_size(_x::MessageOptions)
     return encoded_size
 end
 
-struct var"DescriptorProto.ExtensionRange"
+struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
     options::Union{Nothing,ExtensionRangeOptions}
 end
 PB.default_values(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = nothing, var"#end" = nothing, options = nothing)
 PB.field_numbers(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = 1, var"#end" = 2, options = 3)
+PB.json_field_names(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = "start", var"#end" = "end", options = "options")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProto.ExtensionRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
@@ -866,12 +884,13 @@ function PB._encoded_size(_x::var"DescriptorProto.ExtensionRange")
     return encoded_size
 end
 
-struct var"DescriptorProto.ReservedRange"
+struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
 end
 PB.default_values(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = nothing, var"#end" = nothing)
 PB.field_numbers(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = 1, var"#end" = 2)
+PB.json_field_names(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = "start", var"#end" = "end")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProto.ReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
@@ -902,7 +921,7 @@ function PB._encoded_size(_x::var"DescriptorProto.ReservedRange")
     return encoded_size
 end
 
-struct DescriptorProto
+struct DescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     field::Vector{FieldDescriptorProto}
     extension::Vector{FieldDescriptorProto}
@@ -916,6 +935,7 @@ struct DescriptorProto
 end
 PB.default_values(::Core.Type{DescriptorProto}) = (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}())
 PB.field_numbers(::Core.Type{DescriptorProto}) = (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
+PB.json_field_names(::Core.Type{DescriptorProto}) = (;name = "name", field = "field", extension = "extension", nested_type = "nestedType", enum_type = "enumType", extension_range = "extensionRange", oneof_decl = "oneofDecl", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -986,7 +1006,7 @@ function PB._encoded_size(_x::DescriptorProto)
     return encoded_size
 end
 
-struct var"SourceCodeInfo.Location"
+struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
     path::Vector{Int32}
     span::Vector{Int32}
     leading_comments::Union{Nothing,String}
@@ -995,6 +1015,7 @@ struct var"SourceCodeInfo.Location"
 end
 PB.default_values(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}())
 PB.field_numbers(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
+PB.json_field_names(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = "path", span = "span", leading_comments = "leadingComments", trailing_comments = "trailingComments", leading_detached_comments = "leadingDetachedComments")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"SourceCodeInfo.Location"}, _endpos::Int=0, _group::Bool=false)
     path = PB.BufferedVector{Int32}()
@@ -1040,11 +1061,12 @@ function PB._encoded_size(_x::var"SourceCodeInfo.Location")
     return encoded_size
 end
 
-struct SourceCodeInfo
+struct SourceCodeInfo <: PB.AbstractProtoBufMessage
     location::Vector{var"SourceCodeInfo.Location"}
 end
 PB.default_values(::Core.Type{SourceCodeInfo}) = (;location = Vector{var"SourceCodeInfo.Location"}())
 PB.field_numbers(::Core.Type{SourceCodeInfo}) = (;location = 1)
+PB.json_field_names(::Core.Type{SourceCodeInfo}) = (;location = "location")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceCodeInfo}, _endpos::Int=0, _group::Bool=false)
     location = PB.BufferedVector{var"SourceCodeInfo.Location"}()
@@ -1072,7 +1094,7 @@ end
 
 @enumx var"FileOptions.OptimizeMode" SPEED=1 CODE_SIZE=2 LITE_RUNTIME=3
 
-struct FileOptions
+struct FileOptions <: PB.AbstractProtoBufMessage
     java_package::Union{Nothing,String}
     java_outer_classname::Union{Nothing,String}
     java_multiple_files::Union{Nothing,Bool}
@@ -1097,6 +1119,7 @@ struct FileOptions
 end
 PB.default_values(::Core.Type{FileOptions}) = (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = var"FileOptions.OptimizeMode".SPEED, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}())
 PB.field_numbers(::Core.Type{FileOptions}) = (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
+PB.json_field_names(::Core.Type{FileOptions}) = (;java_package = "javaPackage", java_outer_classname = "javaOuterClassname", java_multiple_files = "javaMultipleFiles", java_generate_equals_and_hash = "javaGenerateEqualsAndHash", java_string_check_utf8 = "javaStringCheckUtf8", optimize_for = "optimizeFor", go_package = "goPackage", cc_generic_services = "ccGenericServices", java_generic_services = "javaGenericServices", py_generic_services = "pyGenericServices", php_generic_services = "phpGenericServices", deprecated = "deprecated", cc_enable_arenas = "ccEnableArenas", objc_class_prefix = "objcClassPrefix", csharp_namespace = "csharpNamespace", swift_prefix = "swiftPrefix", php_class_prefix = "phpClassPrefix", php_namespace = "phpNamespace", php_metadata_namespace = "phpMetadataNamespace", ruby_package = "rubyPackage", uninterpreted_option = "uninterpretedOption")
 PB.reserved_fields(::Core.Type{FileOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[38])
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileOptions}, _endpos::Int=0, _group::Bool=false)
@@ -1223,7 +1246,7 @@ function PB._encoded_size(_x::FileOptions)
     return encoded_size
 end
 
-struct FileDescriptorProto
+struct FileDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     package::Union{Nothing,String}
     dependency::Vector{String}
@@ -1239,6 +1262,7 @@ struct FileDescriptorProto
 end
 PB.default_values(::Core.Type{FileDescriptorProto}) = (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing)
 PB.field_numbers(::Core.Type{FileDescriptorProto}) = (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
+PB.json_field_names(::Core.Type{FileDescriptorProto}) = (;name = "name", package = "package", dependency = "dependency", public_dependency = "publicDependency", weak_dependency = "weakDependency", message_type = "messageType", enum_type = "enumType", service = "service", extension = "extension", options = "options", source_code_info = "sourceCodeInfo", syntax = "syntax")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -1335,11 +1359,12 @@ function PB._encoded_size(_x::FileDescriptorProto)
     return encoded_size
 end
 
-struct FileDescriptorSet
+struct FileDescriptorSet <: PB.AbstractProtoBufMessage
     file::Vector{FileDescriptorProto}
 end
 PB.default_values(::Core.Type{FileDescriptorSet}) = (;file = Vector{FileDescriptorProto}())
 PB.field_numbers(::Core.Type{FileDescriptorSet}) = (;file = 1)
+PB.json_field_names(::Core.Type{FileDescriptorSet}) = (;file = "file")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorSet}, _endpos::Int=0, _group::Bool=false)
     file = PB.BufferedVector{FileDescriptorProto}()
@@ -1365,7 +1390,7 @@ function PB._encoded_size(_x::FileDescriptorSet)
     return encoded_size
 end
 
-struct var"GeneratedCodeInfo.Annotation"
+struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
     path::Vector{Int32}
     source_file::Union{Nothing,String}
     var"#begin"::Union{Nothing,Int32}
@@ -1373,6 +1398,7 @@ struct var"GeneratedCodeInfo.Annotation"
 end
 PB.default_values(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing)
 PB.field_numbers(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
+PB.json_field_names(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = "path", source_file = "sourceFile", var"#begin" = "begin", var"#end" = "end")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"GeneratedCodeInfo.Annotation"}, _endpos::Int=0, _group::Bool=false)
     path = PB.BufferedVector{Int32}()
@@ -1413,11 +1439,12 @@ function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
     return encoded_size
 end
 
-struct GeneratedCodeInfo
+struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
     annotation::Vector{var"GeneratedCodeInfo.Annotation"}
 end
 PB.default_values(::Core.Type{GeneratedCodeInfo}) = (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}())
 PB.field_numbers(::Core.Type{GeneratedCodeInfo}) = (;annotation = 1)
+PB.json_field_names(::Core.Type{GeneratedCodeInfo}) = (;annotation = "annotation")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:GeneratedCodeInfo}, _endpos::Int=0, _group::Bool=false)
     annotation = PB.BufferedVector{var"GeneratedCodeInfo.Annotation"}()

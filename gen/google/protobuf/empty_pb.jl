@@ -7,10 +7,11 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Empty
 
-struct Empty
+struct Empty <: PB.AbstractProtoBufMessage
 end
 PB.default_values(::Core.Type{Empty}) = (;)
 PB.field_numbers(::Core.Type{Empty}) = (;)
+PB.json_field_names(::Core.Type{Empty}) = (;)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
     while !PB.message_done(_d, _endpos, _group)

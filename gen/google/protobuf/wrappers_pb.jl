@@ -7,11 +7,12 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value, BoolValue, StringValue, BytesValue
 
-struct DoubleValue
+struct DoubleValue <: PB.AbstractProtoBufMessage
     value::Float64
 end
 PB.default_values(::Core.Type{DoubleValue}) = (;value = zero(Float64))
 PB.field_numbers(::Core.Type{DoubleValue}) = (;value = 1)
+PB.json_field_names(::Core.Type{DoubleValue}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float64)
@@ -37,11 +38,12 @@ function PB._encoded_size(_x::DoubleValue)
     return encoded_size
 end
 
-struct FloatValue
+struct FloatValue <: PB.AbstractProtoBufMessage
     value::Float32
 end
 PB.default_values(::Core.Type{FloatValue}) = (;value = zero(Float32))
 PB.field_numbers(::Core.Type{FloatValue}) = (;value = 1)
+PB.json_field_names(::Core.Type{FloatValue}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float32)
@@ -67,11 +69,12 @@ function PB._encoded_size(_x::FloatValue)
     return encoded_size
 end
 
-struct Int64Value
+struct Int64Value <: PB.AbstractProtoBufMessage
     value::Int64
 end
 PB.default_values(::Core.Type{Int64Value}) = (;value = zero(Int64))
 PB.field_numbers(::Core.Type{Int64Value}) = (;value = 1)
+PB.json_field_names(::Core.Type{Int64Value}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int64)
@@ -97,11 +100,12 @@ function PB._encoded_size(_x::Int64Value)
     return encoded_size
 end
 
-struct UInt64Value
+struct UInt64Value <: PB.AbstractProtoBufMessage
     value::UInt64
 end
 PB.default_values(::Core.Type{UInt64Value}) = (;value = zero(UInt64))
 PB.field_numbers(::Core.Type{UInt64Value}) = (;value = 1)
+PB.json_field_names(::Core.Type{UInt64Value}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt64)
@@ -127,11 +131,12 @@ function PB._encoded_size(_x::UInt64Value)
     return encoded_size
 end
 
-struct Int32Value
+struct Int32Value <: PB.AbstractProtoBufMessage
     value::Int32
 end
 PB.default_values(::Core.Type{Int32Value}) = (;value = zero(Int32))
 PB.field_numbers(::Core.Type{Int32Value}) = (;value = 1)
+PB.json_field_names(::Core.Type{Int32Value}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int32)
@@ -157,11 +162,12 @@ function PB._encoded_size(_x::Int32Value)
     return encoded_size
 end
 
-struct UInt32Value
+struct UInt32Value <: PB.AbstractProtoBufMessage
     value::UInt32
 end
 PB.default_values(::Core.Type{UInt32Value}) = (;value = zero(UInt32))
 PB.field_numbers(::Core.Type{UInt32Value}) = (;value = 1)
+PB.json_field_names(::Core.Type{UInt32Value}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt32)
@@ -187,11 +193,12 @@ function PB._encoded_size(_x::UInt32Value)
     return encoded_size
 end
 
-struct BoolValue
+struct BoolValue <: PB.AbstractProtoBufMessage
     value::Bool
 end
 PB.default_values(::Core.Type{BoolValue}) = (;value = false)
 PB.field_numbers(::Core.Type{BoolValue}) = (;value = 1)
+PB.json_field_names(::Core.Type{BoolValue}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
     value = false
@@ -217,11 +224,12 @@ function PB._encoded_size(_x::BoolValue)
     return encoded_size
 end
 
-struct StringValue
+struct StringValue <: PB.AbstractProtoBufMessage
     value::String
 end
 PB.default_values(::Core.Type{StringValue}) = (;value = "")
 PB.field_numbers(::Core.Type{StringValue}) = (;value = 1)
+PB.json_field_names(::Core.Type{StringValue}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
     value = ""
@@ -247,11 +255,12 @@ function PB._encoded_size(_x::StringValue)
     return encoded_size
 end
 
-struct BytesValue
+struct BytesValue <: PB.AbstractProtoBufMessage
     value::Vector{UInt8}
 end
 PB.default_values(::Core.Type{BytesValue}) = (;value = UInt8[])
 PB.field_numbers(::Core.Type{BytesValue}) = (;value = 1)
+PB.json_field_names(::Core.Type{BytesValue}) = (;value = "value")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)
     value = UInt8[]

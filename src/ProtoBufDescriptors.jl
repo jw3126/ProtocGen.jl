@@ -65,14 +65,25 @@ function default_values(::Type{T}) where {T}
     return (;)
 end
 
+# Maps each Julia field name → the JSON key it serializes to. Codegen
+# emits a method per generated message reading the (already populated)
+# `json_name` from the FieldDescriptor; the default-empty NamedTuple
+# returned here means "use the Julia field name verbatim" — useful for
+# in-process / hand-written types that haven't been through codegen.
+function json_field_names(::Type{T}) where {T}
+    return (;)
+end
+
 include("../gen/google/google.jl")
 
 include("codegen.jl")
 include("plugin.jl")
+include("json.jl")
 include("testing.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder
+export encode_json, decode_json
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
-export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values
+export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values, json_field_names
 
 end # module

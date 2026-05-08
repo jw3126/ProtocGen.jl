@@ -7,12 +7,13 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Duration
 
-struct Duration
+struct Duration <: PB.AbstractProtoBufMessage
     seconds::Int64
     nanos::Int32
 end
 PB.default_values(::Core.Type{Duration}) = (;seconds = zero(Int64), nanos = zero(Int32))
 PB.field_numbers(::Core.Type{Duration}) = (;seconds = 1, nanos = 2)
+PB.json_field_names(::Core.Type{Duration}) = (;seconds = "seconds", nanos = "nanos")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Duration}, _endpos::Int=0, _group::Bool=false)
     seconds = zero(Int64)

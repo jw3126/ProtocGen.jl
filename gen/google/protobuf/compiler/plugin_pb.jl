@@ -9,7 +9,7 @@ import ProtoBufDescriptors.google.protobuf as google_protobuf
 
 export Version, CodeGeneratorRequest, CodeGeneratorResponse
 
-struct Version
+struct Version <: PB.AbstractProtoBufMessage
     major::Union{Nothing,Int32}
     minor::Union{Nothing,Int32}
     patch::Union{Nothing,Int32}
@@ -17,6 +17,7 @@ struct Version
 end
 PB.default_values(::Core.Type{Version}) = (;major = nothing, minor = nothing, patch = nothing, suffix = nothing)
 PB.field_numbers(::Core.Type{Version}) = (;major = 1, minor = 2, patch = 3, suffix = 4)
+PB.json_field_names(::Core.Type{Version}) = (;major = "major", minor = "minor", patch = "patch", suffix = "suffix")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Version}, _endpos::Int=0, _group::Bool=false)
     major = nothing
@@ -57,7 +58,7 @@ function PB._encoded_size(_x::Version)
     return encoded_size
 end
 
-struct CodeGeneratorRequest
+struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
     file_to_generate::Vector{String}
     parameter::Union{Nothing,String}
     proto_file::Vector{google_protobuf.FileDescriptorProto}
@@ -66,6 +67,7 @@ struct CodeGeneratorRequest
 end
 PB.default_values(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing)
 PB.field_numbers(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
+PB.json_field_names(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = "fileToGenerate", parameter = "parameter", proto_file = "protoFile", source_file_descriptors = "sourceFileDescriptors", compiler_version = "compilerVersion")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorRequest}, _endpos::Int=0, _group::Bool=false)
     file_to_generate = PB.BufferedVector{String}()
@@ -113,7 +115,7 @@ end
 
 @enumx var"CodeGeneratorResponse.Feature" FEATURE_NONE=0 FEATURE_PROTO3_OPTIONAL=1 FEATURE_SUPPORTS_EDITIONS=2
 
-struct var"CodeGeneratorResponse.File"
+struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     insertion_point::Union{Nothing,String}
     content::Union{Nothing,String}
@@ -121,6 +123,7 @@ struct var"CodeGeneratorResponse.File"
 end
 PB.default_values(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing)
 PB.field_numbers(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
+PB.json_field_names(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = "name", insertion_point = "insertionPoint", content = "content", generated_code_info = "generatedCodeInfo")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"CodeGeneratorResponse.File"}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -161,7 +164,7 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     return encoded_size
 end
 
-struct CodeGeneratorResponse
+struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
     error::Union{Nothing,String}
     supported_features::Union{Nothing,UInt64}
     minimum_edition::Union{Nothing,Int32}
@@ -170,6 +173,7 @@ struct CodeGeneratorResponse
 end
 PB.default_values(::Core.Type{CodeGeneratorResponse}) = (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}())
 PB.field_numbers(::Core.Type{CodeGeneratorResponse}) = (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)
+PB.json_field_names(::Core.Type{CodeGeneratorResponse}) = (;error = "error", supported_features = "supportedFeatures", minimum_edition = "minimumEdition", maximum_edition = "maximumEdition", file = "file")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorResponse}, _endpos::Int=0, _group::Bool=false)
     error = nothing

@@ -242,6 +242,7 @@ end
 Base.@kwdef struct FieldModel
     proto_name::String          # snake_case as in .proto
     jl_fieldname::String        # Julia field name (escaped if needed)
+    json_name::String           # JSON key (camelCase by default, or `[json_name = …]`)
     number::Int                 # field tag
     is_repeated::Bool = false
     is_message::Bool = false
@@ -288,6 +289,10 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
 
     proto_name = something(field.name, "")
     jl_fieldname = _jl_fieldname(proto_name)
+    # `json_name` is populated by protoc with the camelCase form (or the
+    # `[json_name = "…"]` override) for every field. Fall back to the raw
+    # field name only for hand-built descriptors that lack it.
+    json_name = something(field.json_name, proto_name)
     number = Int(something(field.number, Int32(0)))
     label = field.label
     ftype = getfield(field, Symbol("#type"))
@@ -321,6 +326,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             return FieldModel(;
                 proto_name,
                 jl_fieldname,
+                json_name,
                 number,
                 is_repeated = true,
                 is_map = true,
@@ -355,6 +361,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         return FieldModel(;
             proto_name,
             jl_fieldname,
+            json_name,
             number,
             is_repeated,
             is_message = true,
@@ -385,6 +392,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         return FieldModel(;
             proto_name,
             jl_fieldname,
+            json_name,
             number,
             is_repeated,
             is_enum = true,
@@ -443,6 +451,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         return FieldModel(;
             proto_name,
             jl_fieldname,
+            json_name,
             number,
             is_repeated,
             is_required,
@@ -651,7 +660,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     if is_cycle_participant
         println(io, "struct ", jl_name, " <: ", _abstract_name(jl_name))
     else
-        println(io, "struct ", jl_name)
+        println(io, "struct ", jl_name, " <: PB.AbstractProtoBufMessage")
     end
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
@@ -681,6 +690,19 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         for m in o.members
             push!(pieces, "$(m.jl_fieldname) = $(m.number)")
+        end
+    end
+    print(io, join(pieces, ", "))
+    println(io, ")")
+
+    print(io, "PB.json_field_names(::Core.Type{", jl_name, "}) = (;")
+    pieces = String[]
+    for f in plain_fields
+        push!(pieces, "$(f.jl_fieldname) = $(repr(f.json_name))")
+    end
+    for o in real_oneofs
+        for m in o.members
+            push!(pieces, "$(m.jl_fieldname) = $(repr(m.json_name))")
         end
     end
     print(io, join(pieces, ", "))
@@ -1309,7 +1331,7 @@ function codegen(file::FileDescriptorProto, universe::Universe)
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
-            println(io, "abstract type ", abs_jl, " end")
+            println(io, "abstract type ", abs_jl, " <: PB.AbstractProtoBufMessage end")
         end
         println(io)
     end

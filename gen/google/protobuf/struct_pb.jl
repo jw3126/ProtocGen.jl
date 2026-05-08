@@ -12,15 +12,16 @@ export NullValue, Struct, Value, ListValue
 # Forward declarations for cyclic message types. Each cycle
 # participant has an abstract supertype; field types that
 # reference cycle participants resolve to the abstract.
-abstract type AbstractListValue end
-abstract type AbstractStruct end
-abstract type AbstractValue end
+abstract type AbstractListValue <: PB.AbstractProtoBufMessage end
+abstract type AbstractStruct <: PB.AbstractProtoBufMessage end
+abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
 struct Struct <: AbstractStruct
     fields::OrderedDict{String,AbstractValue}
 end
 PB.default_values(::Core.Type{Struct}) = (;fields = OrderedDict{String,AbstractValue}())
 PB.field_numbers(::Core.Type{Struct}) = (;fields = 1)
+PB.json_field_names(::Core.Type{Struct}) = (;fields = "fields")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Struct}, _endpos::Int=0, _group::Bool=false)
     fields = OrderedDict{String,AbstractValue}()
@@ -51,6 +52,7 @@ struct Value <: AbstractValue
 end
 PB.default_values(::Core.Type{Value}) = (;kind = nothing)
 PB.field_numbers(::Core.Type{Value}) = (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
+PB.json_field_names(::Core.Type{Value}) = (;null_value = "nullValue", number_value = "numberValue", string_value = "stringValue", bool_value = "boolValue", struct_value = "structValue", list_value = "listValue")
 PB.oneof_field_types(::Core.Type{Value}) = (;kind = (;null_value = NullValue.T, number_value = Float64, string_value = String, bool_value = Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Value}, _endpos::Int=0, _group::Bool=false)
@@ -154,6 +156,7 @@ struct ListValue <: AbstractListValue
 end
 PB.default_values(::Core.Type{ListValue}) = (;values = Vector{AbstractValue}())
 PB.field_numbers(::Core.Type{ListValue}) = (;values = 1)
+PB.json_field_names(::Core.Type{ListValue}) = (;values = "values")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ListValue}, _endpos::Int=0, _group::Bool=false)
     values = PB.BufferedVector{AbstractValue}()

@@ -7,11 +7,12 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export FieldMask
 
-struct FieldMask
+struct FieldMask <: PB.AbstractProtoBufMessage
     paths::Vector{String}
 end
 PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}())
 PB.field_numbers(::Core.Type{FieldMask}) = (;paths = 1)
+PB.json_field_names(::Core.Type{FieldMask}) = (;paths = "paths")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
     paths = PB.BufferedVector{String}()

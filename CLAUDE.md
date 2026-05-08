@@ -73,6 +73,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a done) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -361,6 +362,26 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
     failures, 0 unexpected failures**.
 - 1670 / 1670 julia tests pass (1666 from Phase 8 + 4 from the
   conformance runner gate).
+- Phase 12a (JSON scaffold) lands the protobuf-JSON mapping — encode
+  and decode for scalars, repeated, nested messages, enums, plus the
+  generic wire quirks that fall out of plain type dispatch (int64 /
+  uint64 → JSON string, bytes → base64 string, NaN/±Infinity → JSON
+  string). Codegen now also emits `PB.json_field_names(::Core.Type{T})`
+  per message — a Julia-field → JSON-key map honoring
+  `[json_name = …]` overrides; non-overridden fields use protoc's
+  camelCase default, which is already populated in the
+  FieldDescriptorProto we receive. Encode is reflection-driven via the
+  same metadata methods the binary path uses (`field_numbers`,
+  `default_values`, `oneof_field_types`, `json_field_names`); WKT
+  specials (Timestamp → RFC 3339, Duration → "1.5s", Any → `@type`,
+  …) are deferred to Phase 12c. Maps and oneof parent-flattening
+  defer to Phase 12b. Codegen also flips the struct supertype:
+  generated messages now subtype `PB.AbstractProtoBufMessage` (cycle
+  participants do too via their forward-declared abstract), which is
+  what `encode_json` / `decode_json` dispatch on. **JSON.jl** is a
+  new runtime dep; base64 is implemented inline (a few dozen LOC) to
+  avoid wrestling with stdlib resolution under Julia 1.12.
+- 1713 / 1713 julia tests pass (1670 + 43 new JSON tests).
 
 ### Known bootstrap caveats
 

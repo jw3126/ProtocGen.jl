@@ -7,11 +7,12 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export SourceContext
 
-struct SourceContext
+struct SourceContext <: PB.AbstractProtoBufMessage
     file_name::String
 end
 PB.default_values(::Core.Type{SourceContext}) = (;file_name = "")
 PB.field_numbers(::Core.Type{SourceContext}) = (;file_name = 1)
+PB.json_field_names(::Core.Type{SourceContext}) = (;file_name = "fileName")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
     file_name = ""
