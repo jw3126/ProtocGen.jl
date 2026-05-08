@@ -63,8 +63,19 @@ function run_plugin(input::IO=stdin, output::IO=stdout)
         request = decode(ProtoDecoder(IOBuffer(blob)), _GC.CodeGeneratorRequest)
         generate(request)
     catch e
+        # Include the backtrace in `response.error` so codegen bugs surface
+        # with a real stack trace instead of a one-line message. The protoc
+        # plugin contract treats this string as user-facing text — it
+        # appears verbatim in protoc's stderr — so a trace there is the
+        # only signal a user gets when something goes wrong inside us.
+        bt = catch_backtrace()
+        msg = sprint() do io
+            showerror(io, e)
+            println(io)
+            Base.show_backtrace(io, bt)
+        end
         _GC.CodeGeneratorResponse(
-            sprint(showerror, e),
+            msg,
             nothing,
             nothing,
             nothing,
