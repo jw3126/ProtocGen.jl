@@ -69,6 +69,7 @@ include("../gen/google/google.jl")
 
 include("codegen.jl")
 include("plugin.jl")
+include("testing.jl")
 
 export encode, ProtoEncoder, decode, decode!, ProtoDecoder
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict

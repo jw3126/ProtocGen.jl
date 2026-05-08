@@ -70,7 +70,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 6 | proto2 `required`, maps, oneofs, packed, groups | DONE (groups deferred) |
 | 7 | Well-known types | DONE (all 11) |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | DONE |
-| 9 | Conformance + golden corpus | pending |
+| 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
 
@@ -317,7 +317,50 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   display behavior). With this in place,
   `test/fixtures/proto/test_messages_proto3.proto` ships verbatim
   upstream — the `_patched` suffix is gone.
-- 1666 / 1666 tests pass.
+- Phase 9 (2/2) wires up Google's `conformance_test_runner` against a
+  Julia testee that drives our codec end-to-end. The new tree under
+  `test/conformance/` holds:
+  - `proto/conformance.proto` — vendored verbatim from protobuf v25.9.
+  - `regen.jl` → `conformance_descriptors.pb` — bundled
+    FileDescriptorSet covering `conformance.proto` plus the
+    `test_messages_proto{2,3}` corpora (`--include_imports` drags the
+    transitive WKT descriptors along).
+  - `testee.jl` — self-executing Julia script (same shebang trick as
+    `bin/protoc-gen-julia`). At startup it feeds the bundled
+    descriptors through our own codegen and evals the result into
+    three sub-modules; the run loop reads framed `ConformanceRequest`
+    blobs from stdin, dispatches via decode → encode through
+    `MESSAGE_TYPE`, writes framed `ConformanceResponse` blobs to
+    stdout. JSON / JSPB / TEXT_FORMAT inputs and outputs are reported
+    via `response.skipped`.
+  - `failure_list.txt` — allowlist of 188 known-failing tests
+    grouped by category in the header. Two underlying codec gaps:
+    (a) lenient parser that accepts truncated/malformed inputs the
+    spec wants rejected (`PrematureEof*`, `IllegalZeroFieldNum_*`,
+    BOOL varint >1), and (b) map-entry decoder that rejects empty
+    entries, duplicate fields within an entry, and value-before-key
+    field order. Both are real binary-codec bugs against the wire
+    spec — not v1 scope deferrals — and are tracked for a follow-up
+    codec pass.
+  - `README.md` — how to run the conformance test, how to refresh the
+    failure list, how to force a rebuild.
+  - `ProtoBufDescriptors.obtain_conformance_test_runner()` (defined
+    in `src/testing.jl`, depends on `Scratch`) clones protobuf at the
+    pinned tag and cmake-builds the conformance target on first call,
+    caching the binary in a Scratch.jl scratchspace owned by this
+    package. Subsequent calls are an O(1) lookup. Override via
+    `CONFORMANCE_TEST_RUNNER` env var (use this exact path; skip
+    build) — useful for CI that provisions the binary out-of-band.
+  - `test/test_conformance_runner.jl` runs unconditionally on
+    Linux/macOS — the first run pays ~5–10 min for clone + build,
+    subsequent runs reuse the cached binary. The test asserts the
+    runner's exit code is 0, which holds when only allowlisted tests
+    fail. Skipped only on Windows (runner uses POSIX `fork`) or when
+    `cmake` / `git` is missing on PATH. Current state against
+    protobuf v25.9: **1071 successes, 729 skipped, 188 expected
+    failures, 0 unexpected failures**.
+- 1670 / 1670 julia tests pass (1666 from Phase 8 + 4 from the
+  conformance runner gate).
 
 ### Known bootstrap caveats
 
