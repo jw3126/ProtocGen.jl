@@ -24,6 +24,12 @@ include("setup.jl")
     p2 = eval_generated(f.content, :GeneratedConfP2)
     M = p2.TestAllTypesProto2
 
+    # `reserved 1000 to 9999;` in the schema → reserved_fields metadata
+    # carries the range. Single-number reservations would collapse to
+    # bare Int; this one stays a UnitRange.
+    @test ProtoBufDescriptors.reserved_fields(M) ==
+        (names = String[], numbers = Union{Int,UnitRange{Int}}[1000:9999])
+
     full_pb  = fixture("test_messages_proto2_full.pb")
     empty_pb = fixture("test_messages_proto2_empty.pb")
     @test isempty(empty_pb)
@@ -132,6 +138,9 @@ end
 
     p3 = eval_generated(f.content, :GeneratedConfP3)
     M = p3.TestAllTypesProto3
+
+    @test ProtoBufDescriptors.reserved_fields(M) ==
+        (names = String[], numbers = Union{Int,UnitRange{Int}}[501:510])
 
     full_pb  = fixture("test_messages_proto3_full.pb")
     empty_pb = fixture("test_messages_proto3_empty.pb")

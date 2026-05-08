@@ -51,7 +51,7 @@ end
 
 # ----------------------------------------------------------------------------
 # Name resolution. The proto FieldDescriptorProto.type_name is fully qualified
-# like ".pkg.Outer.Inner". For Phase 4 we only handle types defined within the
+# like ".pkg.Outer.Inner". We only handle types defined within the
 # current FileDescriptorProto. Cross-file imports are deferred.
 # Nested types are emitted at top level using `var"Outer.Inner"` to mirror the
 # bootstrap convention.
@@ -127,7 +127,7 @@ end
 function _resolve_typename(type_name::String, names::LocalNames)
     haskey(names.jl_names, type_name) || error(
         "codegen: unresolved type reference $(type_name) " *
-        "(cross-file imports are not supported in Phase 4)",
+        "(cross-file imports are not yet supported)",
     )
     jl = names.jl_names[type_name]
     # `Foo` stays as-is; `Foo.Bar` needs var"Foo.Bar" because the dot is not a
@@ -150,6 +150,8 @@ Base.@kwdef struct FieldModel
     is_map::Bool = false        # `map<K,V>` — emitted as `OrderedDict{K,V}`
     is_required::Bool = false   # proto2 `required`
     is_packed::Bool = false     # repeated scalar/enum encoded packed (LENGTH_DELIMITED)
+    emit_unpacked_loop::Bool = false  # encode emits per-element loop (proto2 default
+                                #   for repeated scalar/enum, or [packed = false])
     jl_type::String             # the type used in the struct field declaration
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
     wire_annotation::String = "" # "" / "Val{:fixed}" / "Val{:zigzag}"
@@ -280,6 +282,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default  = init_val
             skip     = is_required ? "true" : "_x.$(jl_fieldname) != $(default)"
         end
+        is_packed = is_repeated && _is_packed_repeated(field, names.syntax)
         return FieldModel(;
             proto_name,
             jl_fieldname,
@@ -287,7 +290,8 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             is_repeated,
             is_enum = true,
             is_required,
-            is_packed = is_repeated && _is_packed_repeated(field, names.syntax),
+            is_packed,
+            emit_unpacked_loop = is_repeated && !is_packed,
             jl_type,
             elem_jl_type = elem_t,
             init_value = init_val,
@@ -329,14 +333,14 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
                 skip = "_x.$(jl_fieldname) != $(init_val)"
             end
         end
-        # `is_packed` only matters for packed-eligible scalars (numerics,
-        # bool). String/bytes are length-delimited per element regardless,
-        # so packed-vs-unpacked doesn't apply — treat them as not packed
-        # so the encode path emits via the existing Vector{String}/
-        # Vector{Vector{UInt8}} codec methods that already iterate.
-        is_packed = is_repeated &&
-                    !(scalar_jl == "String" || scalar_jl == "Vector{UInt8}") &&
-                    _is_packed_repeated(field, names.syntax)
+        # Packed-vs-unpacked only applies to repeated numeric scalars and
+        # bool. String/bytes are length-delimited per element regardless;
+        # the existing Vector{String}/Vector{Vector{UInt8}} codec methods
+        # iterate them. So `emit_unpacked_loop` stays false for those
+        # element types — the codec call handles the loop internally.
+        is_packed_eligible =
+            is_repeated && !(scalar_jl == "String" || scalar_jl == "Vector{UInt8}")
+        is_packed = is_packed_eligible && _is_packed_repeated(field, names.syntax)
         return FieldModel(;
             proto_name,
             jl_fieldname,
@@ -344,6 +348,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             is_repeated,
             is_required,
             is_packed,
+            emit_unpacked_loop = is_packed_eligible && !is_packed,
             jl_type,
             elem_jl_type = scalar_jl,
             wire_annotation = wire,
@@ -430,8 +435,8 @@ function _first_enum_member(field::FieldDescriptorProto, names::LocalNames)
     fqn = something(field.type_name, "")
     edef = get(names.enum_defs, fqn, nothing)
     edef === nothing && error(
-        "codegen: enum $(fqn) not found in current file (cross-file imports " *
-        "are not supported in Phase 4)",
+        "codegen: enum $(fqn) not found in current file " *
+        "(cross-file imports are not yet supported)",
     )
     for v in edef.value
         if Int(something(v.number, Int32(0))) == 0
@@ -584,6 +589,8 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         println(io, ")")
     end
 
+    _emit_reserved_fields(io, jl_name, msg)
+
     println(io)
 
     # decode.
@@ -715,22 +722,24 @@ function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     end
 end
 
-function _emit_encode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
-    args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
+# Wraps a one-line emission body in the `if !isnothing(_o) && _o.name ===
+# :member` guard that fires only when this member of the oneof is active.
+function _emit_oneof_member_guarded(io::IO, o::OneofModel, m::FieldModel, body::AbstractString)
     println(io, "    let _o = _x.", o.jl_fieldname)
     println(io, "        if !isnothing(_o) && _o.name === :", m.jl_fieldname)
-    println(io, "            PB.encode(_e, ", m.number, ", _o.value", args, ")")
+    println(io, "            ", body)
     println(io, "        end")
     println(io, "    end")
 end
 
+function _emit_encode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
+    args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
+    _emit_oneof_member_guarded(io, o, m, "PB.encode(_e, $(m.number), _o.value$(args))")
+end
+
 function _emit_encoded_size_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
-    println(io, "    let _o = _x.", o.jl_fieldname)
-    println(io, "        if !isnothing(_o) && _o.name === :", m.jl_fieldname)
-    println(io, "            encoded_size += PB._encoded_size(_o.value, ", m.number, args, ")")
-    println(io, "        end")
-    println(io, "    end")
+    _emit_oneof_member_guarded(io, o, m, "encoded_size += PB._encoded_size(_o.value, $(m.number)$(args))")
 end
 
 function _emit_decode_field(io::IO, f::FieldModel)
@@ -791,12 +800,39 @@ function _decode_finalize(f::FieldModel)
     end
 end
 
+# Emit `PB.reserved_fields(::Type{T}) = (names = [...], numbers = [...])`
+# when the proto says `reserved 1000 to 9999;` or `reserved "foo";`. Only
+# emitted when the message actually has reserved entries — otherwise the
+# package-level fallback returns the empty default. `DescriptorProto.
+# ReservedRange.end` is exclusive on the wire (so `reserved 1000 to 9999`
+# decodes to start=1000, end=10000); we collapse single-number ranges to
+# bare `Int` and multi-number ranges to `UnitRange{Int}` to match the
+# bootstrap's metadata shape.
+function _emit_reserved_fields(io::IO, jl_name::String, msg::DescriptorProto)
+    ranges = msg.reserved_range
+    names = msg.reserved_name
+    isempty(ranges) && isempty(names) && return
+
+    range_pieces = String[]
+    for r in ranges
+        s = Int(something(r.start, Int32(0)))
+        e = Int(something(getfield(r, Symbol("#end")), Int32(0)))
+        push!(range_pieces, e - s == 1 ? string(s) : string(s, ":", e - 1))
+    end
+    range_str = isempty(range_pieces) ?
+        "Union{Int,UnitRange{Int}}[]" :
+        string("Union{Int,UnitRange{Int}}[", join(range_pieces, ", "), "]")
+
+    name_str = isempty(names) ?
+        "String[]" :
+        string("[", join(("\"$(n)\"" for n in names), ", "), "]")
+
+    println(io, "PB.reserved_fields(::Type{", jl_name, "}) = (names = ", name_str, ", numbers = ", range_str, ")")
+end
+
 function _emit_encode_field(io::IO, f::FieldModel)
     args = isempty(f.wire_annotation) ? "" : ", $(f.wire_annotation)"
-    if f.is_repeated && (f.is_enum ||
-                         !(f.is_message || f.is_map ||
-                           f.elem_jl_type == "String" || f.elem_jl_type == "Vector{UInt8}")) &&
-       !f.is_packed
+    if f.emit_unpacked_loop
         # Unpacked repeated scalar/enum: protoc emits one tag-value pair
         # per element (proto2 default, or proto3 with [packed = false]).
         # Emit per-element so the singular scalar encode paths apply.
@@ -812,10 +848,7 @@ end
 
 function _emit_encoded_size_field(io::IO, f::FieldModel)
     args = isempty(f.wire_annotation) ? "" : ", $(f.wire_annotation)"
-    if f.is_repeated && (f.is_enum ||
-                         !(f.is_message || f.is_map ||
-                           f.elem_jl_type == "String" || f.elem_jl_type == "Vector{UInt8}")) &&
-       !f.is_packed
+    if f.emit_unpacked_loop
         println(io, "    if !isempty(_x.", f.jl_fieldname, ")")
         println(io, "        for _v in _x.", f.jl_fieldname)
         println(io, "            encoded_size += PB._encoded_size(_v, ", f.number, args, ")")
@@ -843,7 +876,7 @@ end
 # needs the type name, but for `Vector{Foo}` we also need Foo's name to exist.
 # We just emit forward declarations of structs by emitting them in topological
 # order. Cycles are not yet supported — they'd need `mutable struct` or other
-# tricks; that's deferred to Phase 5+.
+# tricks; deferred until needed.
 # ----------------------------------------------------------------------------
 
 function _toplevel_message_deps(msg::DescriptorProto, names::LocalNames)
@@ -890,7 +923,7 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
 
     function dfs(node)
         node in visited && return
-        node in visiting && error("codegen: recursive message dependency at $(node) — Phase 4 doesn't handle cycles yet")
+        node in visiting && error("codegen: recursive message dependency at $(node) — cycles are not yet supported")
         push!(visiting, node)
         for d in deps[node]
             dfs(d)
