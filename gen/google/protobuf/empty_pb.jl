@@ -12,6 +12,7 @@ end
 PB.default_values(::Core.Type{Empty}) = (;)
 PB.field_numbers(::Core.Type{Empty}) = (;)
 PB.json_field_names(::Core.Type{Empty}) = (;)
+PB.register_message_type("google.protobuf.Empty", Empty)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
     while !PB.message_done(_d, _endpos, _group)

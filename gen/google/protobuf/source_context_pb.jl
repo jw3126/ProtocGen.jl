@@ -13,6 +13,7 @@ end
 PB.default_values(::Core.Type{SourceContext}) = (;file_name = "")
 PB.field_numbers(::Core.Type{SourceContext}) = (;file_name = 1)
 PB.json_field_names(::Core.Type{SourceContext}) = (;file_name = "fileName")
+PB.register_message_type("google.protobuf.SourceContext", SourceContext)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
     file_name = ""

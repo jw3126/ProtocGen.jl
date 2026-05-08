@@ -22,6 +22,7 @@ end
 PB.default_values(::Core.Type{Struct}) = (;fields = OrderedDict{String,AbstractValue}())
 PB.field_numbers(::Core.Type{Struct}) = (;fields = 1)
 PB.json_field_names(::Core.Type{Struct}) = (;fields = "fields")
+PB.register_message_type("google.protobuf.Struct", Struct)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Struct}, _endpos::Int=0, _group::Bool=false)
     fields = OrderedDict{String,AbstractValue}()
@@ -53,6 +54,7 @@ end
 PB.default_values(::Core.Type{Value}) = (;kind = nothing)
 PB.field_numbers(::Core.Type{Value}) = (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
 PB.json_field_names(::Core.Type{Value}) = (;null_value = "nullValue", number_value = "numberValue", string_value = "stringValue", bool_value = "boolValue", struct_value = "structValue", list_value = "listValue")
+PB.register_message_type("google.protobuf.Value", Value)
 PB.oneof_field_types(::Core.Type{Value}) = (;kind = (;null_value = NullValue.T, number_value = Float64, string_value = String, bool_value = Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Value}, _endpos::Int=0, _group::Bool=false)
@@ -157,6 +159,7 @@ end
 PB.default_values(::Core.Type{ListValue}) = (;values = Vector{AbstractValue}())
 PB.field_numbers(::Core.Type{ListValue}) = (;values = 1)
 PB.json_field_names(::Core.Type{ListValue}) = (;values = "values")
+PB.register_message_type("google.protobuf.ListValue", ListValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ListValue}, _endpos::Int=0, _group::Bool=false)
     values = PB.BufferedVector{AbstractValue}()

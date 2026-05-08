@@ -13,6 +13,7 @@ end
 PB.default_values(::Core.Type{DoubleValue}) = (;value = zero(Float64))
 PB.field_numbers(::Core.Type{DoubleValue}) = (;value = 1)
 PB.json_field_names(::Core.Type{DoubleValue}) = (;value = "value")
+PB.register_message_type("google.protobuf.DoubleValue", DoubleValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float64)
@@ -44,6 +45,7 @@ end
 PB.default_values(::Core.Type{FloatValue}) = (;value = zero(Float32))
 PB.field_numbers(::Core.Type{FloatValue}) = (;value = 1)
 PB.json_field_names(::Core.Type{FloatValue}) = (;value = "value")
+PB.register_message_type("google.protobuf.FloatValue", FloatValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
     value = zero(Float32)
@@ -75,6 +77,7 @@ end
 PB.default_values(::Core.Type{Int64Value}) = (;value = zero(Int64))
 PB.field_numbers(::Core.Type{Int64Value}) = (;value = 1)
 PB.json_field_names(::Core.Type{Int64Value}) = (;value = "value")
+PB.register_message_type("google.protobuf.Int64Value", Int64Value)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int64)
@@ -106,6 +109,7 @@ end
 PB.default_values(::Core.Type{UInt64Value}) = (;value = zero(UInt64))
 PB.field_numbers(::Core.Type{UInt64Value}) = (;value = 1)
 PB.json_field_names(::Core.Type{UInt64Value}) = (;value = "value")
+PB.register_message_type("google.protobuf.UInt64Value", UInt64Value)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt64)
@@ -137,6 +141,7 @@ end
 PB.default_values(::Core.Type{Int32Value}) = (;value = zero(Int32))
 PB.field_numbers(::Core.Type{Int32Value}) = (;value = 1)
 PB.json_field_names(::Core.Type{Int32Value}) = (;value = "value")
+PB.register_message_type("google.protobuf.Int32Value", Int32Value)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(Int32)
@@ -168,6 +173,7 @@ end
 PB.default_values(::Core.Type{UInt32Value}) = (;value = zero(UInt32))
 PB.field_numbers(::Core.Type{UInt32Value}) = (;value = 1)
 PB.json_field_names(::Core.Type{UInt32Value}) = (;value = "value")
+PB.register_message_type("google.protobuf.UInt32Value", UInt32Value)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
     value = zero(UInt32)
@@ -199,6 +205,7 @@ end
 PB.default_values(::Core.Type{BoolValue}) = (;value = false)
 PB.field_numbers(::Core.Type{BoolValue}) = (;value = 1)
 PB.json_field_names(::Core.Type{BoolValue}) = (;value = "value")
+PB.register_message_type("google.protobuf.BoolValue", BoolValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
     value = false
@@ -230,6 +237,7 @@ end
 PB.default_values(::Core.Type{StringValue}) = (;value = "")
 PB.field_numbers(::Core.Type{StringValue}) = (;value = 1)
 PB.json_field_names(::Core.Type{StringValue}) = (;value = "value")
+PB.register_message_type("google.protobuf.StringValue", StringValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
     value = ""
@@ -261,6 +269,7 @@ end
 PB.default_values(::Core.Type{BytesValue}) = (;value = UInt8[])
 PB.field_numbers(::Core.Type{BytesValue}) = (;value = 1)
 PB.json_field_names(::Core.Type{BytesValue}) = (;value = "value")
+PB.register_message_type("google.protobuf.BytesValue", BytesValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)
     value = UInt8[]

@@ -18,6 +18,39 @@
 import JSON
 
 # -----------------------------------------------------------------------------
+# Message-type registry — FQN ("google.protobuf.Timestamp") → Julia type.
+# Codegen emits a `register_message_type` call per message, populating this
+# at module-load time. `Any.type_url` carries the FQN, and `lookup_message_type`
+# is the reverse direction the JSON walker uses to decode embedded messages.
+# -----------------------------------------------------------------------------
+
+const _MESSAGE_REGISTRY = Dict{String,Type}()
+
+"""
+    register_message_type(fqn, T)
+
+Associate `fqn` (e.g. `"google.protobuf.Timestamp"`) with the Julia type
+`T`. Called from generated `*_pb.jl` files at module-load time; user code
+typically doesn't need to call this directly. Re-registration is a no-op
+if the existing entry already matches.
+"""
+function register_message_type(fqn::AbstractString, ::Type{T}) where {T}
+    _MESSAGE_REGISTRY[String(fqn)] = T
+    return nothing
+end
+
+"""
+    lookup_message_type(fqn) -> Union{Type,Nothing}
+
+Reverse of `register_message_type`. Returns `nothing` if no type was
+registered under that FQN — typically because the user hasn't loaded
+the proto module that defines it.
+"""
+function lookup_message_type(fqn::AbstractString)
+    return get(_MESSAGE_REGISTRY, String(fqn), nothing)
+end
+
+# -----------------------------------------------------------------------------
 # Inline base64 — bytes <-> string. (Avoids declaring the Base64 stdlib as a
 # dep; the protobuf-JSON spec only needs encode/decode of arbitrary byte
 # strings, so a few dozen lines of pure-Julia code are enough.)

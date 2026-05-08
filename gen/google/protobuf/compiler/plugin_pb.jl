@@ -18,6 +18,7 @@ end
 PB.default_values(::Core.Type{Version}) = (;major = nothing, minor = nothing, patch = nothing, suffix = nothing)
 PB.field_numbers(::Core.Type{Version}) = (;major = 1, minor = 2, patch = 3, suffix = 4)
 PB.json_field_names(::Core.Type{Version}) = (;major = "major", minor = "minor", patch = "patch", suffix = "suffix")
+PB.register_message_type("google.protobuf.compiler.Version", Version)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Version}, _endpos::Int=0, _group::Bool=false)
     major = nothing
@@ -68,6 +69,7 @@ end
 PB.default_values(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing)
 PB.field_numbers(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
 PB.json_field_names(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = "fileToGenerate", parameter = "parameter", proto_file = "protoFile", source_file_descriptors = "sourceFileDescriptors", compiler_version = "compilerVersion")
+PB.register_message_type("google.protobuf.compiler.CodeGeneratorRequest", CodeGeneratorRequest)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorRequest}, _endpos::Int=0, _group::Bool=false)
     file_to_generate = PB.BufferedVector{String}()
@@ -124,6 +126,7 @@ end
 PB.default_values(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing)
 PB.field_numbers(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
 PB.json_field_names(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = "name", insertion_point = "insertionPoint", content = "content", generated_code_info = "generatedCodeInfo")
+PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse.File", var"CodeGeneratorResponse.File")
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"CodeGeneratorResponse.File"}, _endpos::Int=0, _group::Bool=false)
     name = nothing
@@ -174,6 +177,7 @@ end
 PB.default_values(::Core.Type{CodeGeneratorResponse}) = (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}())
 PB.field_numbers(::Core.Type{CodeGeneratorResponse}) = (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)
 PB.json_field_names(::Core.Type{CodeGeneratorResponse}) = (;error = "error", supported_features = "supportedFeatures", minimum_edition = "minimumEdition", maximum_edition = "maximumEdition", file = "file")
+PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse", CodeGeneratorResponse)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorResponse}, _endpos::Int=0, _group::Bool=false)
     error = nothing

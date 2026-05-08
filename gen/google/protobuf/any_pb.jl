@@ -14,6 +14,7 @@ end
 PB.default_values(::Core.Type{Any}) = (;type_url = "", value = UInt8[])
 PB.field_numbers(::Core.Type{Any}) = (;type_url = 1, value = 2)
 PB.json_field_names(::Core.Type{Any}) = (;type_url = "typeUrl", value = "value")
+PB.register_message_type("google.protobuf.Any", Any)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Any}, _endpos::Int=0, _group::Bool=false)
     type_url = ""

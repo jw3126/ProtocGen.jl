@@ -327,6 +327,145 @@ function _decode_json_value(::Type{_AbstractListValue}, v::AbstractDict; kw...)
 end
 
 # -----------------------------------------------------------------------------
+# Any — JSON form embeds the wrapped message together with a `@type`
+# discriminator carrying the protobuf FQN. For WKTs that have a non-message
+# scalar JSON form (Wrappers, Timestamp, Duration, FieldMask, Empty,
+# Struct, Value, ListValue), the special form is wrapped under a
+# `"value": <…>` field; for ordinary messages the fields are merged
+# alongside `@type`.
+#
+#   Any wrapping a Foo message:
+#       {"@type": "type.googleapis.com/<pkg>.Foo", "<fooField>": ..., ...}
+#   Any wrapping a Timestamp:
+#       {"@type": "type.googleapis.com/google.protobuf.Timestamp",
+#        "value": "2024-…"}
+#
+# Encoding: parse `Any.type_url` → FQN → Julia type via the registry,
+# decode `Any.value` bytes into that type using the binary codec, then
+# emit JSON for the inner message and inject `@type`.
+#
+# Decoding: read `@type`, look up Julia type, decode the inner JSON form
+# into a message, re-encode to bytes, store in Any.{type_url, value}.
+# -----------------------------------------------------------------------------
+
+# Set of WKT FQNs that take the `{"@type": ..., "value": …}` shape
+# inside Any (i.e., their JSON form isn't a JSON object, or it IS an
+# object but Any wraps it under `value` to disambiguate from message
+# fields).
+const _WKT_VALUE_FORM = Set([
+    "google.protobuf.BoolValue",
+    "google.protobuf.BytesValue",
+    "google.protobuf.DoubleValue",
+    "google.protobuf.FloatValue",
+    "google.protobuf.Int32Value",
+    "google.protobuf.Int64Value",
+    "google.protobuf.StringValue",
+    "google.protobuf.UInt32Value",
+    "google.protobuf.UInt64Value",
+    "google.protobuf.Timestamp",
+    "google.protobuf.Duration",
+    "google.protobuf.FieldMask",
+    "google.protobuf.Struct",
+    "google.protobuf.Value",
+    "google.protobuf.ListValue",
+])
+
+function _any_extract_fqn(type_url::AbstractString)
+    # Spec: "type.googleapis.com/<full.name>" (or any host before /).
+    idx = findlast('/', type_url)
+    idx === nothing && throw(ArgumentError("Any.type_url has no '/': $(repr(type_url))"))
+    return String(type_url[idx+1:end])
+end
+
+function _encode_json_value(io::IO, a::_Any_)
+    fqn = _any_extract_fqn(a.type_url)
+    T = lookup_message_type(fqn)
+    T === nothing && throw(ArgumentError(
+        "Any: no message type registered for $(repr(fqn)); " *
+        "load the proto module that defines it (or call ProtoBufDescriptors.register_message_type)"))
+    # Decode the embedded binary payload into the concrete type.
+    msg = decode(ProtoDecoder(IOBuffer(a.value)), T)
+
+    if fqn in _WKT_VALUE_FORM
+        # `{"@type": ..., "value": <special>}`
+        print(io, "{\"@type\":")
+        JSON.print(io, a.type_url)
+        print(io, ",\"value\":")
+        _encode_json_value(io, msg)
+        print(io, '}')
+    else
+        # Ordinary message: emit fields like a normal message but inject
+        # `@type` first. We can't reuse the generic walker directly
+        # because it always opens with `{` and writes its own field
+        # entries — so call into a slimmed variant that *appends* fields
+        # to an already-open object.
+        print(io, "{\"@type\":")
+        JSON.print(io, a.type_url)
+        _encode_json_message_after_at_type(io, msg)
+        print(io, '}')
+    end
+    return nothing
+end
+
+# Like `_encode_json_message` but assumes the caller has already written
+# the opening `{` and an `@type` entry. Emits each field with a leading
+# `,` (since `@type` already populated the object).
+function _encode_json_message_after_at_type(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
+    keys   = json_field_names(T)
+    oneofs = oneof_field_types(T)
+    for jl_name in fieldnames(T)
+        v = getfield(msg, jl_name)
+        v === nothing && continue
+        if hasproperty(oneofs, jl_name)
+            o = v::OneOf
+            json_key = getproperty(keys, o.name)
+            print(io, ',')
+            JSON.print(io, json_key)
+            print(io, ':')
+            _encode_json_value(io, o.value)
+            continue
+        end
+        _is_json_default(v) && continue
+        json_key = getproperty(keys, jl_name)
+        print(io, ',')
+        JSON.print(io, json_key)
+        print(io, ':')
+        _encode_json_value(io, v)
+    end
+    return nothing
+end
+
+function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
+    type_url = get(json, "@type", nothing)
+    type_url === nothing && throw(ArgumentError("Any JSON object missing '@type'"))
+    type_url isa AbstractString || throw(ArgumentError("Any '@type' is not a string"))
+
+    fqn = _any_extract_fqn(type_url)
+    T = lookup_message_type(fqn)
+    T === nothing && throw(ArgumentError(
+        "Any: no message type registered for $(repr(fqn))"))
+
+    msg = if fqn in _WKT_VALUE_FORM
+        haskey(json, "value") || throw(ArgumentError(
+            "Any wrapping $(fqn) requires a 'value' field"))
+        _decode_json_value(T, json["value"]; kw...)
+    else
+        # Strip @type and pass the rest to the message walker.
+        rest = Dict{String,Any}()
+        for (k, v) in json
+            k == "@type" && continue
+            rest[k] = v
+        end
+        _decode_json_message(T, rest; kw...)
+    end
+
+    # Re-encode to bytes for the Any wire form.
+    buf = IOBuffer()
+    encode(ProtoEncoder(buf), msg)
+    return _Any_(String(type_url), take!(buf))
+end
+
+# -----------------------------------------------------------------------------
 # NullValue — JSON `null` ↔ NULL_VALUE enum singleton.
 # -----------------------------------------------------------------------------
 

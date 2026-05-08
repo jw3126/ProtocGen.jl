@@ -13,6 +13,7 @@ end
 PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}())
 PB.field_numbers(::Core.Type{FieldMask}) = (;paths = 1)
 PB.json_field_names(::Core.Type{FieldMask}) = (;paths = "paths")
+PB.register_message_type("google.protobuf.FieldMask", FieldMask)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
     paths = PB.BufferedVector{String}()

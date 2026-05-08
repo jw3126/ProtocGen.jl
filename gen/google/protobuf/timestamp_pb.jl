@@ -14,6 +14,7 @@ end
 PB.default_values(::Core.Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32))
 PB.field_numbers(::Core.Type{Timestamp}) = (;seconds = 1, nanos = 2)
 PB.json_field_names(::Core.Type{Timestamp}) = (;seconds = "seconds", nanos = "nanos")
+PB.register_message_type("google.protobuf.Timestamp", Timestamp)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Timestamp}, _endpos::Int=0, _group::Bool=false)
     seconds = zero(Int64)

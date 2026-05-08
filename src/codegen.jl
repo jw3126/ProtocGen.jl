@@ -708,6 +708,14 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     print(io, join(pieces, ", "))
     println(io, ")")
 
+    # Register the message type by its protobuf FQN so `Any` (which
+    # carries `type.googleapis.com/<FQN>` URLs) and any other
+    # introspection user can reverse-look-up the Julia type. The
+    # leading dot in our internal FQN is dropped — protobuf type URLs
+    # don't carry it.
+    fqn = startswith(proto_fqn, ".") ? proto_fqn[2:end] : proto_fqn
+    println(io, "PB.register_message_type(", repr(fqn), ", ", jl_name, ")")
+
     if !isempty(real_oneofs)
         print(io, "PB.oneof_field_types(::Core.Type{", jl_name, "}) = (;")
         oneof_pieces = String[]

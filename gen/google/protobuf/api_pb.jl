@@ -14,6 +14,7 @@ end
 PB.default_values(::Core.Type{Mixin}) = (;name = "", root = "")
 PB.field_numbers(::Core.Type{Mixin}) = (;name = 1, root = 2)
 PB.json_field_names(::Core.Type{Mixin}) = (;name = "name", root = "root")
+PB.register_message_type("google.protobuf.Mixin", Mixin)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Mixin}, _endpos::Int=0, _group::Bool=false)
     name = ""
@@ -56,6 +57,7 @@ end
 PB.default_values(::Core.Type{Method}) = (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2)
 PB.field_numbers(::Core.Type{Method}) = (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
 PB.json_field_names(::Core.Type{Method}) = (;name = "name", request_type_url = "requestTypeUrl", request_streaming = "requestStreaming", response_type_url = "responseTypeUrl", response_streaming = "responseStreaming", options = "options", syntax = "syntax")
+PB.register_message_type("google.protobuf.Method", Method)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos::Int=0, _group::Bool=false)
     name = ""
@@ -123,6 +125,7 @@ end
 PB.default_values(::Core.Type{Api}) = (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2)
 PB.field_numbers(::Core.Type{Api}) = (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
 PB.json_field_names(::Core.Type{Api}) = (;name = "name", methods = "methods", options = "options", version = "version", source_context = "sourceContext", mixins = "mixins", syntax = "syntax")
+PB.register_message_type("google.protobuf.Api", Api)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::Int=0, _group::Bool=false)
     name = ""

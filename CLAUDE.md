@@ -73,7 +73,7 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 188 codec failures allowlisted) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a + 12b + 12c-without-Any done) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | in progress (12a-c done; 12d pending) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -443,6 +443,31 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 - 1764 / 1764 julia tests pass (1739 + 25 new 12c WKT tests across
   wrappers, Timestamp, Duration, FieldMask, Struct/Value/ListValue,
   Empty).
+- Phase 12c.Any closes out 12c. New machinery:
+  - **Type registry**: `_MESSAGE_REGISTRY :: Dict{String,Type}` keyed
+    by protobuf FQN (e.g., `"google.protobuf.Timestamp"`). Codegen
+    emits `PB.register_message_type(<fqn>, <jl_name>)` per message;
+    bootstrap regen registers every WKT and descriptor type at
+    package load time. `lookup_message_type(fqn)` is the reverse.
+  - **Encode**: parses `Any.type_url`, looks up the Julia type,
+    decodes the binary `Any.value` payload via the existing wire
+    codec, then emits the JSON form. WKTs with non-message JSON
+    (Wrappers, Timestamp, Duration, FieldMask, Empty, Struct,
+    Value, ListValue — `_WKT_VALUE_FORM`) emit
+    `{"@type": ..., "value": <special>}`; ordinary messages emit
+    `{"@type": ..., <fields inlined>...}`. The inline-fields path
+    uses a slim `_encode_json_message_after_at_type` helper that
+    appends to an already-open object instead of opening its own.
+  - **Decode**: reads `@type`, looks up Julia type, decodes either
+    the `value` field (WKT) or the rest of the dict (ordinary), then
+    re-encodes to bytes and stores both type_url and bytes back into
+    Any. So a JSON-decoded Any carries the same wire representation
+    as a binary-decoded one.
+  - **Errors**: missing `@type` or unregistered FQN throw
+    `ArgumentError`. Conformance tests for Any with unknown types
+    will hit this — that's the right strict default; users can
+    register their own types with `register_message_type`.
+- 1777 / 1777 julia tests pass (1764 + 13 new Any tests).
 
 ### Known bootstrap caveats
 
