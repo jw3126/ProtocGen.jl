@@ -174,20 +174,6 @@ These are easy traps to forget when reading or modifying codegen:
   is also emitted. `Base.:(==)` and `Base.hash` are overloaded on
   `AbstractProtoBufMessage` to do field-wise comparison.
 
-## Known bootstrap caveat
-
-The committed bootstrap (`gen/google/`) was generated before the proto2
-optional ENUM fix added in the conformance correctness pass. Until
-`gen/regen.jl` is rerun, ENUM fields like `FieldDescriptorProto.label` /
-`.type` are still emitted as bare enum types with the equal-to-default
-skip on encode (instead of the new `Union{Nothing,EnumT}` presence form).
-Harmless in practice — every consumer always sets these — but a
-bootstrap-regen pass would close the gap. Doing the regen requires care:
-codegen.jl itself reads `field.label` / `field.type` (now potentially
-`Union{Nothing,…}`) via `===` comparisons that already handle the
-`Nothing` case correctly, but a regen would still want a CI check that
-no diff sneaks in unintentionally.
-
 ## Reference paths
 
 - **ProtoBuf.jl source of truth** (read-only reference):

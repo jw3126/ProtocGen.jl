@@ -9,33 +9,40 @@ export FieldMask
 
 struct FieldMask <: PB.AbstractProtoBufMessage
     paths::Vector{String}
+    _unknown_fields::Vector{UInt8}
+    FieldMask(paths, _unknown_fields=UInt8[]) = new(paths, _unknown_fields)
 end
-PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}())
+PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FieldMask}) = (;paths = 1)
 PB.json_field_names(::Core.Type{FieldMask}) = (;paths = "paths")
 PB.register_message_type("google.protobuf.FieldMask", FieldMask)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
     paths = PB.BufferedVector{String}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, paths)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FieldMask(paths[])
+    return FieldMask(paths[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FieldMask)
     initpos = position(_e.io)
     !isempty(_x.paths) && PB.encode(_e, 1, _x.paths)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FieldMask)
     encoded_size = 0
     !isempty(_x.paths) && (encoded_size += PB._encoded_size(_x.paths, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

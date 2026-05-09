@@ -10,8 +10,10 @@ export Api, Method, Mixin
 struct Mixin <: PB.AbstractProtoBufMessage
     name::String
     root::String
+    _unknown_fields::Vector{UInt8}
+    Mixin(name, root, _unknown_fields=UInt8[]) = new(name, root, _unknown_fields)
 end
-PB.default_values(::Core.Type{Mixin}) = (;name = "", root = "")
+PB.default_values(::Core.Type{Mixin}) = (;name = "", root = "", _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Mixin}) = (;name = 1, root = 2)
 PB.json_field_names(::Core.Type{Mixin}) = (;name = "name", root = "root")
 PB.register_message_type("google.protobuf.Mixin", Mixin)
@@ -19,6 +21,7 @@ PB.register_message_type("google.protobuf.Mixin", Mixin)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Mixin}, _endpos::Int=0, _group::Bool=false)
     name = ""
     root = ""
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -26,22 +29,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Mixin}, _endpos::I
         elseif field_number == 2
             root = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Mixin(name, root)
+    return Mixin(name, root, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Mixin)
     initpos = position(_e.io)
     !isempty(_x.name) && PB.encode(_e, 1, _x.name)
     !isempty(_x.root) && PB.encode(_e, 2, _x.root)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Mixin)
     encoded_size = 0
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isempty(_x.root) && (encoded_size += PB._encoded_size(_x.root, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -53,8 +60,10 @@ struct Method <: PB.AbstractProtoBufMessage
     response_streaming::Bool
     options::Vector{Option}
     syntax::Syntax.T
+    _unknown_fields::Vector{UInt8}
+    Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[]) = new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
 end
-PB.default_values(::Core.Type{Method}) = (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2)
+PB.default_values(::Core.Type{Method}) = (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Method}) = (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
 PB.json_field_names(::Core.Type{Method}) = (;name = "name", request_type_url = "requestTypeUrl", request_streaming = "requestStreaming", response_type_url = "responseTypeUrl", response_streaming = "responseStreaming", options = "options", syntax = "syntax")
 PB.register_message_type("google.protobuf.Method", Method)
@@ -67,6 +76,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos::
     response_streaming = false
     options = PB.BufferedVector{Option}()
     syntax = Syntax.SYNTAX_PROTO2
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -84,10 +94,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos::
         elseif field_number == 7
             syntax = PB.decode(_d, Syntax.T)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options[], syntax)
+    return Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options[], syntax, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Method)
@@ -99,6 +109,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Method)
     _x.response_streaming != false && PB.encode(_e, 5, _x.response_streaming)
     !isempty(_x.options) && PB.encode(_e, 6, _x.options)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB.encode(_e, 7, _x.syntax)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Method)
@@ -110,6 +123,7 @@ function PB._encoded_size(_x::Method)
     _x.response_streaming != false && (encoded_size += PB._encoded_size(_x.response_streaming, 5))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 6))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -121,8 +135,10 @@ struct Api <: PB.AbstractProtoBufMessage
     source_context::Union{Nothing,SourceContext}
     mixins::Vector{Mixin}
     syntax::Syntax.T
+    _unknown_fields::Vector{UInt8}
+    Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[]) = new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
 end
-PB.default_values(::Core.Type{Api}) = (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2)
+PB.default_values(::Core.Type{Api}) = (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Api}) = (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
 PB.json_field_names(::Core.Type{Api}) = (;name = "name", methods = "methods", options = "options", version = "version", source_context = "sourceContext", mixins = "mixins", syntax = "syntax")
 PB.register_message_type("google.protobuf.Api", Api)
@@ -135,6 +151,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::Int
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
     mixins = PB.BufferedVector{Mixin}()
     syntax = Syntax.SYNTAX_PROTO2
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -152,10 +169,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::Int
         elseif field_number == 7
             syntax = PB.decode(_d, Syntax.T)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Api(name, methods[], options[], version, source_context[], mixins[], syntax)
+    return Api(name, methods[], options[], version, source_context[], mixins[], syntax, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Api)
@@ -167,6 +184,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Api)
     !isnothing(_x.source_context) && PB.encode(_e, 5, _x.source_context)
     !isempty(_x.mixins) && PB.encode(_e, 6, _x.mixins)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB.encode(_e, 7, _x.syntax)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Api)
@@ -178,6 +198,7 @@ function PB._encoded_size(_x::Api)
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 5))
     !isempty(_x.mixins) && (encoded_size += PB._encoded_size(_x.mixins, 6))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

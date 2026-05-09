@@ -9,33 +9,40 @@ export SourceContext
 
 struct SourceContext <: PB.AbstractProtoBufMessage
     file_name::String
+    _unknown_fields::Vector{UInt8}
+    SourceContext(file_name, _unknown_fields=UInt8[]) = new(file_name, _unknown_fields)
 end
-PB.default_values(::Core.Type{SourceContext}) = (;file_name = "")
+PB.default_values(::Core.Type{SourceContext}) = (;file_name = "", _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{SourceContext}) = (;file_name = 1)
 PB.json_field_names(::Core.Type{SourceContext}) = (;file_name = "fileName")
 PB.register_message_type("google.protobuf.SourceContext", SourceContext)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
     file_name = ""
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             file_name = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return SourceContext(file_name)
+    return SourceContext(file_name, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::SourceContext)
     initpos = position(_e.io)
     !isempty(_x.file_name) && PB.encode(_e, 1, _x.file_name)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::SourceContext)
     encoded_size = 0
     !isempty(_x.file_name) && (encoded_size += PB._encoded_size(_x.file_name, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

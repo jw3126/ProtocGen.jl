@@ -690,37 +690,35 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # forward-compat requirement. Cycle participants are tagged with
     # their abstract supertype so other participants can type their
     # fields against the abstract.
+    #
+    # The constructor that defaults `_unknown_fields` to an empty buffer
+    # is emitted as an *inner* constructor with a default argument.
+    # An *outer* `function T(args)` defined right after `struct T` would
+    # split the type's binding partition on Julia 1.12 — methods that
+    # later reference `Type{<:T}` (decode, encode, …) end up tied to a
+    # binding that's stale by the time the package is loaded into a fresh
+    # session, and dispatch fails with a confusing MethodError. Keeping
+    # the convenience constructor inside the struct body avoids the split.
     if is_cycle_participant
         println(io, "struct ", jl_name, " <: ", _abstract_name(jl_name))
     else
         println(io, "struct ", jl_name, " <: PB.AbstractProtoBufMessage")
     end
+    param_names = String[]
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
+        push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
+        push!(param_names, o.jl_fieldname)
     end
     println(io, "    _unknown_fields::Vector{UInt8}")
+    push!(param_names, "_unknown_fields")
+    inner_params = join(param_names[1:end-1], ", ")
+    sep = isempty(inner_params) ? "" : ", "
+    println(io, "    ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[]) = new(", join(param_names, ", "), ")")
     println(io, "end")
-
-    # Convenience constructor that omits the trailing `_unknown_fields`
-    # buffer (defaults to empty). Lets user code instantiate messages
-    # the same way as before this field was added.
-    n_user_args = length(plain_fields) + length(real_oneofs)
-    if n_user_args > 0
-        param_names = String[]
-        for f in plain_fields
-            push!(param_names, f.jl_fieldname)
-        end
-        for o in real_oneofs
-            push!(param_names, o.jl_fieldname)
-        end
-        params = join(param_names, ", ")
-        println(io, "function ", jl_name, "(", params, ")")
-        println(io, "    return ", jl_name, "(", params, ", UInt8[])")
-        println(io, "end")
-    end
 
     # Metadata.
     print(io, "PB.default_values(::Core.Type{", jl_name, "}) = (;")

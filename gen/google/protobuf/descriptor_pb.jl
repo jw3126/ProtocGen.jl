@@ -10,8 +10,10 @@ export FileDescriptorSet, FileDescriptorProto, DescriptorProto, ExtensionRangeOp
 struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
     name_part::String
     is_extension::Bool
+    _unknown_fields::Vector{UInt8}
+    var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[]) = new(name_part, is_extension, _unknown_fields)
 end
-PB.default_values(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "", is_extension = false)
+PB.default_values(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "", is_extension = false, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = 1, is_extension = 2)
 PB.json_field_names(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "namePart", is_extension = "isExtension")
 PB.register_message_type("google.protobuf.UninterpretedOption.NamePart", var"UninterpretedOption.NamePart")
@@ -21,6 +23,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"UninterpretedO
     _saw_name_part = false
     is_extension = false
     _saw_is_extension = false
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -30,24 +33,28 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"UninterpretedO
             is_extension = PB.decode(_d, Bool)
             _saw_is_extension = true
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
     _saw_name_part || throw(PB.DecodeError("required field " * "name_part" * " missing"))
     _saw_is_extension || throw(PB.DecodeError("required field " * "is_extension" * " missing"))
-    return var"UninterpretedOption.NamePart"(name_part, is_extension)
+    return var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"UninterpretedOption.NamePart")
     initpos = position(_e.io)
     true && PB.encode(_e, 1, _x.name_part)
     true && PB.encode(_e, 2, _x.is_extension)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"UninterpretedOption.NamePart")
     encoded_size = 0
     true && (encoded_size += PB._encoded_size(_x.name_part, 1))
     true && (encoded_size += PB._encoded_size(_x.is_extension, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -59,8 +66,10 @@ struct UninterpretedOption <: PB.AbstractProtoBufMessage
     double_value::Union{Nothing,Float64}
     string_value::Union{Nothing,Vector{UInt8}}
     aggregate_value::Union{Nothing,String}
+    _unknown_fields::Vector{UInt8}
+    UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[]) = new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
 end
-PB.default_values(::Core.Type{UninterpretedOption}) = (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing)
+PB.default_values(::Core.Type{UninterpretedOption}) = (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{UninterpretedOption}) = (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
 PB.json_field_names(::Core.Type{UninterpretedOption}) = (;name = "name", identifier_value = "identifierValue", positive_int_value = "positiveIntValue", negative_int_value = "negativeIntValue", double_value = "doubleValue", string_value = "stringValue", aggregate_value = "aggregateValue")
 PB.register_message_type("google.protobuf.UninterpretedOption", UninterpretedOption)
@@ -73,6 +82,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UninterpretedOptio
     double_value = nothing
     string_value = nothing
     aggregate_value = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 2
@@ -90,10 +100,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UninterpretedOptio
         elseif field_number == 8
             aggregate_value = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return UninterpretedOption(name[], identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value)
+    return UninterpretedOption(name[], identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::UninterpretedOption)
@@ -105,6 +115,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::UninterpretedOption)
     !isnothing(_x.double_value) && PB.encode(_e, 6, _x.double_value)
     !isnothing(_x.string_value) && PB.encode(_e, 7, _x.string_value)
     !isnothing(_x.aggregate_value) && PB.encode(_e, 8, _x.aggregate_value)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::UninterpretedOption)
@@ -116,6 +129,7 @@ function PB._encoded_size(_x::UninterpretedOption)
     !isnothing(_x.double_value) && (encoded_size += PB._encoded_size(_x.double_value, 6))
     !isnothing(_x.string_value) && (encoded_size += PB._encoded_size(_x.string_value, 7))
     !isnothing(_x.aggregate_value) && (encoded_size += PB._encoded_size(_x.aggregate_value, 8))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -124,28 +138,31 @@ end
 @enumx var"FieldOptions.JSType" JS_NORMAL=0 JS_STRING=1 JS_NUMBER=2
 
 struct FieldOptions <: PB.AbstractProtoBufMessage
-    ctype::var"FieldOptions.CType".T
+    ctype::Union{Nothing,var"FieldOptions.CType".T}
     packed::Union{Nothing,Bool}
-    jstype::var"FieldOptions.JSType".T
+    jstype::Union{Nothing,var"FieldOptions.JSType".T}
     lazy::Union{Nothing,Bool}
     deprecated::Union{Nothing,Bool}
     weak::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[]) = new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{FieldOptions}) = (;ctype = var"FieldOptions.CType".STRING, packed = nothing, jstype = var"FieldOptions.JSType".JS_NORMAL, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{FieldOptions}) = (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FieldOptions}) = (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{FieldOptions}) = (;ctype = "ctype", packed = "packed", jstype = "jstype", lazy = "lazy", deprecated = "deprecated", weak = "weak", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.FieldOptions", FieldOptions)
 PB.reserved_fields(::Core.Type{FieldOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[4])
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldOptions}, _endpos::Int=0, _group::Bool=false)
-    ctype = var"FieldOptions.CType".STRING
+    ctype = nothing
     packed = nothing
-    jstype = var"FieldOptions.JSType".JS_NORMAL
+    jstype = nothing
     lazy = nothing
     deprecated = nothing
     weak = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -163,32 +180,36 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldOptions}, _en
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option[])
+    return FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FieldOptions)
     initpos = position(_e.io)
-    _x.ctype != var"FieldOptions.CType".STRING && PB.encode(_e, 1, _x.ctype)
+    !isnothing(_x.ctype) && PB.encode(_e, 1, _x.ctype)
     !isnothing(_x.packed) && PB.encode(_e, 2, _x.packed)
     !isnothing(_x.deprecated) && PB.encode(_e, 3, _x.deprecated)
     !isnothing(_x.lazy) && PB.encode(_e, 5, _x.lazy)
-    _x.jstype != var"FieldOptions.JSType".JS_NORMAL && PB.encode(_e, 6, _x.jstype)
+    !isnothing(_x.jstype) && PB.encode(_e, 6, _x.jstype)
     !isnothing(_x.weak) && PB.encode(_e, 10, _x.weak)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FieldOptions)
     encoded_size = 0
-    _x.ctype != var"FieldOptions.CType".STRING && (encoded_size += PB._encoded_size(_x.ctype, 1))
+    !isnothing(_x.ctype) && (encoded_size += PB._encoded_size(_x.ctype, 1))
     !isnothing(_x.packed) && (encoded_size += PB._encoded_size(_x.packed, 2))
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 3))
     !isnothing(_x.lazy) && (encoded_size += PB._encoded_size(_x.lazy, 5))
-    _x.jstype != var"FieldOptions.JSType".JS_NORMAL && (encoded_size += PB._encoded_size(_x.jstype, 6))
+    !isnothing(_x.jstype) && (encoded_size += PB._encoded_size(_x.jstype, 6))
     !isnothing(_x.weak) && (encoded_size += PB._encoded_size(_x.weak, 10))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -199,8 +220,8 @@ end
 struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     number::Union{Nothing,Int32}
-    label::var"FieldDescriptorProto.Label".T
-    var"#type"::var"FieldDescriptorProto.Type".T
+    label::Union{Nothing,var"FieldDescriptorProto.Label".T}
+    var"#type"::Union{Nothing,var"FieldDescriptorProto.Type".T}
     type_name::Union{Nothing,String}
     extendee::Union{Nothing,String}
     default_value::Union{Nothing,String}
@@ -208,8 +229,10 @@ struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     json_name::Union{Nothing,String}
     options::Union{Nothing,FieldOptions}
     proto3_optional::Union{Nothing,Bool}
+    _unknown_fields::Vector{UInt8}
+    FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[]) = new(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
 end
-PB.default_values(::Core.Type{FieldDescriptorProto}) = (;name = nothing, number = nothing, label = var"FieldDescriptorProto.Label".LABEL_OPTIONAL, var"#type" = var"FieldDescriptorProto.Type".TYPE_DOUBLE, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing)
+PB.default_values(::Core.Type{FieldDescriptorProto}) = (;name = nothing, number = nothing, label = nothing, var"#type" = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FieldDescriptorProto}) = (;name = 1, number = 3, label = 4, var"#type" = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
 PB.json_field_names(::Core.Type{FieldDescriptorProto}) = (;name = "name", number = "number", label = "label", var"#type" = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
 PB.register_message_type("google.protobuf.FieldDescriptorProto", FieldDescriptorProto)
@@ -217,8 +240,8 @@ PB.register_message_type("google.protobuf.FieldDescriptorProto", FieldDescriptor
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     number = nothing
-    label = var"FieldDescriptorProto.Label".LABEL_OPTIONAL
-    var"#type" = var"FieldDescriptorProto.Type".TYPE_DOUBLE
+    label = nothing
+    var"#type" = nothing
     type_name = nothing
     extendee = nothing
     default_value = nothing
@@ -226,6 +249,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorPro
     json_name = nothing
     options = Ref{Union{Nothing,FieldOptions}}(nothing)
     proto3_optional = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -251,10 +275,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorPro
         elseif field_number == 17
             proto3_optional = PB.decode(_d, Bool)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options[], proto3_optional)
+    return FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options[], proto3_optional, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FieldDescriptorProto)
@@ -262,14 +286,17 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::FieldDescriptorProto)
     !isnothing(_x.name) && PB.encode(_e, 1, _x.name)
     !isnothing(_x.extendee) && PB.encode(_e, 2, _x.extendee)
     !isnothing(_x.number) && PB.encode(_e, 3, _x.number)
-    _x.label != var"FieldDescriptorProto.Label".LABEL_OPTIONAL && PB.encode(_e, 4, _x.label)
-    _x.var"#type" != var"FieldDescriptorProto.Type".TYPE_DOUBLE && PB.encode(_e, 5, _x.var"#type")
+    !isnothing(_x.label) && PB.encode(_e, 4, _x.label)
+    !isnothing(_x.var"#type") && PB.encode(_e, 5, _x.var"#type")
     !isnothing(_x.type_name) && PB.encode(_e, 6, _x.type_name)
     !isnothing(_x.default_value) && PB.encode(_e, 7, _x.default_value)
     !isnothing(_x.options) && PB.encode(_e, 8, _x.options)
     !isnothing(_x.oneof_index) && PB.encode(_e, 9, _x.oneof_index)
     !isnothing(_x.json_name) && PB.encode(_e, 10, _x.json_name)
     !isnothing(_x.proto3_optional) && PB.encode(_e, 17, _x.proto3_optional)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FieldDescriptorProto)
@@ -277,14 +304,15 @@ function PB._encoded_size(_x::FieldDescriptorProto)
     !isnothing(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isnothing(_x.extendee) && (encoded_size += PB._encoded_size(_x.extendee, 2))
     !isnothing(_x.number) && (encoded_size += PB._encoded_size(_x.number, 3))
-    _x.label != var"FieldDescriptorProto.Label".LABEL_OPTIONAL && (encoded_size += PB._encoded_size(_x.label, 4))
-    _x.var"#type" != var"FieldDescriptorProto.Type".TYPE_DOUBLE && (encoded_size += PB._encoded_size(_x.var"#type", 5))
+    !isnothing(_x.label) && (encoded_size += PB._encoded_size(_x.label, 4))
+    !isnothing(_x.var"#type") && (encoded_size += PB._encoded_size(_x.var"#type", 5))
     !isnothing(_x.type_name) && (encoded_size += PB._encoded_size(_x.type_name, 6))
     !isnothing(_x.default_value) && (encoded_size += PB._encoded_size(_x.default_value, 7))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 8))
     !isnothing(_x.oneof_index) && (encoded_size += PB._encoded_size(_x.oneof_index, 9))
     !isnothing(_x.json_name) && (encoded_size += PB._encoded_size(_x.json_name, 10))
     !isnothing(_x.proto3_optional) && (encoded_size += PB._encoded_size(_x.proto3_optional, 17))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -292,18 +320,21 @@ end
 
 struct MethodOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
-    idempotency_level::var"MethodOptions.IdempotencyLevel".T
+    idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{MethodOptions}) = (;deprecated = nothing, idempotency_level = var"MethodOptions.IdempotencyLevel".IDEMPOTENCY_UNKNOWN, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{MethodOptions}) = (;deprecated = nothing, idempotency_level = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{MethodOptions}) = (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{MethodOptions}) = (;deprecated = "deprecated", idempotency_level = "idempotencyLevel", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.MethodOptions", MethodOptions)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
-    idempotency_level = var"MethodOptions.IdempotencyLevel".IDEMPOTENCY_UNKNOWN
+    idempotency_level = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 33
@@ -313,24 +344,28 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodOptions}, _e
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return MethodOptions(deprecated, idempotency_level, uninterpreted_option[])
+    return MethodOptions(deprecated, idempotency_level, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::MethodOptions)
     initpos = position(_e.io)
     !isnothing(_x.deprecated) && PB.encode(_e, 33, _x.deprecated)
-    _x.idempotency_level != var"MethodOptions.IdempotencyLevel".IDEMPOTENCY_UNKNOWN && PB.encode(_e, 34, _x.idempotency_level)
+    !isnothing(_x.idempotency_level) && PB.encode(_e, 34, _x.idempotency_level)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::MethodOptions)
     encoded_size = 0
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 33))
-    _x.idempotency_level != var"MethodOptions.IdempotencyLevel".IDEMPOTENCY_UNKNOWN && (encoded_size += PB._encoded_size(_x.idempotency_level, 34))
+    !isnothing(_x.idempotency_level) && (encoded_size += PB._encoded_size(_x.idempotency_level, 34))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -341,8 +376,10 @@ struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,MethodOptions}
     client_streaming::Union{Nothing,Bool}
     server_streaming::Union{Nothing,Bool}
+    _unknown_fields::Vector{UInt8}
+    MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[]) = new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
 end
-PB.default_values(::Core.Type{MethodDescriptorProto}) = (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing)
+PB.default_values(::Core.Type{MethodDescriptorProto}) = (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{MethodDescriptorProto}) = (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
 PB.json_field_names(::Core.Type{MethodDescriptorProto}) = (;name = "name", input_type = "inputType", output_type = "outputType", options = "options", client_streaming = "clientStreaming", server_streaming = "serverStreaming")
 PB.register_message_type("google.protobuf.MethodDescriptorProto", MethodDescriptorProto)
@@ -354,6 +391,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodDescriptorPr
     options = Ref{Union{Nothing,MethodOptions}}(nothing)
     client_streaming = nothing
     server_streaming = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -369,10 +407,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodDescriptorPr
         elseif field_number == 6
             server_streaming = PB.decode(_d, Bool)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return MethodDescriptorProto(name, input_type, output_type, options[], client_streaming, server_streaming)
+    return MethodDescriptorProto(name, input_type, output_type, options[], client_streaming, server_streaming, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::MethodDescriptorProto)
@@ -383,6 +421,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::MethodDescriptorProto)
     !isnothing(_x.options) && PB.encode(_e, 4, _x.options)
     !isnothing(_x.client_streaming) && PB.encode(_e, 5, _x.client_streaming)
     !isnothing(_x.server_streaming) && PB.encode(_e, 6, _x.server_streaming)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::MethodDescriptorProto)
@@ -393,14 +434,17 @@ function PB._encoded_size(_x::MethodDescriptorProto)
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 4))
     !isnothing(_x.client_streaming) && (encoded_size += PB._encoded_size(_x.client_streaming, 5))
     !isnothing(_x.server_streaming) && (encoded_size += PB._encoded_size(_x.server_streaming, 6))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct ServiceOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{ServiceOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{ServiceOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{ServiceOptions}) = (;deprecated = 33, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{ServiceOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.ServiceOptions", ServiceOptions)
@@ -408,6 +452,7 @@ PB.register_message_type("google.protobuf.ServiceOptions", ServiceOptions)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 33
@@ -415,22 +460,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceOptions}, _
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return ServiceOptions(deprecated, uninterpreted_option[])
+    return ServiceOptions(deprecated, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::ServiceOptions)
     initpos = position(_e.io)
     !isnothing(_x.deprecated) && PB.encode(_e, 33, _x.deprecated)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::ServiceOptions)
     encoded_size = 0
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 33))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -438,8 +487,10 @@ struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     method::Vector{MethodDescriptorProto}
     options::Union{Nothing,ServiceOptions}
+    _unknown_fields::Vector{UInt8}
+    ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[]) = new(name, method, options, _unknown_fields)
 end
-PB.default_values(::Core.Type{ServiceDescriptorProto}) = (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing)
+PB.default_values(::Core.Type{ServiceDescriptorProto}) = (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{ServiceDescriptorProto}) = (;name = 1, method = 2, options = 3)
 PB.json_field_names(::Core.Type{ServiceDescriptorProto}) = (;name = "name", method = "method", options = "options")
 PB.register_message_type("google.protobuf.ServiceDescriptorProto", ServiceDescriptorProto)
@@ -448,6 +499,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceDescriptorP
     name = nothing
     method = PB.BufferedVector{MethodDescriptorProto}()
     options = Ref{Union{Nothing,ServiceOptions}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -457,10 +509,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceDescriptorP
         elseif field_number == 3
             PB.decode!(_d, options)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return ServiceDescriptorProto(name, method[], options[])
+    return ServiceDescriptorProto(name, method[], options[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::ServiceDescriptorProto)
@@ -468,6 +520,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::ServiceDescriptorProto)
     !isnothing(_x.name) && PB.encode(_e, 1, _x.name)
     !isempty(_x.method) && PB.encode(_e, 2, _x.method)
     !isnothing(_x.options) && PB.encode(_e, 3, _x.options)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::ServiceDescriptorProto)
@@ -475,78 +530,95 @@ function PB._encoded_size(_x::ServiceDescriptorProto)
     !isnothing(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isempty(_x.method) && (encoded_size += PB._encoded_size(_x.method, 2))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[]) = new(uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.ExtensionRangeOptions", ExtensionRangeOptions)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ExtensionRangeOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return ExtensionRangeOptions(uninterpreted_option[])
+    return ExtensionRangeOptions(uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::ExtensionRangeOptions)
     initpos = position(_e.io)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::ExtensionRangeOptions)
     encoded_size = 0
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct OneofOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    OneofOptions(uninterpreted_option, _unknown_fields=UInt8[]) = new(uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{OneofOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{OneofOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{OneofOptions}) = (;uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{OneofOptions}) = (;uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.OneofOptions", OneofOptions)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return OneofOptions(uninterpreted_option[])
+    return OneofOptions(uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::OneofOptions)
     initpos = position(_e.io)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::OneofOptions)
     encoded_size = 0
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     options::Union{Nothing,OneofOptions}
+    _unknown_fields::Vector{UInt8}
+    OneofDescriptorProto(name, options, _unknown_fields=UInt8[]) = new(name, options, _unknown_fields)
 end
-PB.default_values(::Core.Type{OneofDescriptorProto}) = (;name = nothing, options = nothing)
+PB.default_values(::Core.Type{OneofDescriptorProto}) = (;name = nothing, options = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{OneofDescriptorProto}) = (;name = 1, options = 2)
 PB.json_field_names(::Core.Type{OneofDescriptorProto}) = (;name = "name", options = "options")
 PB.register_message_type("google.protobuf.OneofDescriptorProto", OneofDescriptorProto)
@@ -554,6 +626,7 @@ PB.register_message_type("google.protobuf.OneofDescriptorProto", OneofDescriptor
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     options = Ref{Union{Nothing,OneofOptions}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -561,30 +634,36 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofDescriptorPro
         elseif field_number == 2
             PB.decode!(_d, options)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return OneofDescriptorProto(name, options[])
+    return OneofDescriptorProto(name, options[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::OneofDescriptorProto)
     initpos = position(_e.io)
     !isnothing(_x.name) && PB.encode(_e, 1, _x.name)
     !isnothing(_x.options) && PB.encode(_e, 2, _x.options)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::OneofDescriptorProto)
     encoded_size = 0
     !isnothing(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct EnumValueOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{EnumValueOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{EnumValueOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{EnumValueOptions}) = (;deprecated = 1, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{EnumValueOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.EnumValueOptions", EnumValueOptions)
@@ -592,6 +671,7 @@ PB.register_message_type("google.protobuf.EnumValueOptions", EnumValueOptions)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -599,22 +679,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueOptions},
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return EnumValueOptions(deprecated, uninterpreted_option[])
+    return EnumValueOptions(deprecated, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumValueOptions)
     initpos = position(_e.io)
     !isnothing(_x.deprecated) && PB.encode(_e, 1, _x.deprecated)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::EnumValueOptions)
     encoded_size = 0
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 1))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -622,8 +706,10 @@ struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     number::Union{Nothing,Int32}
     options::Union{Nothing,EnumValueOptions}
+    _unknown_fields::Vector{UInt8}
+    EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[]) = new(name, number, options, _unknown_fields)
 end
-PB.default_values(::Core.Type{EnumValueDescriptorProto}) = (;name = nothing, number = nothing, options = nothing)
+PB.default_values(::Core.Type{EnumValueDescriptorProto}) = (;name = nothing, number = nothing, options = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{EnumValueDescriptorProto}) = (;name = 1, number = 2, options = 3)
 PB.json_field_names(::Core.Type{EnumValueDescriptorProto}) = (;name = "name", number = "number", options = "options")
 PB.register_message_type("google.protobuf.EnumValueDescriptorProto", EnumValueDescriptorProto)
@@ -632,6 +718,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueDescripto
     name = nothing
     number = nothing
     options = Ref{Union{Nothing,EnumValueOptions}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -641,10 +728,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueDescripto
         elseif field_number == 3
             PB.decode!(_d, options)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return EnumValueDescriptorProto(name, number, options[])
+    return EnumValueDescriptorProto(name, number, options[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumValueDescriptorProto)
@@ -652,6 +739,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumValueDescriptorProto)
     !isnothing(_x.name) && PB.encode(_e, 1, _x.name)
     !isnothing(_x.number) && PB.encode(_e, 2, _x.number)
     !isnothing(_x.options) && PB.encode(_e, 3, _x.options)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::EnumValueDescriptorProto)
@@ -659,6 +749,7 @@ function PB._encoded_size(_x::EnumValueDescriptorProto)
     !isnothing(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isnothing(_x.number) && (encoded_size += PB._encoded_size(_x.number, 2))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -666,8 +757,10 @@ struct EnumOptions <: PB.AbstractProtoBufMessage
     allow_alias::Union{Nothing,Bool}
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{EnumOptions}) = (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{EnumOptions}) = (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{EnumOptions}) = (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{EnumOptions}) = (;allow_alias = "allowAlias", deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.EnumOptions", EnumOptions)
@@ -677,6 +770,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumOptions}, _end
     allow_alias = nothing
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 2
@@ -686,10 +780,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumOptions}, _end
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return EnumOptions(allow_alias, deprecated, uninterpreted_option[])
+    return EnumOptions(allow_alias, deprecated, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumOptions)
@@ -697,6 +791,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumOptions)
     !isnothing(_x.allow_alias) && PB.encode(_e, 2, _x.allow_alias)
     !isnothing(_x.deprecated) && PB.encode(_e, 3, _x.deprecated)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::EnumOptions)
@@ -704,14 +801,17 @@ function PB._encoded_size(_x::EnumOptions)
     !isnothing(_x.allow_alias) && (encoded_size += PB._encoded_size(_x.allow_alias, 2))
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 3))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
+    _unknown_fields::Vector{UInt8}
+    var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[]) = new(start, var"#end", _unknown_fields)
 end
-PB.default_values(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = nothing, var"#end" = nothing)
+PB.default_values(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = 1, var"#end" = 2)
 PB.json_field_names(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = "start", var"#end" = "end")
 PB.register_message_type("google.protobuf.EnumDescriptorProto.EnumReservedRange", var"EnumDescriptorProto.EnumReservedRange")
@@ -719,6 +819,7 @@ PB.register_message_type("google.protobuf.EnumDescriptorProto.EnumReservedRange"
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"EnumDescriptorProto.EnumReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
     var"#end" = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -726,22 +827,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"EnumDescriptor
         elseif field_number == 2
             var"#end" = PB.decode(_d, Int32)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"EnumDescriptorProto.EnumReservedRange"(start, var"#end")
+    return var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"EnumDescriptorProto.EnumReservedRange")
     initpos = position(_e.io)
     !isnothing(_x.start) && PB.encode(_e, 1, _x.start)
     !isnothing(_x.var"#end") && PB.encode(_e, 2, _x.var"#end")
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"EnumDescriptorProto.EnumReservedRange")
     encoded_size = 0
     !isnothing(_x.start) && (encoded_size += PB._encoded_size(_x.start, 1))
     !isnothing(_x.var"#end") && (encoded_size += PB._encoded_size(_x.var"#end", 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -751,8 +856,10 @@ struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,EnumOptions}
     reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
     reserved_name::Vector{String}
+    _unknown_fields::Vector{UInt8}
+    EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[]) = new(name, value, options, reserved_range, reserved_name, _unknown_fields)
 end
-PB.default_values(::Core.Type{EnumDescriptorProto}) = (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}())
+PB.default_values(::Core.Type{EnumDescriptorProto}) = (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{EnumDescriptorProto}) = (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
 PB.json_field_names(::Core.Type{EnumDescriptorProto}) = (;name = "name", value = "value", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
 PB.register_message_type("google.protobuf.EnumDescriptorProto", EnumDescriptorProto)
@@ -763,6 +870,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumDescriptorProt
     options = Ref{Union{Nothing,EnumOptions}}(nothing)
     reserved_range = PB.BufferedVector{var"EnumDescriptorProto.EnumReservedRange"}()
     reserved_name = PB.BufferedVector{String}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -776,10 +884,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumDescriptorProt
         elseif field_number == 5
             PB.decode!(_d, reserved_name)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return EnumDescriptorProto(name, value[], options[], reserved_range[], reserved_name[])
+    return EnumDescriptorProto(name, value[], options[], reserved_range[], reserved_name[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumDescriptorProto)
@@ -789,6 +897,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumDescriptorProto)
     !isnothing(_x.options) && PB.encode(_e, 3, _x.options)
     !isempty(_x.reserved_range) && PB.encode(_e, 4, _x.reserved_range)
     !isempty(_x.reserved_name) && PB.encode(_e, 5, _x.reserved_name)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::EnumDescriptorProto)
@@ -798,6 +909,7 @@ function PB._encoded_size(_x::EnumDescriptorProto)
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
     !isempty(_x.reserved_range) && (encoded_size += PB._encoded_size(_x.reserved_range, 4))
     !isempty(_x.reserved_name) && (encoded_size += PB._encoded_size(_x.reserved_name, 5))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -807,8 +919,10 @@ struct MessageOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     map_entry::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[]) = new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{MessageOptions}) = (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{MessageOptions}) = (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{MessageOptions}) = (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{MessageOptions}) = (;message_set_wire_format = "messageSetWireFormat", no_standard_descriptor_accessor = "noStandardDescriptorAccessor", deprecated = "deprecated", map_entry = "mapEntry", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.MessageOptions", MessageOptions)
@@ -820,6 +934,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MessageOptions}, _
     deprecated = nothing
     map_entry = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -833,10 +948,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MessageOptions}, _
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option[])
+    return MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::MessageOptions)
@@ -846,6 +961,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::MessageOptions)
     !isnothing(_x.deprecated) && PB.encode(_e, 3, _x.deprecated)
     !isnothing(_x.map_entry) && PB.encode(_e, 7, _x.map_entry)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::MessageOptions)
@@ -855,6 +973,7 @@ function PB._encoded_size(_x::MessageOptions)
     !isnothing(_x.deprecated) && (encoded_size += PB._encoded_size(_x.deprecated, 3))
     !isnothing(_x.map_entry) && (encoded_size += PB._encoded_size(_x.map_entry, 7))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -862,8 +981,10 @@ struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
     options::Union{Nothing,ExtensionRangeOptions}
+    _unknown_fields::Vector{UInt8}
+    var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[]) = new(start, var"#end", options, _unknown_fields)
 end
-PB.default_values(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = nothing, var"#end" = nothing, options = nothing)
+PB.default_values(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = nothing, var"#end" = nothing, options = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = 1, var"#end" = 2, options = 3)
 PB.json_field_names(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = "start", var"#end" = "end", options = "options")
 PB.register_message_type("google.protobuf.DescriptorProto.ExtensionRange", var"DescriptorProto.ExtensionRange")
@@ -872,6 +993,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProt
     start = nothing
     var"#end" = nothing
     options = Ref{Union{Nothing,ExtensionRangeOptions}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -881,10 +1003,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProt
         elseif field_number == 3
             PB.decode!(_d, options)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"DescriptorProto.ExtensionRange"(start, var"#end", options[])
+    return var"DescriptorProto.ExtensionRange"(start, var"#end", options[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"DescriptorProto.ExtensionRange")
@@ -892,6 +1014,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"DescriptorProto.Extensio
     !isnothing(_x.start) && PB.encode(_e, 1, _x.start)
     !isnothing(_x.var"#end") && PB.encode(_e, 2, _x.var"#end")
     !isnothing(_x.options) && PB.encode(_e, 3, _x.options)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"DescriptorProto.ExtensionRange")
@@ -899,14 +1024,17 @@ function PB._encoded_size(_x::var"DescriptorProto.ExtensionRange")
     !isnothing(_x.start) && (encoded_size += PB._encoded_size(_x.start, 1))
     !isnothing(_x.var"#end") && (encoded_size += PB._encoded_size(_x.var"#end", 2))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
+    _unknown_fields::Vector{UInt8}
+    var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[]) = new(start, var"#end", _unknown_fields)
 end
-PB.default_values(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = nothing, var"#end" = nothing)
+PB.default_values(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = 1, var"#end" = 2)
 PB.json_field_names(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = "start", var"#end" = "end")
 PB.register_message_type("google.protobuf.DescriptorProto.ReservedRange", var"DescriptorProto.ReservedRange")
@@ -914,6 +1042,7 @@ PB.register_message_type("google.protobuf.DescriptorProto.ReservedRange", var"De
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProto.ReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
     var"#end" = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -921,22 +1050,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProt
         elseif field_number == 2
             var"#end" = PB.decode(_d, Int32)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"DescriptorProto.ReservedRange"(start, var"#end")
+    return var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"DescriptorProto.ReservedRange")
     initpos = position(_e.io)
     !isnothing(_x.start) && PB.encode(_e, 1, _x.start)
     !isnothing(_x.var"#end") && PB.encode(_e, 2, _x.var"#end")
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"DescriptorProto.ReservedRange")
     encoded_size = 0
     !isnothing(_x.start) && (encoded_size += PB._encoded_size(_x.start, 1))
     !isnothing(_x.var"#end") && (encoded_size += PB._encoded_size(_x.var"#end", 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -951,8 +1084,10 @@ struct DescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,MessageOptions}
     reserved_range::Vector{var"DescriptorProto.ReservedRange"}
     reserved_name::Vector{String}
+    _unknown_fields::Vector{UInt8}
+    DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[]) = new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
 end
-PB.default_values(::Core.Type{DescriptorProto}) = (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}())
+PB.default_values(::Core.Type{DescriptorProto}) = (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{DescriptorProto}) = (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
 PB.json_field_names(::Core.Type{DescriptorProto}) = (;name = "name", field = "field", extension = "extension", nested_type = "nestedType", enum_type = "enumType", extension_range = "extensionRange", oneof_decl = "oneofDecl", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
 PB.register_message_type("google.protobuf.DescriptorProto", DescriptorProto)
@@ -968,6 +1103,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DescriptorProto}, 
     options = Ref{Union{Nothing,MessageOptions}}(nothing)
     reserved_range = PB.BufferedVector{var"DescriptorProto.ReservedRange"}()
     reserved_name = PB.BufferedVector{String}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -991,10 +1127,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DescriptorProto}, 
         elseif field_number == 10
             PB.decode!(_d, reserved_name)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return DescriptorProto(name, field[], extension[], nested_type[], enum_type[], extension_range[], oneof_decl[], options[], reserved_range[], reserved_name[])
+    return DescriptorProto(name, field[], extension[], nested_type[], enum_type[], extension_range[], oneof_decl[], options[], reserved_range[], reserved_name[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::DescriptorProto)
@@ -1009,6 +1145,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::DescriptorProto)
     !isempty(_x.oneof_decl) && PB.encode(_e, 8, _x.oneof_decl)
     !isempty(_x.reserved_range) && PB.encode(_e, 9, _x.reserved_range)
     !isempty(_x.reserved_name) && PB.encode(_e, 10, _x.reserved_name)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::DescriptorProto)
@@ -1023,6 +1162,7 @@ function PB._encoded_size(_x::DescriptorProto)
     !isempty(_x.oneof_decl) && (encoded_size += PB._encoded_size(_x.oneof_decl, 8))
     !isempty(_x.reserved_range) && (encoded_size += PB._encoded_size(_x.reserved_range, 9))
     !isempty(_x.reserved_name) && (encoded_size += PB._encoded_size(_x.reserved_name, 10))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -1032,8 +1172,10 @@ struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
     leading_comments::Union{Nothing,String}
     trailing_comments::Union{Nothing,String}
     leading_detached_comments::Vector{String}
+    _unknown_fields::Vector{UInt8}
+    var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[]) = new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
 end
-PB.default_values(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}())
+PB.default_values(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
 PB.json_field_names(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = "path", span = "span", leading_comments = "leadingComments", trailing_comments = "trailingComments", leading_detached_comments = "leadingDetachedComments")
 PB.register_message_type("google.protobuf.SourceCodeInfo.Location", var"SourceCodeInfo.Location")
@@ -1044,6 +1186,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"SourceCodeInfo
     leading_comments = nothing
     trailing_comments = nothing
     leading_detached_comments = PB.BufferedVector{String}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -1057,10 +1200,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"SourceCodeInfo
         elseif field_number == 6
             PB.decode!(_d, leading_detached_comments)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"SourceCodeInfo.Location"(path[], span[], leading_comments, trailing_comments, leading_detached_comments[])
+    return var"SourceCodeInfo.Location"(path[], span[], leading_comments, trailing_comments, leading_detached_comments[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"SourceCodeInfo.Location")
@@ -1070,6 +1213,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"SourceCodeInfo.Location"
     !isnothing(_x.leading_comments) && PB.encode(_e, 3, _x.leading_comments)
     !isnothing(_x.trailing_comments) && PB.encode(_e, 4, _x.trailing_comments)
     !isempty(_x.leading_detached_comments) && PB.encode(_e, 6, _x.leading_detached_comments)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"SourceCodeInfo.Location")
@@ -1079,38 +1225,46 @@ function PB._encoded_size(_x::var"SourceCodeInfo.Location")
     !isnothing(_x.leading_comments) && (encoded_size += PB._encoded_size(_x.leading_comments, 3))
     !isnothing(_x.trailing_comments) && (encoded_size += PB._encoded_size(_x.trailing_comments, 4))
     !isempty(_x.leading_detached_comments) && (encoded_size += PB._encoded_size(_x.leading_detached_comments, 6))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct SourceCodeInfo <: PB.AbstractProtoBufMessage
     location::Vector{var"SourceCodeInfo.Location"}
+    _unknown_fields::Vector{UInt8}
+    SourceCodeInfo(location, _unknown_fields=UInt8[]) = new(location, _unknown_fields)
 end
-PB.default_values(::Core.Type{SourceCodeInfo}) = (;location = Vector{var"SourceCodeInfo.Location"}())
+PB.default_values(::Core.Type{SourceCodeInfo}) = (;location = Vector{var"SourceCodeInfo.Location"}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{SourceCodeInfo}) = (;location = 1)
 PB.json_field_names(::Core.Type{SourceCodeInfo}) = (;location = "location")
 PB.register_message_type("google.protobuf.SourceCodeInfo", SourceCodeInfo)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceCodeInfo}, _endpos::Int=0, _group::Bool=false)
     location = PB.BufferedVector{var"SourceCodeInfo.Location"}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, location)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return SourceCodeInfo(location[])
+    return SourceCodeInfo(location[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::SourceCodeInfo)
     initpos = position(_e.io)
     !isempty(_x.location) && PB.encode(_e, 1, _x.location)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::SourceCodeInfo)
     encoded_size = 0
     !isempty(_x.location) && (encoded_size += PB._encoded_size(_x.location, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -1122,7 +1276,7 @@ struct FileOptions <: PB.AbstractProtoBufMessage
     java_multiple_files::Union{Nothing,Bool}
     java_generate_equals_and_hash::Union{Nothing,Bool}
     java_string_check_utf8::Union{Nothing,Bool}
-    optimize_for::var"FileOptions.OptimizeMode".T
+    optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T}
     go_package::Union{Nothing,String}
     cc_generic_services::Union{Nothing,Bool}
     java_generic_services::Union{Nothing,Bool}
@@ -1138,8 +1292,10 @@ struct FileOptions <: PB.AbstractProtoBufMessage
     php_metadata_namespace::Union{Nothing,String}
     ruby_package::Union{Nothing,String}
     uninterpreted_option::Vector{UninterpretedOption}
+    _unknown_fields::Vector{UInt8}
+    FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[]) = new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
 end
-PB.default_values(::Core.Type{FileOptions}) = (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = var"FileOptions.OptimizeMode".SPEED, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}())
+PB.default_values(::Core.Type{FileOptions}) = (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = nothing, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FileOptions}) = (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
 PB.json_field_names(::Core.Type{FileOptions}) = (;java_package = "javaPackage", java_outer_classname = "javaOuterClassname", java_multiple_files = "javaMultipleFiles", java_generate_equals_and_hash = "javaGenerateEqualsAndHash", java_string_check_utf8 = "javaStringCheckUtf8", optimize_for = "optimizeFor", go_package = "goPackage", cc_generic_services = "ccGenericServices", java_generic_services = "javaGenericServices", py_generic_services = "pyGenericServices", php_generic_services = "phpGenericServices", deprecated = "deprecated", cc_enable_arenas = "ccEnableArenas", objc_class_prefix = "objcClassPrefix", csharp_namespace = "csharpNamespace", swift_prefix = "swiftPrefix", php_class_prefix = "phpClassPrefix", php_namespace = "phpNamespace", php_metadata_namespace = "phpMetadataNamespace", ruby_package = "rubyPackage", uninterpreted_option = "uninterpretedOption")
 PB.register_message_type("google.protobuf.FileOptions", FileOptions)
@@ -1151,7 +1307,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileOptions}, _end
     java_multiple_files = nothing
     java_generate_equals_and_hash = nothing
     java_string_check_utf8 = nothing
-    optimize_for = var"FileOptions.OptimizeMode".SPEED
+    optimize_for = nothing
     go_package = nothing
     cc_generic_services = nothing
     java_generic_services = nothing
@@ -1167,6 +1323,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileOptions}, _end
     php_metadata_namespace = nothing
     ruby_package = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -1212,17 +1369,17 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileOptions}, _end
         elseif field_number == 999
             PB.decode!(_d, uninterpreted_option)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option[])
+    return FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FileOptions)
     initpos = position(_e.io)
     !isnothing(_x.java_package) && PB.encode(_e, 1, _x.java_package)
     !isnothing(_x.java_outer_classname) && PB.encode(_e, 8, _x.java_outer_classname)
-    _x.optimize_for != var"FileOptions.OptimizeMode".SPEED && PB.encode(_e, 9, _x.optimize_for)
+    !isnothing(_x.optimize_for) && PB.encode(_e, 9, _x.optimize_for)
     !isnothing(_x.java_multiple_files) && PB.encode(_e, 10, _x.java_multiple_files)
     !isnothing(_x.go_package) && PB.encode(_e, 11, _x.go_package)
     !isnothing(_x.cc_generic_services) && PB.encode(_e, 16, _x.cc_generic_services)
@@ -1241,13 +1398,16 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::FileOptions)
     !isnothing(_x.php_metadata_namespace) && PB.encode(_e, 44, _x.php_metadata_namespace)
     !isnothing(_x.ruby_package) && PB.encode(_e, 45, _x.ruby_package)
     !isempty(_x.uninterpreted_option) && PB.encode(_e, 999, _x.uninterpreted_option)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FileOptions)
     encoded_size = 0
     !isnothing(_x.java_package) && (encoded_size += PB._encoded_size(_x.java_package, 1))
     !isnothing(_x.java_outer_classname) && (encoded_size += PB._encoded_size(_x.java_outer_classname, 8))
-    _x.optimize_for != var"FileOptions.OptimizeMode".SPEED && (encoded_size += PB._encoded_size(_x.optimize_for, 9))
+    !isnothing(_x.optimize_for) && (encoded_size += PB._encoded_size(_x.optimize_for, 9))
     !isnothing(_x.java_multiple_files) && (encoded_size += PB._encoded_size(_x.java_multiple_files, 10))
     !isnothing(_x.go_package) && (encoded_size += PB._encoded_size(_x.go_package, 11))
     !isnothing(_x.cc_generic_services) && (encoded_size += PB._encoded_size(_x.cc_generic_services, 16))
@@ -1266,6 +1426,7 @@ function PB._encoded_size(_x::FileOptions)
     !isnothing(_x.php_metadata_namespace) && (encoded_size += PB._encoded_size(_x.php_metadata_namespace, 44))
     !isnothing(_x.ruby_package) && (encoded_size += PB._encoded_size(_x.ruby_package, 45))
     !isempty(_x.uninterpreted_option) && (encoded_size += PB._encoded_size(_x.uninterpreted_option, 999))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -1282,8 +1443,10 @@ struct FileDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,FileOptions}
     source_code_info::Union{Nothing,SourceCodeInfo}
     syntax::Union{Nothing,String}
+    _unknown_fields::Vector{UInt8}
+    FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[]) = new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
 end
-PB.default_values(::Core.Type{FileDescriptorProto}) = (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing)
+PB.default_values(::Core.Type{FileDescriptorProto}) = (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FileDescriptorProto}) = (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
 PB.json_field_names(::Core.Type{FileDescriptorProto}) = (;name = "name", package = "package", dependency = "dependency", public_dependency = "publicDependency", weak_dependency = "weakDependency", message_type = "messageType", enum_type = "enumType", service = "service", extension = "extension", options = "options", source_code_info = "sourceCodeInfo", syntax = "syntax")
 PB.register_message_type("google.protobuf.FileDescriptorProto", FileDescriptorProto)
@@ -1301,6 +1464,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorProt
     options = Ref{Union{Nothing,FileOptions}}(nothing)
     source_code_info = Ref{Union{Nothing,SourceCodeInfo}}(nothing)
     syntax = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -1328,10 +1492,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorProt
         elseif field_number == 12
             syntax = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FileDescriptorProto(name, package, dependency[], public_dependency[], weak_dependency[], message_type[], enum_type[], service[], extension[], options[], source_code_info[], syntax)
+    return FileDescriptorProto(name, package, dependency[], public_dependency[], weak_dependency[], message_type[], enum_type[], service[], extension[], options[], source_code_info[], syntax, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FileDescriptorProto)
@@ -1356,6 +1520,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::FileDescriptorProto)
         end
     end
     !isnothing(_x.syntax) && PB.encode(_e, 12, _x.syntax)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FileDescriptorProto)
@@ -1380,38 +1547,46 @@ function PB._encoded_size(_x::FileDescriptorProto)
         end
     end
     !isnothing(_x.syntax) && (encoded_size += PB._encoded_size(_x.syntax, 12))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct FileDescriptorSet <: PB.AbstractProtoBufMessage
     file::Vector{FileDescriptorProto}
+    _unknown_fields::Vector{UInt8}
+    FileDescriptorSet(file, _unknown_fields=UInt8[]) = new(file, _unknown_fields)
 end
-PB.default_values(::Core.Type{FileDescriptorSet}) = (;file = Vector{FileDescriptorProto}())
+PB.default_values(::Core.Type{FileDescriptorSet}) = (;file = Vector{FileDescriptorProto}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{FileDescriptorSet}) = (;file = 1)
 PB.json_field_names(::Core.Type{FileDescriptorSet}) = (;file = "file")
 PB.register_message_type("google.protobuf.FileDescriptorSet", FileDescriptorSet)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorSet}, _endpos::Int=0, _group::Bool=false)
     file = PB.BufferedVector{FileDescriptorProto}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, file)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FileDescriptorSet(file[])
+    return FileDescriptorSet(file[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::FileDescriptorSet)
     initpos = position(_e.io)
     !isempty(_x.file) && PB.encode(_e, 1, _x.file)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FileDescriptorSet)
     encoded_size = 0
     !isempty(_x.file) && (encoded_size += PB._encoded_size(_x.file, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -1420,8 +1595,10 @@ struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
     source_file::Union{Nothing,String}
     var"#begin"::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
+    _unknown_fields::Vector{UInt8}
+    var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[]) = new(path, source_file, var"#begin", var"#end", _unknown_fields)
 end
-PB.default_values(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing)
+PB.default_values(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
 PB.json_field_names(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = "path", source_file = "sourceFile", var"#begin" = "begin", var"#end" = "end")
 PB.register_message_type("google.protobuf.GeneratedCodeInfo.Annotation", var"GeneratedCodeInfo.Annotation")
@@ -1431,6 +1608,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"GeneratedCodeI
     source_file = nothing
     var"#begin" = nothing
     var"#end" = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -1442,10 +1620,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"GeneratedCodeI
         elseif field_number == 4
             var"#end" = PB.decode(_d, Int32)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"GeneratedCodeInfo.Annotation"(path[], source_file, var"#begin", var"#end")
+    return var"GeneratedCodeInfo.Annotation"(path[], source_file, var"#begin", var"#end", _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"GeneratedCodeInfo.Annotation")
@@ -1454,6 +1632,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"GeneratedCodeInfo.Annota
     !isnothing(_x.source_file) && PB.encode(_e, 2, _x.source_file)
     !isnothing(_x.var"#begin") && PB.encode(_e, 3, _x.var"#begin")
     !isnothing(_x.var"#end") && PB.encode(_e, 4, _x.var"#end")
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
@@ -1462,38 +1643,46 @@ function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
     !isnothing(_x.source_file) && (encoded_size += PB._encoded_size(_x.source_file, 2))
     !isnothing(_x.var"#begin") && (encoded_size += PB._encoded_size(_x.var"#begin", 3))
     !isnothing(_x.var"#end") && (encoded_size += PB._encoded_size(_x.var"#end", 4))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
     annotation::Vector{var"GeneratedCodeInfo.Annotation"}
+    _unknown_fields::Vector{UInt8}
+    GeneratedCodeInfo(annotation, _unknown_fields=UInt8[]) = new(annotation, _unknown_fields)
 end
-PB.default_values(::Core.Type{GeneratedCodeInfo}) = (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}())
+PB.default_values(::Core.Type{GeneratedCodeInfo}) = (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{GeneratedCodeInfo}) = (;annotation = 1)
 PB.json_field_names(::Core.Type{GeneratedCodeInfo}) = (;annotation = "annotation")
 PB.register_message_type("google.protobuf.GeneratedCodeInfo", GeneratedCodeInfo)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:GeneratedCodeInfo}, _endpos::Int=0, _group::Bool=false)
     annotation = PB.BufferedVector{var"GeneratedCodeInfo.Annotation"}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, annotation)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return GeneratedCodeInfo(annotation[])
+    return GeneratedCodeInfo(annotation[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::GeneratedCodeInfo)
     initpos = position(_e.io)
     !isempty(_x.annotation) && PB.encode(_e, 1, _x.annotation)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::GeneratedCodeInfo)
     encoded_size = 0
     !isempty(_x.annotation) && (encoded_size += PB._encoded_size(_x.annotation, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

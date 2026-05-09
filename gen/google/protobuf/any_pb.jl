@@ -10,8 +10,10 @@ export Any
 struct Any <: PB.AbstractProtoBufMessage
     type_url::String
     value::Vector{UInt8}
+    _unknown_fields::Vector{UInt8}
+    Any(type_url, value, _unknown_fields=UInt8[]) = new(type_url, value, _unknown_fields)
 end
-PB.default_values(::Core.Type{Any}) = (;type_url = "", value = UInt8[])
+PB.default_values(::Core.Type{Any}) = (;type_url = "", value = UInt8[], _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Any}) = (;type_url = 1, value = 2)
 PB.json_field_names(::Core.Type{Any}) = (;type_url = "typeUrl", value = "value")
 PB.register_message_type("google.protobuf.Any", Any)
@@ -19,6 +21,7 @@ PB.register_message_type("google.protobuf.Any", Any)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Any}, _endpos::Int=0, _group::Bool=false)
     type_url = ""
     value = UInt8[]
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -26,22 +29,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Any}, _endpos::Int
         elseif field_number == 2
             value = PB.decode(_d, Vector{UInt8})
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Any(type_url, value)
+    return Any(type_url, value, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Any)
     initpos = position(_e.io)
     !isempty(_x.type_url) && PB.encode(_e, 1, _x.type_url)
     !isempty(_x.value) && PB.encode(_e, 2, _x.value)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Any)
     encoded_size = 0
     !isempty(_x.type_url) && (encoded_size += PB._encoded_size(_x.type_url, 1))
     !isempty(_x.value) && (encoded_size += PB._encoded_size(_x.value, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

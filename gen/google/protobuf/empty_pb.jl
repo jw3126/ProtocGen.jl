@@ -8,26 +8,33 @@ using ProtoBufDescriptors.EnumX: @enumx
 export Empty
 
 struct Empty <: PB.AbstractProtoBufMessage
+    _unknown_fields::Vector{UInt8}
+    Empty(_unknown_fields=UInt8[]) = new(_unknown_fields)
 end
-PB.default_values(::Core.Type{Empty}) = (;)
+PB.default_values(::Core.Type{Empty}) = (;_unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Empty}) = (;)
 PB.json_field_names(::Core.Type{Empty}) = (;)
 PB.register_message_type("google.protobuf.Empty", Empty)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
-        Base.skip(_d, wire_type)
+        PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
     end
-    return Empty()
+    return Empty(_unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Empty)
     initpos = position(_e.io)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Empty)
     encoded_size = 0
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

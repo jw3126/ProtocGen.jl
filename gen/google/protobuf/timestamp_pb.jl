@@ -10,8 +10,10 @@ export Timestamp
 struct Timestamp <: PB.AbstractProtoBufMessage
     seconds::Int64
     nanos::Int32
+    _unknown_fields::Vector{UInt8}
+    Timestamp(seconds, nanos, _unknown_fields=UInt8[]) = new(seconds, nanos, _unknown_fields)
 end
-PB.default_values(::Core.Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32))
+PB.default_values(::Core.Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Timestamp}) = (;seconds = 1, nanos = 2)
 PB.json_field_names(::Core.Type{Timestamp}) = (;seconds = "seconds", nanos = "nanos")
 PB.register_message_type("google.protobuf.Timestamp", Timestamp)
@@ -19,6 +21,7 @@ PB.register_message_type("google.protobuf.Timestamp", Timestamp)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Timestamp}, _endpos::Int=0, _group::Bool=false)
     seconds = zero(Int64)
     nanos = zero(Int32)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -26,22 +29,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Timestamp}, _endpo
         elseif field_number == 2
             nanos = PB.decode(_d, Int32)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Timestamp(seconds, nanos)
+    return Timestamp(seconds, nanos, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Timestamp)
     initpos = position(_e.io)
     _x.seconds != zero(Int64) && PB.encode(_e, 1, _x.seconds)
     _x.nanos != zero(Int32) && PB.encode(_e, 2, _x.nanos)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Timestamp)
     encoded_size = 0
     _x.seconds != zero(Int64) && (encoded_size += PB._encoded_size(_x.seconds, 1))
     _x.nanos != zero(Int32) && (encoded_size += PB._encoded_size(_x.nanos, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

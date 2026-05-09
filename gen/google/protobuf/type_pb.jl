@@ -12,8 +12,10 @@ export Syntax, Type, Field, Enum, EnumValue, Option
 struct Option <: PB.AbstractProtoBufMessage
     name::String
     value::Union{Nothing,Any}
+    _unknown_fields::Vector{UInt8}
+    Option(name, value, _unknown_fields=UInt8[]) = new(name, value, _unknown_fields)
 end
-PB.default_values(::Core.Type{Option}) = (;name = "", value = nothing)
+PB.default_values(::Core.Type{Option}) = (;name = "", value = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Option}) = (;name = 1, value = 2)
 PB.json_field_names(::Core.Type{Option}) = (;name = "name", value = "value")
 PB.register_message_type("google.protobuf.Option", Option)
@@ -21,6 +23,7 @@ PB.register_message_type("google.protobuf.Option", Option)
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Option}, _endpos::Int=0, _group::Bool=false)
     name = ""
     value = Ref{Union{Nothing,Any}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -28,22 +31,26 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Option}, _endpos::
         elseif field_number == 2
             PB.decode!(_d, value)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Option(name, value[])
+    return Option(name, value[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Option)
     initpos = position(_e.io)
     !isempty(_x.name) && PB.encode(_e, 1, _x.name)
     !isnothing(_x.value) && PB.encode(_e, 2, _x.value)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Option)
     encoded_size = 0
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isnothing(_x.value) && (encoded_size += PB._encoded_size(_x.value, 2))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -62,8 +69,10 @@ struct Field <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     json_name::String
     default_value::String
+    _unknown_fields::Vector{UInt8}
+    Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[]) = new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
 end
-PB.default_values(::Core.Type{Field}) = (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "")
+PB.default_values(::Core.Type{Field}) = (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Field}) = (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
 PB.json_field_names(::Core.Type{Field}) = (;kind = "kind", cardinality = "cardinality", number = "number", name = "name", type_url = "typeUrl", oneof_index = "oneofIndex", packed = "packed", options = "options", json_name = "jsonName", default_value = "defaultValue")
 PB.register_message_type("google.protobuf.Field", Field)
@@ -79,6 +88,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Field}, _endpos::I
     options = PB.BufferedVector{Option}()
     json_name = ""
     default_value = ""
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -102,10 +112,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Field}, _endpos::I
         elseif field_number == 11
             default_value = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Field(kind, cardinality, number, name, type_url, oneof_index, packed, options[], json_name, default_value)
+    return Field(kind, cardinality, number, name, type_url, oneof_index, packed, options[], json_name, default_value, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Field)
@@ -120,6 +130,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Field)
     !isempty(_x.options) && PB.encode(_e, 9, _x.options)
     !isempty(_x.json_name) && PB.encode(_e, 10, _x.json_name)
     !isempty(_x.default_value) && PB.encode(_e, 11, _x.default_value)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Field)
@@ -134,6 +147,7 @@ function PB._encoded_size(_x::Field)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 9))
     !isempty(_x.json_name) && (encoded_size += PB._encoded_size(_x.json_name, 10))
     !isempty(_x.default_value) && (encoded_size += PB._encoded_size(_x.default_value, 11))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -144,8 +158,10 @@ struct Type <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
+    _unknown_fields::Vector{UInt8}
+    Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[]) = new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
 end
-PB.default_values(::Core.Type{Type}) = (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2)
+PB.default_values(::Core.Type{Type}) = (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Type}) = (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
 PB.json_field_names(::Core.Type{Type}) = (;name = "name", fields = "fields", oneofs = "oneofs", options = "options", source_context = "sourceContext", syntax = "syntax")
 PB.register_message_type("google.protobuf.Type", Type)
@@ -157,6 +173,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Type}, _endpos::In
     options = PB.BufferedVector{Option}()
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
     syntax = Syntax.SYNTAX_PROTO2
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -172,10 +189,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Type}, _endpos::In
         elseif field_number == 6
             syntax = PB.decode(_d, Syntax.T)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Type(name, fields[], oneofs[], options[], source_context[], syntax)
+    return Type(name, fields[], oneofs[], options[], source_context[], syntax, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Type)
@@ -186,6 +203,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Type)
     !isempty(_x.options) && PB.encode(_e, 4, _x.options)
     !isnothing(_x.source_context) && PB.encode(_e, 5, _x.source_context)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB.encode(_e, 6, _x.syntax)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Type)
@@ -196,6 +216,7 @@ function PB._encoded_size(_x::Type)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 4))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 5))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 6))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -203,8 +224,10 @@ struct EnumValue <: PB.AbstractProtoBufMessage
     name::String
     number::Int32
     options::Vector{Option}
+    _unknown_fields::Vector{UInt8}
+    EnumValue(name, number, options, _unknown_fields=UInt8[]) = new(name, number, options, _unknown_fields)
 end
-PB.default_values(::Core.Type{EnumValue}) = (;name = "", number = zero(Int32), options = Vector{Option}())
+PB.default_values(::Core.Type{EnumValue}) = (;name = "", number = zero(Int32), options = Vector{Option}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{EnumValue}) = (;name = 1, number = 2, options = 3)
 PB.json_field_names(::Core.Type{EnumValue}) = (;name = "name", number = "number", options = "options")
 PB.register_message_type("google.protobuf.EnumValue", EnumValue)
@@ -213,6 +236,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValue}, _endpo
     name = ""
     number = zero(Int32)
     options = PB.BufferedVector{Option}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -222,10 +246,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValue}, _endpo
         elseif field_number == 3
             PB.decode!(_d, options)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return EnumValue(name, number, options[])
+    return EnumValue(name, number, options[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumValue)
@@ -233,6 +257,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::EnumValue)
     !isempty(_x.name) && PB.encode(_e, 1, _x.name)
     _x.number != zero(Int32) && PB.encode(_e, 2, _x.number)
     !isempty(_x.options) && PB.encode(_e, 3, _x.options)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::EnumValue)
@@ -240,6 +267,7 @@ function PB._encoded_size(_x::EnumValue)
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     _x.number != zero(Int32) && (encoded_size += PB._encoded_size(_x.number, 2))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -249,8 +277,10 @@ struct Enum <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
+    _unknown_fields::Vector{UInt8}
+    Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[]) = new(name, enumvalue, options, source_context, syntax, _unknown_fields)
 end
-PB.default_values(::Core.Type{Enum}) = (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2)
+PB.default_values(::Core.Type{Enum}) = (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Enum}) = (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
 PB.json_field_names(::Core.Type{Enum}) = (;name = "name", enumvalue = "enumvalue", options = "options", source_context = "sourceContext", syntax = "syntax")
 PB.register_message_type("google.protobuf.Enum", Enum)
@@ -261,6 +291,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Enum}, _endpos::In
     options = PB.BufferedVector{Option}()
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
     syntax = Syntax.SYNTAX_PROTO2
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -274,10 +305,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Enum}, _endpos::In
         elseif field_number == 5
             syntax = PB.decode(_d, Syntax.T)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Enum(name, enumvalue[], options[], source_context[], syntax)
+    return Enum(name, enumvalue[], options[], source_context[], syntax, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Enum)
@@ -287,6 +318,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Enum)
     !isempty(_x.options) && PB.encode(_e, 3, _x.options)
     !isnothing(_x.source_context) && PB.encode(_e, 4, _x.source_context)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB.encode(_e, 5, _x.syntax)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Enum)
@@ -296,6 +330,7 @@ function PB._encoded_size(_x::Enum)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 4))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 5))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

@@ -18,40 +18,49 @@ abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
 struct Struct <: AbstractStruct
     fields::OrderedDict{String,AbstractValue}
+    _unknown_fields::Vector{UInt8}
+    Struct(fields, _unknown_fields=UInt8[]) = new(fields, _unknown_fields)
 end
-PB.default_values(::Core.Type{Struct}) = (;fields = OrderedDict{String,AbstractValue}())
+PB.default_values(::Core.Type{Struct}) = (;fields = OrderedDict{String,AbstractValue}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Struct}) = (;fields = 1)
 PB.json_field_names(::Core.Type{Struct}) = (;fields = "fields")
 PB.register_message_type("google.protobuf.Struct", Struct)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Struct}, _endpos::Int=0, _group::Bool=false)
     fields = OrderedDict{String,AbstractValue}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, fields)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Struct(fields)
+    return Struct(fields, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Struct)
     initpos = position(_e.io)
     !isempty(_x.fields) && PB.encode(_e, 1, _x.fields)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Struct)
     encoded_size = 0
     !isempty(_x.fields) && (encoded_size += PB._encoded_size(_x.fields, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct Value <: AbstractValue
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}}
+    _unknown_fields::Vector{UInt8}
+    Value(kind, _unknown_fields=UInt8[]) = new(kind, _unknown_fields)
 end
-PB.default_values(::Core.Type{Value}) = (;kind = nothing)
+PB.default_values(::Core.Type{Value}) = (;kind = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Value}) = (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
 PB.json_field_names(::Core.Type{Value}) = (;null_value = "nullValue", number_value = "numberValue", string_value = "stringValue", bool_value = "boolValue", struct_value = "structValue", list_value = "listValue")
 PB.register_message_type("google.protobuf.Value", Value)
@@ -59,6 +68,7 @@ PB.oneof_field_types(::Core.Type{Value}) = (;kind = (;null_value = NullValue.T, 
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Value}, _endpos::Int=0, _group::Bool=false)
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}} = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -70,18 +80,18 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Value}, _endpos::I
         elseif field_number == 4
             kind = OneOf(:bool_value, PB.decode(_d, Bool))
         elseif field_number == 5
-            _v = Ref{Union{Nothing,AbstractStruct}}(nothing)
+            _v = Ref{Union{Nothing,AbstractStruct}}((!isnothing(kind) && kind.name === :struct_value) ? kind.value::AbstractStruct : nothing)
             PB.decode!(_d, _v)
             kind = OneOf(:struct_value, _v[]::AbstractStruct)
         elseif field_number == 6
-            _v = Ref{Union{Nothing,AbstractListValue}}(nothing)
+            _v = Ref{Union{Nothing,AbstractListValue}}((!isnothing(kind) && kind.name === :list_value) ? kind.value::AbstractListValue : nothing)
             PB.decode!(_d, _v)
             kind = OneOf(:list_value, _v[]::AbstractListValue)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Value(kind)
+    return Value(kind, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Value)
@@ -115,6 +125,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Value)
         if !isnothing(_o) && _o.name === :list_value
             PB.encode(_e, 6, _o.value)
         end
+    end
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
     end
     return position(_e.io) - initpos
 end
@@ -150,38 +163,46 @@ function PB._encoded_size(_x::Value)
             encoded_size += PB._encoded_size(_o.value, 6)
         end
     end
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
 struct ListValue <: AbstractListValue
     values::Vector{AbstractValue}
+    _unknown_fields::Vector{UInt8}
+    ListValue(values, _unknown_fields=UInt8[]) = new(values, _unknown_fields)
 end
-PB.default_values(::Core.Type{ListValue}) = (;values = Vector{AbstractValue}())
+PB.default_values(::Core.Type{ListValue}) = (;values = Vector{AbstractValue}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{ListValue}) = (;values = 1)
 PB.json_field_names(::Core.Type{ListValue}) = (;values = "values")
 PB.register_message_type("google.protobuf.ListValue", ListValue)
 
 function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ListValue}, _endpos::Int=0, _group::Bool=false)
     values = PB.BufferedVector{AbstractValue}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             PB.decode!(_d, values)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return ListValue(values[])
+    return ListValue(values[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::ListValue)
     initpos = position(_e.io)
     !isempty(_x.values) && PB.encode(_e, 1, _x.values)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::ListValue)
     encoded_size = 0
     !isempty(_x.values) && (encoded_size += PB._encoded_size(_x.values, 1))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 

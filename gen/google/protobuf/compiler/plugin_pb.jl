@@ -14,8 +14,10 @@ struct Version <: PB.AbstractProtoBufMessage
     minor::Union{Nothing,Int32}
     patch::Union{Nothing,Int32}
     suffix::Union{Nothing,String}
+    _unknown_fields::Vector{UInt8}
+    Version(major, minor, patch, suffix, _unknown_fields=UInt8[]) = new(major, minor, patch, suffix, _unknown_fields)
 end
-PB.default_values(::Core.Type{Version}) = (;major = nothing, minor = nothing, patch = nothing, suffix = nothing)
+PB.default_values(::Core.Type{Version}) = (;major = nothing, minor = nothing, patch = nothing, suffix = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{Version}) = (;major = 1, minor = 2, patch = 3, suffix = 4)
 PB.json_field_names(::Core.Type{Version}) = (;major = "major", minor = "minor", patch = "patch", suffix = "suffix")
 PB.register_message_type("google.protobuf.compiler.Version", Version)
@@ -25,6 +27,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Version}, _endpos:
     minor = nothing
     patch = nothing
     suffix = nothing
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -36,10 +39,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Version}, _endpos:
         elseif field_number == 4
             suffix = PB.decode(_d, String)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return Version(major, minor, patch, suffix)
+    return Version(major, minor, patch, suffix, _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::Version)
@@ -48,6 +51,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::Version)
     !isnothing(_x.minor) && PB.encode(_e, 2, _x.minor)
     !isnothing(_x.patch) && PB.encode(_e, 3, _x.patch)
     !isnothing(_x.suffix) && PB.encode(_e, 4, _x.suffix)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Version)
@@ -56,6 +62,7 @@ function PB._encoded_size(_x::Version)
     !isnothing(_x.minor) && (encoded_size += PB._encoded_size(_x.minor, 2))
     !isnothing(_x.patch) && (encoded_size += PB._encoded_size(_x.patch, 3))
     !isnothing(_x.suffix) && (encoded_size += PB._encoded_size(_x.suffix, 4))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -65,8 +72,10 @@ struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
     proto_file::Vector{google_protobuf.FileDescriptorProto}
     source_file_descriptors::Vector{google_protobuf.FileDescriptorProto}
     compiler_version::Union{Nothing,Version}
+    _unknown_fields::Vector{UInt8}
+    CodeGeneratorRequest(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields=UInt8[]) = new(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields)
 end
-PB.default_values(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing)
+PB.default_values(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
 PB.json_field_names(::Core.Type{CodeGeneratorRequest}) = (;file_to_generate = "fileToGenerate", parameter = "parameter", proto_file = "protoFile", source_file_descriptors = "sourceFileDescriptors", compiler_version = "compilerVersion")
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorRequest", CodeGeneratorRequest)
@@ -77,6 +86,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorReque
     proto_file = PB.BufferedVector{google_protobuf.FileDescriptorProto}()
     source_file_descriptors = PB.BufferedVector{google_protobuf.FileDescriptorProto}()
     compiler_version = Ref{Union{Nothing,Version}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -90,10 +100,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorReque
         elseif field_number == 3
             PB.decode!(_d, compiler_version)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return CodeGeneratorRequest(file_to_generate[], parameter, proto_file[], source_file_descriptors[], compiler_version[])
+    return CodeGeneratorRequest(file_to_generate[], parameter, proto_file[], source_file_descriptors[], compiler_version[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::CodeGeneratorRequest)
@@ -103,6 +113,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::CodeGeneratorRequest)
     !isnothing(_x.compiler_version) && PB.encode(_e, 3, _x.compiler_version)
     !isempty(_x.proto_file) && PB.encode(_e, 15, _x.proto_file)
     !isempty(_x.source_file_descriptors) && PB.encode(_e, 17, _x.source_file_descriptors)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::CodeGeneratorRequest)
@@ -112,6 +125,7 @@ function PB._encoded_size(_x::CodeGeneratorRequest)
     !isnothing(_x.compiler_version) && (encoded_size += PB._encoded_size(_x.compiler_version, 3))
     !isempty(_x.proto_file) && (encoded_size += PB._encoded_size(_x.proto_file, 15))
     !isempty(_x.source_file_descriptors) && (encoded_size += PB._encoded_size(_x.source_file_descriptors, 17))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -122,8 +136,10 @@ struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
     insertion_point::Union{Nothing,String}
     content::Union{Nothing,String}
     generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo}
+    _unknown_fields::Vector{UInt8}
+    var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info, _unknown_fields=UInt8[]) = new(name, insertion_point, content, generated_code_info, _unknown_fields)
 end
-PB.default_values(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing)
+PB.default_values(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing, _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
 PB.json_field_names(::Core.Type{var"CodeGeneratorResponse.File"}) = (;name = "name", insertion_point = "insertionPoint", content = "content", generated_code_info = "generatedCodeInfo")
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse.File", var"CodeGeneratorResponse.File")
@@ -133,6 +149,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"CodeGeneratorR
     insertion_point = nothing
     content = nothing
     generated_code_info = Ref{Union{Nothing,google_protobuf.GeneratedCodeInfo}}(nothing)
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -144,10 +161,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"CodeGeneratorR
         elseif field_number == 16
             PB.decode!(_d, generated_code_info)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info[])
+    return var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"CodeGeneratorResponse.File")
@@ -156,6 +173,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::var"CodeGeneratorResponse.Fi
     !isnothing(_x.insertion_point) && PB.encode(_e, 2, _x.insertion_point)
     !isnothing(_x.content) && PB.encode(_e, 15, _x.content)
     !isnothing(_x.generated_code_info) && PB.encode(_e, 16, _x.generated_code_info)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
@@ -164,6 +184,7 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     !isnothing(_x.insertion_point) && (encoded_size += PB._encoded_size(_x.insertion_point, 2))
     !isnothing(_x.content) && (encoded_size += PB._encoded_size(_x.content, 15))
     !isnothing(_x.generated_code_info) && (encoded_size += PB._encoded_size(_x.generated_code_info, 16))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
@@ -173,8 +194,10 @@ struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
     minimum_edition::Union{Nothing,Int32}
     maximum_edition::Union{Nothing,Int32}
     file::Vector{var"CodeGeneratorResponse.File"}
+    _unknown_fields::Vector{UInt8}
+    CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields=UInt8[]) = new(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields)
 end
-PB.default_values(::Core.Type{CodeGeneratorResponse}) = (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}())
+PB.default_values(::Core.Type{CodeGeneratorResponse}) = (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}(), _unknown_fields = UInt8[])
 PB.field_numbers(::Core.Type{CodeGeneratorResponse}) = (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)
 PB.json_field_names(::Core.Type{CodeGeneratorResponse}) = (;error = "error", supported_features = "supportedFeatures", minimum_edition = "minimumEdition", maximum_edition = "maximumEdition", file = "file")
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse", CodeGeneratorResponse)
@@ -185,6 +208,7 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorRespo
     minimum_edition = nothing
     maximum_edition = nothing
     file = PB.BufferedVector{var"CodeGeneratorResponse.File"}()
+    _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
@@ -198,10 +222,10 @@ function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:CodeGeneratorRespo
         elseif field_number == 15
             PB.decode!(_d, file)
         else
-            Base.skip(_d, wire_type)
+            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file[])
+    return CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file[], _unknown_fields)
 end
 
 function PB.encode(_e::PB.AbstractProtoEncoder, _x::CodeGeneratorResponse)
@@ -211,6 +235,9 @@ function PB.encode(_e::PB.AbstractProtoEncoder, _x::CodeGeneratorResponse)
     !isnothing(_x.minimum_edition) && PB.encode(_e, 3, _x.minimum_edition)
     !isnothing(_x.maximum_edition) && PB.encode(_e, 4, _x.maximum_edition)
     !isempty(_x.file) && PB.encode(_e, 15, _x.file)
+    if !isempty(_x._unknown_fields)
+        write(_e.io, _x._unknown_fields)
+    end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::CodeGeneratorResponse)
@@ -220,6 +247,7 @@ function PB._encoded_size(_x::CodeGeneratorResponse)
     !isnothing(_x.minimum_edition) && (encoded_size += PB._encoded_size(_x.minimum_edition, 3))
     !isnothing(_x.maximum_edition) && (encoded_size += PB._encoded_size(_x.maximum_edition, 4))
     !isempty(_x.file) && (encoded_size += PB._encoded_size(_x.file, 15))
+    encoded_size += length(_x._unknown_fields)
     return encoded_size
 end
 
