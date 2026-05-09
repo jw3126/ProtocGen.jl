@@ -412,6 +412,16 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             init_val = "PB.BufferedVector{$(elem_t)}()"
             default  = "Vector{$(elem_t)}()"
             skip     = "!isempty(_x.$(jl_fieldname))"
+        elseif _wants_scalar_presence(field, names)
+            # proto2 `optional` and proto3 explicit `optional` enums carry
+            # presence — same treatment as scalars. Without this, an
+            # `optional Foo enum_field = 1` set to `Foo.FIRST` (numeric 0)
+            # is dropped by the equal-to-default skip on encode, and the
+            # field is indistinguishable from unset.
+            jl_type  = "Union{Nothing,$(elem_t)}"
+            init_val = "nothing"
+            default  = "nothing"
+            skip     = "!isnothing(_x.$(jl_fieldname))"
         else
             # No presence on a bare proto3 enum — defaults to the first enum
             # value (numeric 0). proto2 required enums encode unconditionally.
@@ -876,9 +886,17 @@ end
 function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     # Decode the value into a temporary, then wrap in OneOf.
     if m.is_message
-        # OneOf members can be submessages — decode into a Ref, unwrap, wrap.
+        # OneOf members can be submessages. Per spec: when the *same*
+        # message-type oneof member appears multiple times on the wire,
+        # the values are merged (as singular submessages would be).
+        # Seed the Ref with the prior value if and only if that prior
+        # value belonged to *this* member; otherwise start from
+        # `nothing`. The Union{Nothing,T} `decode!` overload then
+        # merges the new wire instance into the seeded value.
         elem = m.elem_jl_type
-        println(io, "            _v = Ref{Union{Nothing,$(elem)}}(nothing)")
+        println(io, "            _v = Ref{Union{Nothing,$(elem)}}(",
+                "(!isnothing(", o.jl_fieldname, ") && ", o.jl_fieldname, ".name === :",
+                m.jl_fieldname, ") ? ", o.jl_fieldname, ".value::", elem, " : nothing)")
         println(io, "            PB.decode!(_d, _v)")
         println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", _v[]::", elem, ")")
     elseif m.is_enum

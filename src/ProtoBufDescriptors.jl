@@ -39,6 +39,13 @@ end
 
 include("codec/Codecs.jl")
 
+# OneOf-vs-OneOf merge: per the protobuf spec, when multiple members
+# of the same oneof appear on the wire, only the last seen member is
+# set. So when two top-level messages are merged, `s2`'s active member
+# replaces `s1`'s. Defined here (not inside Codecs) because `OneOf` is
+# declared in this module.
+@inline Codecs._merge_structs(::OneOf, s2::OneOf) = s2
+
 import .Codecs
 import .Codecs: decode, decode!, encode, AbstractProtoDecoder, AbstractProtoEncoder,
     ProtoDecoder, ProtoEncoder, BufferedVector, message_done, decode_tag, _encoded_size

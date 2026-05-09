@@ -12,8 +12,15 @@ end
 const _ScalarTypes = Union{Float64,Float32,Int32,Int64,UInt64,UInt32,Bool,String,Vector{UInt8}}
 const _ScalarTypesEnum = Union{_ScalarTypes,Enum}
 
-# uint32, uint64
-decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{UInt32,UInt64}} = vbyte_decode(get_stream(d), T)
+# uint64
+decode(d::AbstractProtoDecoder, ::Type{UInt64}) = vbyte_decode(get_stream(d), UInt64)
+# uint32. The wire spec lets a UINT32 varint be up to 10 bytes — protoc
+# happily emits e.g. `varint(kInt64Max)` into a uint32 field, expecting
+# the decoder to consume the whole thing and truncate. Read as UInt64
+# and truncate, matching what Int32 already does (line below). The
+# bare `vbyte_decode(io, UInt32)` only handles up to 5 bytes; tags
+# (always ≤ 5 bytes) and small uint32 lengths are still its territory.
+decode(d::AbstractProtoDecoder, ::Type{UInt32}) = vbyte_decode(get_stream(d), UInt64) % UInt32
 # int32: Negative int32 are encoded in 10 bytes...
 # TODO: add check the int is negative if larger than typemax UInt32
 decode(d::AbstractProtoDecoder, ::Type{Int32}) = reinterpret(Int32, UInt32(vbyte_decode(get_stream(d), UInt64) % UInt32))
@@ -185,19 +192,26 @@ function decode!(d::AbstractProtoDecoder, buffer::BufferedVector{String})
 end
 
 function decode(d::AbstractProtoDecoder, ::Type{Vector{UInt8}})
-    bytelen = vbyte_decode(get_stream(d), UInt32)
-    return read(get_stream(d), bytelen)
+    io = get_stream(d)
+    bytelen = vbyte_decode(io, UInt32)
+    # `read(io, n)` returns up to `n` bytes — silent on truncation. The
+    # spec wants malformed input rejected, so check first (matches the
+    # symmetric LENGTH_DELIMITED check in `Base.skip` below).
+    bytesavailable(io) >= bytelen || throw(EOFError())
+    return read(io, bytelen)
 end
 function decode(d::AbstractProtoDecoder, ::Type{Base.CodeUnits{UInt8, String}})
-    bytelen = vbyte_decode(get_stream(d), UInt32)
-    return read(get_stream(d), bytelen)
+    io = get_stream(d)
+    bytelen = vbyte_decode(io, UInt32)
+    bytesavailable(io) >= bytelen || throw(EOFError())
+    return read(io, bytelen)
 end
 function decode!(d::AbstractProtoDecoder, buffer::BufferedVector{Vector{UInt8}})
     buffer[] = decode(d, Vector{UInt8})
     return nothing
 end
 
-function decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Int32,Int64,UInt32,UInt64,Enum{Int32},Enum{UInt32}}}
+function decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Bool,Int32,Int64,UInt32,UInt64,Enum{Int32},Enum{UInt32}}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -246,7 +260,7 @@ function decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}
     return nothing
 end
 
-function decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Bool,Float32,Float64}}
+function decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Float32,Float64}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -365,16 +379,68 @@ end
     # TODO: Error gracefully on unsuported types like Missing, Matrices...
     #       Would be easier if we have a HolyTrait for user defined structs
     merged_values = Tuple(
-        (
-            type <: _ScalarTypesEnum ? :(s2.$(name)) :
-            type <: AbstractVector ? :(vcat(s1.$(name), s2.$(name))) :
-            :(_merge_structs(s1.$(name), s2.$(name)))
-        )
+        _merge_field_expr(name, type)
         for (name, type)
         in zip(fieldnames(T), fieldtypes(T))
     )
     return quote T($(merged_values...)) end
 end
+
+# Per-field merge expression for the @generated body. Inline-handle every
+# field shape codegen can emit so we don't have to dispatch through
+# `_merge_structs` for cases the primary handler can't see (notably
+# `Union{Nothing,...}`, where it requires `s2::T` concrete and the inner
+# bits-type early return doesn't fire on Union types).
+function _merge_field_expr(name::Symbol, type)
+    if type <: _ScalarTypesEnum
+        # Bare scalar/enum (proto3 non-presence). Spec: latter replaces
+        # former. But proto3 encoders are required to skip equal-to-
+        # default scalars, so a 0/""/[] arriving on `s2` was never on
+        # the wire — treat it as "unset" and keep `s1`. This is the
+        # only way to match the wire-level merge semantics without
+        # tracking presence on every bare scalar.
+        return :(_at_default(s2.$(name)) ? s1.$(name) : s2.$(name))
+    elseif type <: AbstractVector
+        # Repeated: concatenate.
+        return :(vcat(s1.$(name), s2.$(name)))
+    elseif type <: AbstractDict
+        # Map: per-key last-wins (s2 entries override s1).
+        return :(merge(s1.$(name), s2.$(name)))
+    elseif type isa Union && Nothing <: type
+        # Presence-bearing field. Inline the nothing-checks so we never
+        # hit `_merge_structs(::Union{Nothing,T}, ::Union{Nothing,T})` —
+        # that signature isn't matched by the primary handler (s2 must
+        # be concrete `T`).
+        inner = Core.Compiler.typesubtract(type, Nothing, 2)
+        if inner <: _ScalarTypesEnum
+            # Presence scalar / enum: last-wins on set, else keep s1.
+            return :(s2.$(name) === nothing ? s1.$(name) : s2.$(name))
+        else
+            # Presence submessage / oneof: merge if both set, else
+            # take whichever side is set.
+            return :(s2.$(name) === nothing ? s1.$(name) :
+                     (s1.$(name) === nothing ? s2.$(name) :
+                      _merge_structs(s1.$(name), s2.$(name))))
+        end
+    else
+        # Bare submessage (proto2 required): always recurse.
+        return :(_merge_structs(s1.$(name), s2.$(name)))
+    end
+end
+
+# Default-value detection for proto3 bare scalars and enums. Used by the
+# merge to decide whether `s2`'s value was on the wire or just the type's
+# zero-value.
+@inline _at_default(x::Number)            = iszero(x)
+@inline _at_default(x::AbstractString)    = isempty(x)
+@inline _at_default(x::AbstractVector)    = isempty(x)
+@inline _at_default(x::Base.Enum)         = Integer(x) == 0
+
+# OneOf-vs-OneOf is defined in the parent module (it depends on the
+# `OneOf` type, which lives there). The presence-wrapper case
+# (`Union{Nothing,OneOf{...}}`) is handled inline by
+# `_merge_field_expr` above, which only calls `_merge_structs` when
+# both sides are concrete OneOfs.
 
 @generated function _merge_structs!(s1::Union{Nothing,T}, s2::T) where {T}
     isbitstype(s1) && :(return nothing)
