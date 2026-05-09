@@ -80,9 +80,17 @@ function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...); ret
 # -----------------------------------------------------------------------------
 # Timestamp — RFC 3339 string in UTC, e.g. "2024-05-08T15:30:00.123456789Z".
 # Fractional precision is 0/3/6/9 digits depending on trailing zeros.
+# Spec range: 0001-01-01T00:00:00Z to 9999-12-31T23:59:59.999999999Z
+# (i.e., seconds ∈ [-62135596800, 253402300799]).
 # -----------------------------------------------------------------------------
 
+const _TIMESTAMP_MIN_SECONDS = Int64(-62135596800)   # 0001-01-01T00:00:00Z
+const _TIMESTAMP_MAX_SECONDS = Int64(253402300799)   # 9999-12-31T23:59:59Z
+
 function _encode_json_value(io::IO, ts::_Timestamp)
+    if ts.seconds < _TIMESTAMP_MIN_SECONDS || ts.seconds > _TIMESTAMP_MAX_SECONDS
+        throw(ArgumentError("Timestamp seconds out of range [$(Int(_TIMESTAMP_MIN_SECONDS)), $(Int(_TIMESTAMP_MAX_SECONDS))]: $(ts.seconds)"))
+    end
     print(io, '"')
     _format_rfc3339(io, ts.seconds, ts.nanos)
     print(io, '"')
@@ -91,6 +99,9 @@ end
 
 function _decode_json_value(::Type{_Timestamp}, s::AbstractString; kw...)
     seconds, nanos = _parse_rfc3339(s)
+    if seconds < _TIMESTAMP_MIN_SECONDS || seconds > _TIMESTAMP_MAX_SECONDS
+        throw(ArgumentError("Timestamp out of range: $(repr(s))"))
+    end
     return _Timestamp(seconds, nanos)
 end
 
@@ -139,9 +150,15 @@ end
 
 # -----------------------------------------------------------------------------
 # Duration — string ending in 's', e.g. "1.5s", "-12s", "3.000000001s".
+# Spec range: ±10000 years, i.e. seconds ∈ [-315576000000, 315576000000].
 # -----------------------------------------------------------------------------
 
+const _DURATION_MAX_SECONDS = Int64(315576000000)
+
 function _encode_json_value(io::IO, d::_Duration)
+    if d.seconds > _DURATION_MAX_SECONDS || d.seconds < -_DURATION_MAX_SECONDS
+        throw(ArgumentError("Duration seconds out of range [-$(Int(_DURATION_MAX_SECONDS)), $(Int(_DURATION_MAX_SECONDS))]: $(d.seconds)"))
+    end
     print(io, '"')
     s, n = d.seconds, d.nanos
     # Sign convention: seconds and nanos must agree on sign per spec.
@@ -168,7 +185,11 @@ function _decode_json_value(::Type{_Duration}, s::AbstractString; kw...)
     m = match(r"^(-?)(\d+)(?:\.(\d{1,9}))?s$", s)
     m === nothing && throw(ArgumentError("invalid Duration string: $(repr(s))"))
     sign = m[1] == "-" ? -1 : 1
-    seconds = sign * parse(Int64, m[2])
+    seconds_abs = parse(Int64, m[2])
+    if seconds_abs > _DURATION_MAX_SECONDS
+        throw(ArgumentError("Duration out of range: $(repr(s))"))
+    end
+    seconds = sign * seconds_abs
     nanos = m[3] === nothing ? Int32(0) : Int32(sign * parse(Int, rpad(m[3], 9, '0')))
     return _Duration(seconds, nanos)
 end
@@ -351,8 +372,10 @@ end
 # Set of WKT FQNs that take the `{"@type": ..., "value": …}` shape
 # inside Any (i.e., their JSON form isn't a JSON object, or it IS an
 # object but Any wraps it under `value` to disambiguate from message
-# fields).
+# fields). Nested Any (Any wrapping Any) also uses this shape — the
+# inner Any's own `@type` would otherwise collide with the outer.
 const _WKT_VALUE_FORM = Set([
+    "google.protobuf.Any",
     "google.protobuf.BoolValue",
     "google.protobuf.BytesValue",
     "google.protobuf.DoubleValue",
@@ -480,4 +503,11 @@ end
 function _decode_json_value(::Type{_NullValue.T}, ::Nothing; kw...)
     return _NullValue.NULL_VALUE
 end
+
+# Tell the message walker that these three types accept JSON `null` as a
+# real decoded value (rather than "field unset, use default"). See
+# `_accepts_json_null` in json.jl.
+@inline _accepts_json_null(::Type{_Value})         = true
+@inline _accepts_json_null(::Type{_AbstractValue}) = true
+@inline _accepts_json_null(::Type{_NullValue.T})   = true
 

@@ -244,6 +244,12 @@ end
     return ft isa Union && Nothing <: ft
 end
 
+# Does `T`'s JSON form treat a JSON `null` as a real value (rather than
+# "field unset")? Default false; overridden in `json_wkt.jl` for
+# `google.protobuf.Value`, its cycle supertype `AbstractValue`, and
+# `google.protobuf.NullValue`.
+@inline _accepts_json_null(::Type) = false
+
 # Skip-on-default predicate. Mirrors protoc's default emission policy:
 # scalar zero / empty string / empty bytes / empty repeated all skipped.
 # Submessages: `nothing` is already filtered above, so any concrete
@@ -322,9 +328,20 @@ end
 
 # Enums: emit the canonical declared name. With EnumX, `Symbol(v)`
 # returns the canonical-form name even for aliases (Phase 9
-# `allow_alias` design).
+# `allow_alias` design). Per spec: an enum value with no declared name
+# (i.e., a numeric value the wire/JSON delivered that isn't in this
+# enum's value set) round-trips as a JSON number, not a string.
 function _encode_json_value(io::IO, v::Base.Enum)
-    print(io, '"', String(Symbol(v)), '"')
+    name = try
+        Symbol(v)
+    catch
+        nothing
+    end
+    if name === nothing
+        print(io, Integer(v))
+    else
+        print(io, '"', String(name), '"')
+    end
     return nothing
 end
 
@@ -413,11 +430,13 @@ function _decode_json_message(::Type{T}, json::AbstractDict;
         vals[k] = getproperty(defaults, k)
     end
 
-    for (json_key, json_val) in json
-        # Per spec, JSON `null` for a singular field means "use default";
-        # we already populated `vals` from defaults.
-        json_val === nothing && continue
+    # Per spec, a JSON object that sets two members of the same oneof is
+    # rejected. Track the set of parent oneof field names already set;
+    # NB null members that resolve to "skip" are NOT counted (matches
+    # OneofFieldNullFirst/Second).
+    seen_oneof = Set{Symbol}()
 
+    for (json_key, json_val) in json
         jl_name = get(json_to_jl, json_key, nothing)
         if jl_name === nothing
             ignore_unknown_fields && continue
@@ -426,20 +445,55 @@ function _decode_json_message(::Type{T}, json::AbstractDict;
                 "set `ignore_unknown_fields = true` to skip"))
         end
 
+        # Determine the field-or-oneof-member's resolved type so we can
+        # do null-handling consistently for both. `oneof_member_lookup`
+        # maps a member name → (parent_field, member_type); plain
+        # fields aren't in there.
         member = get(oneof_member_lookup, jl_name, nothing)
+        FT = if member !== nothing
+            member[2]
+        else
+            Base.nonnothingtype(fieldtype(T, jl_name))
+        end
+
+        # Per spec, JSON `null` for a singular field means "use default" —
+        # we already populated `vals` from defaults, so just skip. The
+        # exception is types whose JSON form treats null as a real
+        # value (Value / NullValue) — `_accepts_json_null(T)` returns
+        # `true` for those (overridden in json_wkt.jl, since the WKT
+        # types live in a module loaded after this file).
+        if json_val === nothing
+            if _accepts_json_null(FT)
+                decoded = _decode_json_value(FT, nothing;
+                                              ignore_unknown_fields = ignore_unknown_fields)
+                if member !== nothing
+                    parent = member[1]
+                    parent in seen_oneof && throw(ArgumentError(
+                        "multiple members of oneof '$(parent)' set in JSON for $(T)"))
+                    push!(seen_oneof, parent)
+                    vals[parent] = OneOf(jl_name, decoded)
+                else
+                    vals[jl_name] = decoded
+                end
+            end
+            continue
+        end
+
         if member !== nothing
-            (parent_name, member_type) = member
             # Decoding an active oneof member: wrap in `OneOf` and
             # store at the parent field. The parent field type uses a
             # covariant `OneOf{<:Union{…}}` bound, so `OneOf{ConcreteT}`
             # is assignable.
-            decoded = _decode_json_value(member_type, json_val;
+            parent = member[1]
+            parent in seen_oneof && throw(ArgumentError(
+                "multiple members of oneof '$(parent)' set in JSON for $(T)"))
+            push!(seen_oneof, parent)
+            decoded = _decode_json_value(FT, json_val;
                                          ignore_unknown_fields = ignore_unknown_fields)
-            vals[parent_name] = OneOf(jl_name, decoded)
+            vals[parent] = OneOf(jl_name, decoded)
         else
             # Plain field. Strip the presence wrapper; JSON `null` was
             # already filtered above.
-            FT = Base.nonnothingtype(fieldtype(T, jl_name))
             vals[jl_name] = _decode_json_value(FT, json_val;
                                                ignore_unknown_fields = ignore_unknown_fields)
         end
@@ -462,19 +516,35 @@ function _decode_json_value(::Type{Bool}, v::Bool; kw...)
 end
 
 # Smaller integers. Accept either JSON number or numeric string.
+# `Bool <: Real`, so without the explicit Bool method below, JSON `true` /
+# `false` would silently coerce to 0/1 — spec says reject.
+function _decode_json_value(::Type{T}, ::Bool; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32,Int64,UInt64}}
+    throw(ArgumentError("expected $(T), got JSON boolean"))
+end
 function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
     return T(v)
 end
 function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
-    return parse(T, v)
+    return _strict_parse_int(T, v)
 end
 
 # 64-bit integers — accept string (canonical) or number.
 function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Union{Int64,UInt64}}
-    return parse(T, v)
+    return _strict_parse_int(T, v)
 end
 function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int64,UInt64}}
     return T(v)
+end
+
+# Strict integer parse: Julia's `parse(T, s)` accepts leading/trailing
+# whitespace; the protobuf-JSON spec rejects it. Reject any non-canonical
+# decoration before falling through.
+function _strict_parse_int(::Type{T}, s::AbstractString) where {T<:Integer}
+    if isempty(s) || s[1] in (' ', '\t', '\n', '\r') ||
+       s[end] in (' ', '\t', '\n', '\r')
+        throw(ArgumentError("invalid $(T) literal: $(repr(s))"))
+    end
+    return parse(T, s)
 end
 
 function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:AbstractFloat}
@@ -485,11 +555,35 @@ function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Abstr
     elseif v == "-Infinity"
         return T(-Inf)
     else
-        return parse(T, v)
+        # `parse(Float32, big_string)` silently produces ±Inf on overflow.
+        # Parse as Float64 first, then range-check the narrowing.
+        return _checked_float(T, parse(Float64, v))
     end
 end
 function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:AbstractFloat}
-    return T(v)
+    return _checked_float(T, v)
+end
+
+# Range-checked narrowing. The two cases we have to catch:
+#   * JSON literal exceeds Float64's range — JSON.parse returns a
+#     `BigFloat` whose `Float64(v)` is ±Inf. Reject for any concrete
+#     AbstractFloat target.
+#   * JSON literal fits in Float64 but is outside Float32's representable
+#     finite range — `Float32(big_double)` silently rounds to ±Inf.
+# In both cases the source `v` was finite; the conversion isn't.
+@inline function _checked_float(::Type{Float64}, v::Real)
+    f = Float64(v)
+    if !isfinite(f) && isfinite(v)
+        throw(ArgumentError("Float64 literal out of range"))
+    end
+    return f
+end
+@inline function _checked_float(::Type{Float32}, v::Real)
+    f = Float32(v)
+    if !isfinite(f) && isfinite(v)
+        throw(ArgumentError("Float32 literal out of range"))
+    end
+    return f
 end
 
 function _decode_json_value(::Type{String}, v::AbstractString; kw...)
@@ -505,8 +599,14 @@ end
 function _decode_json_value(::Type{E}, v::AbstractString; kw...) where {E<:Base.Enum}
     return getfield(parentmodule(E), Symbol(v))::E
 end
+# Numeric form. Per spec, *any* integer is accepted; values outside the
+# enum's declared set round-trip as numbers (no symbolic name). Use
+# `bitcast` to construct a value with the integer regardless of whether
+# it's a declared member, mirroring what the binary codec produces from
+# wire-level varints.
 function _decode_json_value(::Type{E}, v::Real; kw...) where {E<:Base.Enum}
-    return E(v)
+    Backing = Base.Enums.basetype(E)
+    return Core.bitcast(E, Backing(v))
 end
 
 # Repeated.

@@ -70,10 +70,10 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 6 | proto2 `required`, maps, oneofs, packed, groups | DONE (groups deferred) |
 | 7 | Well-known types | DONE (all 11) |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | DONE |
-| 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 21 codec failures allowlisted) |
+| 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 2 codec failures allowlisted — both unknown-field retention) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | DONE (allowlist 21 known failures: 2 unknown-varint retention, 19 JSON edge cases) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | DONE (allowlist 2 known failures, both unknown-field retention) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -500,9 +500,12 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   `req.test_category == JSON_IGNORE_UNKNOWN_PARSING_TEST`.
   - **Conformance state vs protobuf v25.9**: was `1071 successes,
     729 skipped, 188 expected failures` (Phase 9 baseline) →
-    `1692 / 0 / 279` after Phase 12d → now
-    **`1993 successes, 0 skipped, 21 expected failures, 0
-    unexpected`** after a follow-up codec correctness pass:
+    `1692 / 0 / 279` after Phase 12d →
+    `1993 / 0 / 21` after the codec correctness pass → now
+    **`2013 successes, 0 skipped, 2 expected failures, 0
+    unexpected`** after a JSON-walker correctness pass.
+
+    **Codec correctness pass:**
       * UInt32 vbyte tolerates the 6-/9-/10-byte sign-extended forms
         (read-as-UInt64-and-truncate, mirroring what Int32 already
         does). Removes 8 ValidDataScalar.UINT32[3,8,9] +
@@ -534,10 +537,40 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
         `Ref{Union{Nothing,T}}` with the *prior* oneof value when
         the same member is being decoded again, so the merging
         Ref-decode kicks in. Fixes ValidDataOneof.MESSAGE.Merge.
-    The remaining 21 are: 2 UnknownVarint.ProtobufOutput (defer to
-    a future unknown-field-retention pass) and 19 JSON-input edges
-    (whitespace, overflow, WKT bounds, AnyNested, ValueAcceptNull,
-    OneofFieldDuplicate, …). All grouped in the failure_list header.
+
+    **JSON-walker correctness pass (21 → 2):**
+      * `_decode_json_value(::Type{<:Integer}, ::Bool)` explicitly
+        rejects JSON booleans for integer fields (Bool <: Real
+        otherwise silently coerces to 0/1). Fixes
+        RepeatedFieldWrongElementTypeExpectingIntegersGotBool.
+      * `_strict_parse_int` rejects leading/trailing whitespace
+        on numeric-string Int32 fields (Julia's `parse` is
+        permissive). Fixes Int32FieldLeading/TrailingSpace.
+      * `_checked_float` for Float32/Float64 detects overflow
+        (source finite, conversion non-finite) and throws.
+        Fixes FloatFieldTooLarge/Small + DoubleFieldTooSmall.
+      * Duration JSON encode + decode bound seconds to
+        ±315576000000 (10000 years) per spec; Timestamp bounds
+        seconds to [-62135596800, 253402300799] (years 0001-9999).
+        Fixes Duration/TimestampJsonInputToo*, Proto*Input*.JsonOutput.
+      * Generic walker null-handling: only skip JSON `null` for
+        fields whose type opts out via `_accepts_json_null` — the
+        Value/AbstractValue/NullValue WKTs override to true so
+        `{"optionalValue": null}` decodes to a `Value` with
+        `null_value` set. Fixes ValueAcceptNull.{Json,Protobuf}Output.
+      * Walker tracks `seen_oneof` and rejects two JSON keys
+        targeting the same oneof. Fixes OneofFieldDuplicate.
+      * Enum decode uses `Core.bitcast` so any integer value is
+        accepted; encode emits the integer when `Symbol(v)`
+        throws (unknown enum value). Fixes
+        EnumFieldUnknownValue.Validator (round-trip 123).
+      * `_WKT_VALUE_FORM` now includes `google.protobuf.Any` —
+        a nested Any is wrapped under `value` to avoid the inner
+        `@type` colliding with the outer. Fixes AnyNested.{Json,
+        Protobuf}Output.
+    The remaining 2 are UnknownVarint.ProtobufOutput (proto2 +
+    proto3) — they need per-message `_unknown_fields` retention
+    plumbed through codec + codegen, deferred to a follow-up.
   - The conformance runner integration test (gated on
     Linux/macOS) still passes — exit code 0 with the updated
     failure_list.
