@@ -200,6 +200,10 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
     print(io, '{')
     first = true
     for jl_name in fieldnames(T)
+        # `_unknown_fields` is a wire-format-only buffer for forward-compat
+        # round-trips of unrecognized tags; the JSON form per spec drops
+        # unknowns, so don't emit it here.
+        jl_name === :_unknown_fields && continue
         v = getfield(msg, jl_name)
         # `nothing` always means "field not set" (presence-bearing fields
         # default to `nothing`, plain proto3 scalars never get `nothing`).
@@ -516,9 +520,12 @@ function _decode_json_value(::Type{Bool}, v::Bool; kw...)
 end
 
 # Smaller integers. Accept either JSON number or numeric string.
-# `Bool <: Real`, so without the explicit Bool method below, JSON `true` /
-# `false` would silently coerce to 0/1 — spec says reject.
-function _decode_json_value(::Type{T}, ::Bool; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32,Int64,UInt64}}
+# `Bool <: Real`, so without explicit Bool methods below, JSON `true` /
+# `false` would silently coerce to 0/1 — spec says reject. The Bool
+# method's first-arg union must match the Real method's exactly to
+# avoid Aqua ambiguity (more-specific second arg loses if first is
+# wider), so it's split into the two size groups.
+function _decode_json_value(::Type{T}, ::Bool; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
     throw(ArgumentError("expected $(T), got JSON boolean"))
 end
 function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
@@ -531,6 +538,9 @@ end
 # 64-bit integers — accept string (canonical) or number.
 function _decode_json_value(::Type{T}, v::AbstractString; kw...) where {T<:Union{Int64,UInt64}}
     return _strict_parse_int(T, v)
+end
+function _decode_json_value(::Type{T}, ::Bool; kw...) where {T<:Union{Int64,UInt64}}
+    throw(ArgumentError("expected $(T), got JSON boolean"))
 end
 function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int64,UInt64}}
     return T(v)

@@ -486,3 +486,57 @@ end
     end
     return nothing
 end
+
+# Append a varint to a Vector{UInt8} (no IO wrapping). Used by
+# `_skip_and_capture!` to re-encode the (already-decoded) tag and any
+# nested length prefix into the unknown-fields buffer.
+@inline function _append_varint!(buf::Vector{UInt8}, x::Unsigned)
+    while x >= 0x80
+        push!(buf, UInt8((x & 0x7f) | 0x80))
+        x >>= 7
+    end
+    push!(buf, UInt8(x))
+    return nothing
+end
+
+# `Base.skip` consumes an unknown field's value bytes and discards them.
+# `_skip_and_capture!` mirrors that walk but appends the tag plus the
+# value bytes to `buf` so the caller can replay them verbatim later.
+# Used by the codegen-emitted decode body to populate
+# `_unknown_fields` for later re-emission.
+function _skip_and_capture!(buf::Vector{UInt8}, d::AbstractProtoDecoder,
+                            field_number::Integer, wire_type::WireType)
+    io = get_stream(d)
+    # Re-encode the tag we already decoded.
+    _append_varint!(buf, (UInt32(field_number) << 3) | UInt32(wire_type))
+    if wire_type == VARINT
+        while true
+            b = read(io, UInt8)
+            push!(buf, b)
+            b < 0x80 && break
+        end
+    elseif wire_type == FIXED64
+        bytesavailable(io) >= 8 || throw(EOFError())
+        append!(buf, read(io, 8))
+    elseif wire_type == FIXED32
+        bytesavailable(io) >= 4 || throw(EOFError())
+        append!(buf, read(io, 4))
+    elseif wire_type == LENGTH_DELIMITED
+        bytelen = vbyte_decode(io, UInt32)
+        _append_varint!(buf, bytelen)
+        bytesavailable(io) >= bytelen || throw(EOFError())
+        append!(buf, read(io, bytelen))
+    elseif wire_type == START_GROUP
+        # Groups are deprecated but spec-correct unknown-field
+        # retention should still preserve them. Recurse into the
+        # group, capturing each inner tag and the matching END_GROUP.
+        while peek(io) != UInt8(END_GROUP)
+            inner_field, inner_wire = decode_tag(d)
+            _skip_and_capture!(buf, d, inner_field, inner_wire)
+        end
+        push!(buf, read(io, UInt8))  # END_GROUP byte
+    else
+        error("Encountered END_GROUP wiretype while capturing unknown field")
+    end
+    return nothing
+end

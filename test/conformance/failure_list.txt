@@ -7,26 +7,9 @@
 # failing (and a *new* failure shows up as unexpected, which is the
 # regression signal CI cares about).
 #
-# Categories (2 total — 277 → 112 after map-entry decoder fix,
-# 112 → 91 after BOOL leniency, 91 → 53 after parser strictness pass,
-# 53 → 28 after UInt32 vbyte tolerance / Bool packed / known-bytes EOF,
-# 28 → 27 after proto2 optional ENUM presence,
-# 27 → 24 after `_merge_structs` rewrite (presence-aware fields,
-# proto3 default-skip heuristic, OneOf, AbstractDict),
-# 24 → 21 after oneof MESSAGE-member same-member merge,
-# 21 → 2 after JSON-walker correctness pass (numeric strictness,
-# Bool reject for integer fields, Duration / Timestamp range checks,
-# Value/NullValue accept JSON null, oneof-duplicate detection, unknown
-# enum numeric round-trip, Any-nesting via the value-form set)):
-#
-#   * 2 UnknownVarint.ProtobufOutput — unknown fields are dropped;
-#     spec wants them preserved on output. Requires a per-message
-#     `_unknown_fields::Vector{UInt8}` slot plus codec capture/replay
-#     of unknown tags during decode/encode.
-#
-# All real spec-conformance bugs; allowlisted so the harness lands green
-# and any *new* failure surfaces as a regression. Tracked for follow-up
-# codec passes.
-#
-Required.Proto2.ProtobufInput.UnknownVarint.ProtobufOutput
-Required.Proto3.ProtobufInput.UnknownVarint.ProtobufOutput
+# Currently empty — the suite passes clean against protobuf v25.9.
+# Progression: 277 → 112 (map-entry decoder) → 91 (BOOL leniency)
+# → 53 (parser strictness) → 28 (UInt32 vbyte / Bool packed / known-bytes
+# EOF) → 27 (proto2 optional ENUM presence) → 24 (`_merge_structs`
+# rewrite) → 21 (oneof MESSAGE-member same-member merge)
+# → 2 (JSON-walker correctness pass) → 0 (unknown-field retention).

@@ -70,10 +70,10 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
 | 6 | proto2 `required`, maps, oneofs, packed, groups | DONE (groups deferred) |
 | 7 | Well-known types | DONE (all 11) |
 | 8 | Self-bootstrap (regenerate descriptor types from own codegen) | DONE |
-| 9 | Conformance + golden corpus | DONE (proto2 corpus still patched, 2 codec failures allowlisted — both unknown-field retention) |
+| 9 | Conformance + golden corpus | DONE (allowlist empty; 2015/0/0/0 against protobuf v25.9 Required) |
 | 10 | Startup latency (`PackageCompiler` sysimage) | pending |
 | 11 | Docs + v0.1.0 release | pending |
-| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | DONE (allowlist 2 known failures, both unknown-field retention) |
+| 12 | JSON mapping (encode + decode + WKT specials, conformance JSON green) | DONE (allowlist empty) |
 
 **Total v0.1.0 estimate**: ~8–9 weeks for one focused engineer.
 
@@ -501,9 +501,18 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
   - **Conformance state vs protobuf v25.9**: was `1071 successes,
     729 skipped, 188 expected failures` (Phase 9 baseline) →
     `1692 / 0 / 279` after Phase 12d →
-    `1993 / 0 / 21` after the codec correctness pass → now
-    **`2013 successes, 0 skipped, 2 expected failures, 0
-    unexpected`** after a JSON-walker correctness pass.
+    `1993 / 0 / 21` after the codec correctness pass →
+    `2013 / 0 / 2` after the JSON-walker pass → now
+    **`2015 successes, 0 skipped, 0 expected failures, 0
+    unexpected`** after unknown-field retention. Allowlist is
+    empty; the conformance runner integration test passes with
+    a zero-failure failure_list.
+
+    The `--enforce_recommended` set still has 16 unexpected
+    Recommended failures (FieldMask edge cases, base64-URL alt
+    alphabet, JSON unpaired surrogate detection, IgnoreUnknown
+    enum-string parsing). They're follow-up polish; CI gates on
+    Required only.
 
     **Codec correctness pass:**
       * UInt32 vbyte tolerates the 6-/9-/10-byte sign-extended forms
@@ -568,9 +577,37 @@ Each phase is independently mergeable. Approximate sizes for one engineer.
         a nested Any is wrapped under `value` to avoid the inner
         `@type` colliding with the outer. Fixes AnyNested.{Json,
         Protobuf}Output.
-    The remaining 2 are UnknownVarint.ProtobufOutput (proto2 +
-    proto3) — they need per-message `_unknown_fields` retention
-    plumbed through codec + codegen, deferred to a follow-up.
+    **Unknown-field retention pass (2 → 0):**
+      * Codec gains `_skip_and_capture!(buf, d, field, wire_type)` —
+        same wire-type walk as `Base.skip` but appends the
+        re-encoded tag plus value bytes to `buf` so the caller can
+        replay them later.
+      * Codegen emits an extra `_unknown_fields::Vector{UInt8}`
+        slot on every generated message (last field). Decode
+        body declares `_unknown_fields = UInt8[]`, the unknown-tag
+        else-branch routes to `_skip_and_capture!`, and the
+        constructor call passes the buffer at the end. Encode
+        body writes the buffer verbatim *after* all known fields
+        (append-at-end semantics: not byte-identical to protoc
+        when known + unknown tags interleave, but spec-correct
+        and enough for round-trips). `_encoded_size` includes
+        `length(_unknown_fields)`.
+      * Codegen also emits a convenience constructor that omits
+        the buffer (defaults to `UInt8[]`) so user code that
+        instantiates messages positionally keeps working.
+      * `default_values` includes `_unknown_fields`; `field_numbers`,
+        `json_field_names`, `oneof_field_types` do *not*. The
+        JSON walker explicitly skips the field by name (JSON form
+        per spec drops unknowns).
+      * `Base.:(==)` and `Base.hash` overloaded on
+        `AbstractProtoBufMessage` to do field-wise comparison —
+        the default falls through to `===` on non-bits fields,
+        so two `decode`-from-the-same-bytes messages with empty
+        but distinct `_unknown_fields` Vectors compared unequal.
+
+    The committed bootstrap (`gen/google/`) was generated before
+    this change and lacks `_unknown_fields` on its descriptors;
+    a `gen/regen.jl` rerun is the path to bring them into line.
   - The conformance runner integration test (gated on
     Linux/macOS) still passes — exit code 0 with the updated
     failure_list.

@@ -696,9 +696,12 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         push!(plain_fields, _model_field(f, names))
     end
 
-    # struct: plain fields + one slot per real oneof. Cycle participants
-    # are tagged with their abstract supertype so other participants can
-    # type their fields against the abstract.
+    # struct: plain fields + one slot per real oneof + a buffer for
+    # unknown fields. The unknown buffer lets us round-trip wire bytes
+    # whose tags we don't recognize, per the protobuf spec's
+    # forward-compat requirement. Cycle participants are tagged with
+    # their abstract supertype so other participants can type their
+    # fields against the abstract.
     if is_cycle_participant
         println(io, "struct ", jl_name, " <: ", _abstract_name(jl_name))
     else
@@ -710,7 +713,26 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
     end
+    println(io, "    _unknown_fields::Vector{UInt8}")
     println(io, "end")
+
+    # Convenience constructor that omits the trailing `_unknown_fields`
+    # buffer (defaults to empty). Lets user code instantiate messages
+    # the same way as before this field was added.
+    n_user_args = length(plain_fields) + length(real_oneofs)
+    if n_user_args > 0
+        param_names = String[]
+        for f in plain_fields
+            push!(param_names, f.jl_fieldname)
+        end
+        for o in real_oneofs
+            push!(param_names, o.jl_fieldname)
+        end
+        params = join(param_names, ", ")
+        println(io, "function ", jl_name, "(", params, ")")
+        println(io, "    return ", jl_name, "(", params, ", UInt8[])")
+        println(io, "end")
+    end
 
     # Metadata.
     print(io, "PB.default_values(::Core.Type{", jl_name, "}) = (;")
@@ -721,6 +743,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         push!(pieces, "$(o.jl_fieldname) = nothing")
     end
+    push!(pieces, "_unknown_fields = UInt8[]")
     print(io, join(pieces, ", "))
     println(io, ")")
 
@@ -784,6 +807,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
     end
+    println(io, "    _unknown_fields = UInt8[]")
     println(io, "    while !PB.message_done(_d, _endpos, _group)")
     println(io, "        field_number, wire_type = PB.decode_tag(_d)")
     first_branch = true
@@ -805,11 +829,11 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         end
     end
     if first_branch
-        # No fields at all.
-        println(io, "        Base.skip(_d, wire_type)")
+        # No known fields at all — every tag is unknown.
+        println(io, "        PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)")
     else
         println(io, "        else")
-        println(io, "            Base.skip(_d, wire_type)")
+        println(io, "            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)")
         println(io, "        end")
     end
     println(io, "    end")
@@ -834,6 +858,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         push!(arg_parts, o.jl_fieldname)
     end
+    push!(arg_parts, "_unknown_fields")
     print(io, join(arg_parts, ", "))
     println(io, ")")
     println(io, "end")
@@ -864,6 +889,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for (_, emit_e, _) in encode_plan
         emit_e(io)
     end
+    # Replay unknown-field bytes verbatim. Append-at-end semantics: not
+    # byte-identical to protoc when known + unknown tags interleave, but
+    # spec-correct (the protobuf wire format makes no field-order
+    # promises) and enough for forward-compat round-trips.
+    println(io, "    if !isempty(_x._unknown_fields)")
+    println(io, "        write(_e.io, _x._unknown_fields)")
+    println(io, "    end")
     println(io, "    return position(_e.io) - initpos")
     println(io, "end")
 
@@ -872,6 +904,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for (_, _, emit_s) in encode_plan
         emit_s(io)
     end
+    println(io, "    encoded_size += length(_x._unknown_fields)")
     println(io, "    return encoded_size")
     println(io, "end")
 

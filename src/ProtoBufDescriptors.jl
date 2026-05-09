@@ -48,9 +48,32 @@ include("codec/Codecs.jl")
 
 import .Codecs
 import .Codecs: decode, decode!, encode, AbstractProtoDecoder, AbstractProtoEncoder,
-    ProtoDecoder, ProtoEncoder, BufferedVector, message_done, decode_tag, _encoded_size
+    ProtoDecoder, ProtoEncoder, BufferedVector, message_done, decode_tag, _encoded_size,
+    _skip_and_capture!
 
 abstract type AbstractProtoBufMessage end
+
+# Field-wise `==` for generated messages. Julia's default falls through
+# to `===`, which on non-bits fields like `Vector{UInt8}` (the
+# `_unknown_fields` buffer) compares object identity — so two
+# decoded-from-the-same-bytes messages compare unequal. Walk the fields
+# and use `==` per field instead; nested messages recurse back here,
+# vectors compare elementwise, scalars use their own `==`.
+function Base.:(==)(a::AbstractProtoBufMessage, b::AbstractProtoBufMessage)
+    typeof(a) === typeof(b) || return false
+    for name in fieldnames(typeof(a))
+        getfield(a, name) == getfield(b, name) || return false
+    end
+    return true
+end
+
+function Base.hash(m::AbstractProtoBufMessage, h::UInt)
+    h = hash(typeof(m), h)
+    for name in fieldnames(typeof(m))
+        h = hash(getfield(m, name), h)
+    end
+    return h
+end
 
 function reserved_fields(::Type{T}) where {T}
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[])

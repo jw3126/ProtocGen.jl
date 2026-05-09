@@ -437,6 +437,7 @@ function _encode_json_message_after_at_type(io::IO, msg::T) where {T<:AbstractPr
     keys   = json_field_names(T)
     oneofs = oneof_field_types(T)
     for jl_name in fieldnames(T)
+        jl_name === :_unknown_fields && continue
         v = getfield(msg, jl_name)
         v === nothing && continue
         if hasproperty(oneofs, jl_name)
