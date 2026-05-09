@@ -12,16 +12,10 @@ Pure function — no I/O. The `request.proto_file` field gives the
 `FileDescriptorProto`s in topological order (each file appears before any
 file that imports it); `request.file_to_generate` lists the filenames the
 plugin is supposed to emit code for.
-
-Phase 3 stub: this function does not yet emit code. It returns an empty
-response with the appropriate feature bits cleared. Phase 4 fills in real
-codegen.
 """
 function generate(request::_GC.CodeGeneratorRequest)
     # We advertise FEATURE_PROTO3_OPTIONAL so protoc forwards proto3 `optional`
-    # fields to us instead of rejecting the request. Phase 5 will actually use
-    # those bits; the Phase 4 happy-path codegen treats the field as a bare
-    # proto3 scalar (no presence) which is wire-compatible.
+    # fields to us instead of rejecting the request.
     by_name = Dict{String,_G.FileDescriptorProto}()
     for f in request.proto_file
         name = something(f.name, "")

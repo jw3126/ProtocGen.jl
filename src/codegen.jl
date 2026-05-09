@@ -32,11 +32,6 @@ function _scalar_jl_type_and_wire(t)
     error("scalar mapping not defined for $t")
 end
 
-function _is_scalar(t)
-    T = var"FieldDescriptorProto.Type"
-    return t !== T.TYPE_MESSAGE && t !== T.TYPE_GROUP && t !== T.TYPE_ENUM
-end
-
 function _scalar_zero(jl_type::String)
     if jl_type == "String"
         return "\"\""
@@ -216,16 +211,10 @@ function _make_local_names(universe::Universe, file::FileDescriptorProto)
     )
 end
 
-# Single-file convenience: build a Universe containing just `file`. Useful
-# for tests and for the legacy `codegen(file)` entry point.
-function _gather_names(file::FileDescriptorProto)
-    return _make_local_names(gather_universe([file]), file)
-end
-
 function _resolve_typename(type_name::String, names::LocalNames)
     haskey(names.jl_names, type_name) || error(
         "codegen: unresolved type reference $(type_name) " *
-        "(cross-file imports are not yet supported)",
+        "(type not found in any input file)",
     )
     jl = names.jl_names[type_name]
     # `Foo` stays as-is; `Foo.Bar` needs var"Foo.Bar" because the dot is not a
@@ -585,8 +574,7 @@ function _first_enum_member(field::FieldDescriptorProto, names::LocalNames)
     fqn = something(field.type_name, "")
     edef = get(names.enum_defs, fqn, nothing)
     edef === nothing && error(
-        "codegen: enum $(fqn) not found in current file " *
-        "(cross-file imports are not yet supported)",
+        "codegen: enum $(fqn) not found in any input file",
     )
     for v in edef.value
         if Int(something(v.number, Int32(0))) == 0
@@ -1012,9 +1000,9 @@ function _decode_finalize(f::FieldModel)
     if f.is_map
         # `dict` is a real Dict the codec mutates in place; pass through.
         return f.jl_fieldname
-    elseif f.is_message
-        return f.is_repeated ? "$(f.jl_fieldname)[]" : "$(f.jl_fieldname)[]"
-    elseif f.is_repeated
+    elseif f.is_message || f.is_repeated
+        # Singular message: `Ref{T}[]` unwraps to T.
+        # Repeated (message or scalar): `BufferedVector[]` finalizes to Vector{T}.
         return "$(f.jl_fieldname)[]"
     else
         return f.jl_fieldname
@@ -1131,9 +1119,10 @@ end
 # defined first. proto allows recursive messages (Foo containing a Foo) — in
 # Julia this works fine for `Union{Nothing,Foo}` references because it only
 # needs the type name, but for `Vector{Foo}` we also need Foo's name to exist.
-# We just emit forward declarations of structs by emitting them in topological
-# order. Cycles are not yet supported — they'd need `mutable struct` or other
-# tricks; deferred until needed.
+# We emit messages in topological order. Cycles are handled separately by
+# forward-declaring an `abstract type AbstractFoo` per cycle participant and
+# typing cyclic references against the abstract — see `_abstract_name` and
+# the cycle plumbing in `LocalNames`.
 # ----------------------------------------------------------------------------
 
 function _direct_message_deps(msg::DescriptorProto, names::LocalNames)

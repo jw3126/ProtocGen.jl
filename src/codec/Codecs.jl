@@ -59,10 +59,6 @@ end
 function Base.getindex(x::BufferedVector)
     return resize!(x.elements, x.occupied)
 end
-function empty!(buffer::BufferedVector)
-    buffer.occupied = 0
-    return buffer
-end
 @inline function Base.setindex!(buffer::BufferedVector{T}, x::T) where {T}
     if length(buffer.elements) == buffer.occupied
         Base._growend!(buffer.elements, _grow_by(T))
