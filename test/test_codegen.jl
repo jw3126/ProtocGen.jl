@@ -11,8 +11,12 @@ include("setup.jl")
     @test occursin("struct Inner", f.content)
     @test occursin("struct Outer", f.content)
     @test occursin("nested::Union{Nothing,Inner}", f.content)
-    @test occursin("packed_ints::Vector{Int64}", f.content)
-    @test occursin("choice::Union{Nothing,OneOf{<:Union{Int32,String}}}", f.content)
+    # Scalar refs are emitted through the `var"#base"` alias defined
+    # at the top of every generated file, so a user proto declaring
+    # a message named e.g. `Bool` cannot shadow the codegen's scalar
+    # type annotations.
+    @test occursin("packed_ints::Vector{var\"#base\".Int64}", f.content)
+    @test occursin("choice::Union{Nothing,OneOf{<:Union{var\"#base\".Int32,var\"#base\".String}}}", f.content)
 
     # Eval the generated module and verify a round-trip.
     sample_mod = eval_generated(f.content, :GeneratedSample)
@@ -113,9 +117,10 @@ end
     f = response.file[1]
 
     # Maps surface as OrderedDict{K,V}; the synthetic *Entry messages stay invisible.
-    @test occursin("counts::OrderedDict{String,Int32}", f.content)
-    @test occursin("labels::OrderedDict{Int32,String}", f.content)
-    @test occursin("items::OrderedDict{String,Item}",   f.content)
+    # Scalar refs go through the `var"#base"` alias for shadow-immunity.
+    @test occursin("counts::OrderedDict{var\"#base\".String,var\"#base\".Int32}", f.content)
+    @test occursin("labels::OrderedDict{var\"#base\".Int32,var\"#base\".String}", f.content)
+    @test occursin("items::OrderedDict{var\"#base\".String,Item}",                f.content)
     @test !occursin("CountsEntry", f.content)
     @test !occursin("LabelsEntry", f.content)
     @test !occursin("ItemsEntry",  f.content)
@@ -185,6 +190,49 @@ end
     enum_cfg = Dict("enumbatteries" => Dict("kwshow" => true))
     with_enums = ProtocGen.Codegen.codegen(corpus_file, corpus_universe; config = enum_cfg)
     @test occursin(r"@enumbatteries Color\.T typesalt=0x[0-9a-f]{16} kwshow=true", with_enums)
+end
+
+@testset "codegen: @batteries works on Core/Base-shadowing types" begin
+    # `shadow.proto` declares messages named `Core`, `Base`, `Type`,
+    # `Any`, `Bool`, an enum `Integer`, and a `Holder` that pulls them
+    # all together. Each of these names shadows a Core / Base binding
+    # inside the generated module — the StructHelpers >=1.4.1 fix
+    # captures the original Core / Base values at quote-build time so
+    # @batteries macro expansion is no longer derailed.
+    response = run_codegen("shadow.pb", ["shadow.proto"])
+    @test response.error === nothing
+    @test length(response.file) == 1
+    f = first(response.file)
+
+    # Eval the file in a fresh anonymous module; this is where the
+    # macro-expansion-time shadowing would bite if it weren't fixed.
+    m = eval_generated(f.content, :GeneratedShadow)
+
+    # Every shadow message + enum was decorated with @batteries /
+    # @enumbatteries (StructHelpers.has_batteries returns true).
+    for name in (:Core, :Base, :Type, :Any, :Bool, :Holder)
+        T = Base.invokelatest(getproperty, m, name)
+        @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, T)
+    end
+    EnumT = Base.invokelatest(getproperty,
+                              Base.invokelatest(getproperty, m, :Integer),
+                              :T)
+    @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, EnumT)
+
+    # Holder ties them together — round-trip through binary format
+    # exercises the generated decode/encode plus the @batteries-
+    # decorated structs.
+    msg = Base.invokelatest(m.Holder,
+        Base.invokelatest(m.Core, Int32(1)),
+        Base.invokelatest(m.Base, "label"),
+        Base.invokelatest(m.Type, "type-name"),
+        Base.invokelatest(m.Any, "url"),
+        Base.invokelatest(m.Bool, true),
+        Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
+    )
+    bytes = encode_latest(msg)
+    back  = decode_latest(m.Holder, bytes)
+    @test back == msg
 end
 
 end  # module TestCodegen

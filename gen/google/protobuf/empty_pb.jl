@@ -6,24 +6,27 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
+const var"#core" = Core
+const var"#base" = Base
 
 export Empty
 
-Base.@kwdef struct Empty <: PB.AbstractProtoBufMessage
+var"#base".@kwdef struct Empty <: PB.AbstractProtoBufMessage
     var"#unknown_fields"::Vector{UInt8} = UInt8[]
 end
-function PB.default_values(::Core.Type{Empty})
+function PB.default_values(::var"#core".Type{Empty})
     return (;var"#unknown_fields" = UInt8[])
 end
-function PB.field_numbers(::Core.Type{Empty})
+function PB.field_numbers(::var"#core".Type{Empty})
     return (;)
 end
-function PB.json_field_names(::Core.Type{Empty})
+function PB.json_field_names(::var"#core".Type{Empty})
     return (;)
 end
 PB.register_message_type("google.protobuf.Empty", Empty)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Empty}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -44,6 +47,7 @@ function PB._encoded_size(_x::Empty)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries Empty typesalt=0x0ddc1dc29fc40c04
 
 
 #! format: on

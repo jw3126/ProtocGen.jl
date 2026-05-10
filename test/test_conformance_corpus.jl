@@ -151,7 +151,7 @@ end
                    f.content)
     @test occursin("@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
                    f.content)
-    @test occursin("Core.eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
+    @test occursin("var\"#core\".eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
                    f.content)
 
     p3 = eval_generated(f.content, :GeneratedConfP3)

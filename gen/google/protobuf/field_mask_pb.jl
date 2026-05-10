@@ -6,29 +6,32 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
+const var"#core" = Core
+const var"#base" = Base
 
 export FieldMask
 
-Base.@kwdef struct FieldMask <: PB.AbstractProtoBufMessage
-    paths::Vector{String} = Vector{String}()
+var"#base".@kwdef struct FieldMask <: PB.AbstractProtoBufMessage
+    paths::Vector{var"#base".String} = Vector{var"#base".String}()
     var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FieldMask(paths, _unknown_fields=UInt8[])
         return new(paths, _unknown_fields)
     end
 end
-function PB.default_values(::Core.Type{FieldMask})
-    return (;paths = Vector{String}(), var"#unknown_fields" = UInt8[])
+function PB.default_values(::var"#core".Type{FieldMask})
+    return (;paths = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
 end
-function PB.field_numbers(::Core.Type{FieldMask})
+function PB.field_numbers(::var"#core".Type{FieldMask})
     return (;paths = 1)
 end
-function PB.json_field_names(::Core.Type{FieldMask})
+function PB.json_field_names(::var"#core".Type{FieldMask})
     return (;paths = "paths")
 end
 PB.register_message_type("google.protobuf.FieldMask", FieldMask)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
-    paths = PB.BufferedVector{String}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldMask}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+    paths = PB.BufferedVector{var"#base".String}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -55,6 +58,7 @@ function PB._encoded_size(_x::FieldMask)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries FieldMask typesalt=0xe1df3b729904a745
 
 
 #! format: on

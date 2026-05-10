@@ -15,10 +15,10 @@ include("setup.jl")
     f = response.file[1]
 
     # Generated source carries the right shapes.
-    @test occursin("name::String", f.content)         # required scalar → bare type
+    @test occursin("name::var\"#base\".String", f.content)         # required scalar → bare type
     @test occursin("nested::Inner", f.content)        # required submessage → bare type
-    @test occursin("maybe::Union{Nothing,Int32}", f.content)  # proto2 optional → presence
-    @test occursin("hint::Union{Nothing,String}", f.content)
+    @test occursin("maybe::Union{Nothing,var\"#base\".Int32}", f.content)  # proto2 optional → presence
+    @test occursin("hint::Union{Nothing,var\"#base\".String}", f.content)
     @test occursin("_saw_name", f.content)
     @test occursin("required field", f.content)
 

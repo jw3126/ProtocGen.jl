@@ -6,38 +6,41 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
+const var"#core" = Core
+const var"#base" = Base
 
 export Duration
 
-Base.@kwdef struct Duration <: PB.AbstractProtoBufMessage
-    seconds::Int64 = zero(Int64)
-    nanos::Int32 = zero(Int32)
+var"#base".@kwdef struct Duration <: PB.AbstractProtoBufMessage
+    seconds::var"#base".Int64 = zero(var"#base".Int64)
+    nanos::var"#base".Int32 = zero(var"#base".Int32)
     var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Duration(seconds, nanos, _unknown_fields=UInt8[])
         return new(seconds, nanos, _unknown_fields)
     end
 end
-function PB.default_values(::Core.Type{Duration})
-    return (;seconds = zero(Int64), nanos = zero(Int32), var"#unknown_fields" = UInt8[])
+function PB.default_values(::var"#core".Type{Duration})
+    return (;seconds = zero(var"#base".Int64), nanos = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
 end
-function PB.field_numbers(::Core.Type{Duration})
+function PB.field_numbers(::var"#core".Type{Duration})
     return (;seconds = 1, nanos = 2)
 end
-function PB.json_field_names(::Core.Type{Duration})
+function PB.json_field_names(::var"#core".Type{Duration})
     return (;seconds = "seconds", nanos = "nanos")
 end
 PB.register_message_type("google.protobuf.Duration", Duration)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Duration}, _endpos::Int=0, _group::Bool=false)
-    seconds = zero(Int64)
-    nanos = zero(Int32)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Duration}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+    seconds = zero(var"#base".Int64)
+    nanos = zero(var"#base".Int32)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            seconds = PB._decode(_d, Int64)
+            seconds = PB._decode(_d, var"#base".Int64)
         elseif field_number == 2
-            nanos = PB._decode(_d, Int32)
+            nanos = PB._decode(_d, var"#base".Int32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -47,8 +50,8 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Duration)
     initpos = position(_e.io)
-    _x.seconds != zero(Int64) && PB._encode(_e, 1, _x.seconds)
-    _x.nanos != zero(Int32) && PB._encode(_e, 2, _x.nanos)
+    _x.seconds != zero(var"#base".Int64) && PB._encode(_e, 1, _x.seconds)
+    _x.nanos != zero(var"#base".Int32) && PB._encode(_e, 2, _x.nanos)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -56,11 +59,12 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Duration)
 end
 function PB._encoded_size(_x::Duration)
     encoded_size = 0
-    _x.seconds != zero(Int64) && (encoded_size += PB._encoded_size(_x.seconds, 1))
-    _x.nanos != zero(Int32) && (encoded_size += PB._encoded_size(_x.nanos, 2))
+    _x.seconds != zero(var"#base".Int64) && (encoded_size += PB._encoded_size(_x.seconds, 1))
+    _x.nanos != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.nanos, 2))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries Duration typesalt=0x892d89897c209ba3
 
 
 #! format: on
