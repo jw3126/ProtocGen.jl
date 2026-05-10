@@ -20,9 +20,6 @@ struct Version <: PB.AbstractProtoBufMessage
     patch::Union{Nothing,var"#base".Int32}
     suffix::Union{Nothing,var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function Version(major, minor, patch, suffix, _unknown_fields=UInt8[])
-        return new(major, minor, patch, suffix, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Version})
     return (;major = 1, minor = 2, patch = 3, suffix = 4)
@@ -87,9 +84,6 @@ struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
     source_file_descriptors::Vector{google_protobuf.FileDescriptorProto}
     compiler_version::Union{Nothing,Version}
     var"#unknown_fields"::Vector{UInt8}
-    function CodeGeneratorRequest(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields=UInt8[])
-        return new(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{CodeGeneratorRequest})
     return (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
@@ -161,9 +155,6 @@ struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
     content::Union{Nothing,var"#base".String}
     generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo}
     var"#unknown_fields"::Vector{UInt8}
-    function var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info, _unknown_fields=UInt8[])
-        return new(name, insertion_point, content, generated_code_info, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"CodeGeneratorResponse.File"})
     return (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
@@ -228,9 +219,6 @@ struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
     maximum_edition::Union{Nothing,var"#base".Int32}
     file::Vector{var"CodeGeneratorResponse.File"}
     var"#unknown_fields"::Vector{UInt8}
-    function CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields=UInt8[])
-        return new(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{CodeGeneratorResponse})
     return (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)

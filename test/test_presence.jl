@@ -33,13 +33,10 @@ include("setup.jl")
     @test encode_latest(oz) == bytes_maybe_zero
     @test encode_latest(ou) == bytes_maybe_unset
 
-    # Build the same two values directly and confirm. Constructor signature
-    # is Outer(name, maybe, nested, packed_ints, choice) — `ci`/`cs` collapse
-    # into the `choice` oneof field.
-    nothing_outer = Base.invokelatest(sample_mod.Outer,
-                                       "u", nothing, nothing, Int64[], nothing)
-    zero_outer    = Base.invokelatest(sample_mod.Outer,
-                                       "z", Int32(0), nothing, Int64[], nothing)
+    # Build the same two values directly via kwarg construction. `ci`/`cs`
+    # collapse into the `choice` oneof field.
+    nothing_outer = pb_make(sample_mod.Outer; name = "u")
+    zero_outer    = pb_make(sample_mod.Outer; name = "z", maybe = Int32(0))
     @test encode_latest(nothing_outer) == bytes_maybe_unset
     @test encode_latest(zero_outer)    == bytes_maybe_zero
 end

@@ -15,9 +15,6 @@ export FieldMask
 struct FieldMask <: PB.AbstractProtoBufMessage
     paths::Vector{var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function FieldMask(paths, _unknown_fields=UInt8[])
-        return new(paths, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FieldMask})
     return (;paths = 1)

@@ -62,3 +62,19 @@ end
 function encode_latest(x)
     return Base.invokelatest(ProtocGen.encode, x)
 end
+
+# Construct a generated message under `invokelatest`. Two flavours:
+#   - positional (`pb_make(T, args...)`): appends an empty
+#     unknown-fields buffer so the auto-positional ctor matches.
+#   - kwarg (`pb_make(T; kwargs...)`): goes through @batteries
+#     `kwconstructor` + `default_keywords`, which already supplies the
+#     buffer default — nothing to append.
+# Codegen stopped emitting an inner positional ctor with a buffer
+# default, so this helper covers the gap for the test suite.
+function pb_make(T, args...; kwargs...)
+    if isempty(kwargs)
+        return Base.invokelatest(T, args..., UInt8[])
+    else
+        return Base.invokelatest(T; kwargs...)
+    end
+end

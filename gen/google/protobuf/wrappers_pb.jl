@@ -15,9 +15,6 @@ export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value
 struct DoubleValue <: PB.AbstractProtoBufMessage
     value::var"#base".Float64
     var"#unknown_fields"::Vector{UInt8}
-    function DoubleValue(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{DoubleValue})
     return (;value = 1)
@@ -63,9 +60,6 @@ end
 struct FloatValue <: PB.AbstractProtoBufMessage
     value::var"#base".Float32
     var"#unknown_fields"::Vector{UInt8}
-    function FloatValue(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FloatValue})
     return (;value = 1)
@@ -111,9 +105,6 @@ end
 struct Int64Value <: PB.AbstractProtoBufMessage
     value::var"#base".Int64
     var"#unknown_fields"::Vector{UInt8}
-    function Int64Value(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Int64Value})
     return (;value = 1)
@@ -159,9 +150,6 @@ end
 struct UInt64Value <: PB.AbstractProtoBufMessage
     value::var"#base".UInt64
     var"#unknown_fields"::Vector{UInt8}
-    function UInt64Value(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{UInt64Value})
     return (;value = 1)
@@ -207,9 +195,6 @@ end
 struct Int32Value <: PB.AbstractProtoBufMessage
     value::var"#base".Int32
     var"#unknown_fields"::Vector{UInt8}
-    function Int32Value(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Int32Value})
     return (;value = 1)
@@ -255,9 +240,6 @@ end
 struct UInt32Value <: PB.AbstractProtoBufMessage
     value::var"#base".UInt32
     var"#unknown_fields"::Vector{UInt8}
-    function UInt32Value(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{UInt32Value})
     return (;value = 1)
@@ -303,9 +285,6 @@ end
 struct BoolValue <: PB.AbstractProtoBufMessage
     value::var"#base".Bool
     var"#unknown_fields"::Vector{UInt8}
-    function BoolValue(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{BoolValue})
     return (;value = 1)
@@ -351,9 +330,6 @@ end
 struct StringValue <: PB.AbstractProtoBufMessage
     value::var"#base".String
     var"#unknown_fields"::Vector{UInt8}
-    function StringValue(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{StringValue})
     return (;value = 1)
@@ -399,9 +375,6 @@ end
 struct BytesValue <: PB.AbstractProtoBufMessage
     value::var"#base".Vector{var"#base".UInt8}
     var"#unknown_fields"::Vector{UInt8}
-    function BytesValue(value, _unknown_fields=UInt8[])
-        return new(value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{BytesValue})
     return (;value = 1)

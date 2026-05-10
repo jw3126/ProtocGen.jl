@@ -16,9 +16,6 @@ struct Any <: PB.AbstractProtoBufMessage
     type_url::var"#base".String
     value::var"#base".Vector{var"#base".UInt8}
     var"#unknown_fields"::Vector{UInt8}
-    function Any(type_url, value, _unknown_fields=UInt8[])
-        return new(type_url, value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Any})
     return (;type_url = 1, value = 2)

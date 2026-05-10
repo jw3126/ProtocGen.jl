@@ -16,9 +16,6 @@ struct Duration <: PB.AbstractProtoBufMessage
     seconds::var"#base".Int64
     nanos::var"#base".Int32
     var"#unknown_fields"::Vector{UInt8}
-    function Duration(seconds, nanos, _unknown_fields=UInt8[])
-        return new(seconds, nanos, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Duration})
     return (;seconds = 1, nanos = 2)

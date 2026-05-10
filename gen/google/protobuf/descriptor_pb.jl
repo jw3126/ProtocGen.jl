@@ -16,9 +16,6 @@ struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
     name_part::var"#base".String
     is_extension::var"#base".Bool
     var"#unknown_fields"::Vector{UInt8}
-    function var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[])
-        return new(name_part, is_extension, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"UninterpretedOption.NamePart"})
     return (;name_part = 1, is_extension = 2)
@@ -81,9 +78,6 @@ struct UninterpretedOption <: PB.AbstractProtoBufMessage
     string_value::Union{Nothing,var"#base".Vector{var"#base".UInt8}}
     aggregate_value::Union{Nothing,var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[])
-        return new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{UninterpretedOption})
     return (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
@@ -171,9 +165,6 @@ struct FieldOptions <: PB.AbstractProtoBufMessage
     weak::Union{Nothing,var"#base".Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FieldOptions})
     return (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
@@ -268,9 +259,6 @@ struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,FieldOptions}
     proto3_optional::Union{Nothing,var"#base".Bool}
     var"#unknown_fields"::Vector{UInt8}
-    function FieldDescriptorProto(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
-        return new(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FieldDescriptorProto})
     return (;name = 1, number = 3, label = 4, type = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
@@ -371,9 +359,6 @@ struct MethodOptions <: PB.AbstractProtoBufMessage
     idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{MethodOptions})
     return (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
@@ -434,9 +419,6 @@ struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
     client_streaming::Union{Nothing,var"#base".Bool}
     server_streaming::Union{Nothing,var"#base".Bool}
     var"#unknown_fields"::Vector{UInt8}
-    function MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[])
-        return new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{MethodDescriptorProto})
     return (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
@@ -508,9 +490,6 @@ struct ServiceOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,var"#base".Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(deprecated, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{ServiceOptions})
     return (;deprecated = 33, uninterpreted_option = 999)
@@ -563,9 +542,6 @@ struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
     method::Vector{MethodDescriptorProto}
     options::Union{Nothing,ServiceOptions}
     var"#unknown_fields"::Vector{UInt8}
-    function ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[])
-        return new(name, method, options, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{ServiceDescriptorProto})
     return (;name = 1, method = 2, options = 3)
@@ -621,9 +597,6 @@ end
 struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[])
-        return new(uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{ExtensionRangeOptions})
     return (;uninterpreted_option = 999)
@@ -669,9 +642,6 @@ end
 struct OneofOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function OneofOptions(uninterpreted_option, _unknown_fields=UInt8[])
-        return new(uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{OneofOptions})
     return (;uninterpreted_option = 999)
@@ -718,9 +688,6 @@ struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,var"#base".String}
     options::Union{Nothing,OneofOptions}
     var"#unknown_fields"::Vector{UInt8}
-    function OneofDescriptorProto(name, options, _unknown_fields=UInt8[])
-        return new(name, options, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{OneofDescriptorProto})
     return (;name = 1, options = 2)
@@ -772,9 +739,6 @@ struct EnumValueOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,var"#base".Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(deprecated, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{EnumValueOptions})
     return (;deprecated = 1, uninterpreted_option = 999)
@@ -827,9 +791,6 @@ struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
     number::Union{Nothing,var"#base".Int32}
     options::Union{Nothing,EnumValueOptions}
     var"#unknown_fields"::Vector{UInt8}
-    function EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[])
-        return new(name, number, options, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{EnumValueDescriptorProto})
     return (;name = 1, number = 2, options = 3)
@@ -887,9 +848,6 @@ struct EnumOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,var"#base".Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{EnumOptions})
     return (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
@@ -949,9 +907,6 @@ struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,var"#base".Int32}
     var"#end"::Union{Nothing,var"#base".Int32}
     var"#unknown_fields"::Vector{UInt8}
-    function var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[])
-        return new(start, var"#end", _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"EnumDescriptorProto.EnumReservedRange"})
     return (;start = 1, var"#end" = 2)
@@ -1006,9 +961,6 @@ struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
     reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
     reserved_name::Vector{var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
-        return new(name, value, options, reserved_range, reserved_name, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{EnumDescriptorProto})
     return (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
@@ -1078,9 +1030,6 @@ struct MessageOptions <: PB.AbstractProtoBufMessage
     map_entry::Union{Nothing,var"#base".Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{MessageOptions})
     return (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
@@ -1151,9 +1100,6 @@ struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
     var"#end"::Union{Nothing,var"#base".Int32}
     options::Union{Nothing,ExtensionRangeOptions}
     var"#unknown_fields"::Vector{UInt8}
-    function var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[])
-        return new(start, var"#end", options, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"DescriptorProto.ExtensionRange"})
     return (;start = 1, var"#end" = 2, options = 3)
@@ -1210,9 +1156,6 @@ struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,var"#base".Int32}
     var"#end"::Union{Nothing,var"#base".Int32}
     var"#unknown_fields"::Vector{UInt8}
-    function var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[])
-        return new(start, var"#end", _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"DescriptorProto.ReservedRange"})
     return (;start = 1, var"#end" = 2)
@@ -1272,9 +1215,6 @@ struct DescriptorProto <: PB.AbstractProtoBufMessage
     reserved_range::Vector{var"DescriptorProto.ReservedRange"}
     reserved_name::Vector{var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
-        return new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{DescriptorProto})
     return (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
@@ -1369,9 +1309,6 @@ struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
     trailing_comments::Union{Nothing,var"#base".String}
     leading_detached_comments::Vector{var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[])
-        return new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"SourceCodeInfo.Location"})
     return (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
@@ -1437,9 +1374,6 @@ end
 struct SourceCodeInfo <: PB.AbstractProtoBufMessage
     location::Vector{var"SourceCodeInfo.Location"}
     var"#unknown_fields"::Vector{UInt8}
-    function SourceCodeInfo(location, _unknown_fields=UInt8[])
-        return new(location, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{SourceCodeInfo})
     return (;location = 1)
@@ -1508,9 +1442,6 @@ struct FileOptions <: PB.AbstractProtoBufMessage
     ruby_package::Union{Nothing,var"#base".String}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
-    function FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[])
-        return new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FileOptions})
     return (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
@@ -1670,9 +1601,6 @@ struct FileDescriptorProto <: PB.AbstractProtoBufMessage
     source_code_info::Union{Nothing,SourceCodeInfo}
     syntax::Union{Nothing,var"#base".String}
     var"#unknown_fields"::Vector{UInt8}
-    function FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[])
-        return new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FileDescriptorProto})
     return (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
@@ -1789,9 +1717,6 @@ end
 struct FileDescriptorSet <: PB.AbstractProtoBufMessage
     file::Vector{FileDescriptorProto}
     var"#unknown_fields"::Vector{UInt8}
-    function FileDescriptorSet(file, _unknown_fields=UInt8[])
-        return new(file, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{FileDescriptorSet})
     return (;file = 1)
@@ -1840,9 +1765,6 @@ struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
     var"#begin"::Union{Nothing,var"#base".Int32}
     var"#end"::Union{Nothing,var"#base".Int32}
     var"#unknown_fields"::Vector{UInt8}
-    function var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[])
-        return new(path, source_file, var"#begin", var"#end", _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
     return (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
@@ -1903,9 +1825,6 @@ end
 struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
     annotation::Vector{var"GeneratedCodeInfo.Annotation"}
     var"#unknown_fields"::Vector{UInt8}
-    function GeneratedCodeInfo(annotation, _unknown_fields=UInt8[])
-        return new(annotation, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{GeneratedCodeInfo})
     return (;annotation = 1)

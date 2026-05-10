@@ -789,29 +789,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     end
     println(io, "    var\"#unknown_fields\"::Vector{UInt8}")
     push!(param_names, "var\"#unknown_fields\"")
-    # Inner positional constructor with `_unknown_fields=UInt8[]`
-    # default. Replaces Julia's auto-generated all-positional ctor so
-    # users can construct messages without explicitly passing the
-    # buffer:
-    #     T(field1, ..., fieldN-1)              (buffer defaults to UInt8[])
-    #     T(field1, ..., fieldN-1, buffer)      (explicit buffer)
-    # Inner *not* outer: an outer convenience ctor splits the type's
-    # binding partition on Julia 1.12 and breaks `Type{<:T}` dispatch.
-    #
-    # Skip the inner ctor for messages whose only field is the buffer
-    # (e.g. WKT `Empty`): there it collides with the auto-positional
-    # `T(::Vector{UInt8})` since both take exactly the buffer arg.
-    if length(param_names) > 1
-        inner_params = join(param_names[1:end-1], ", ")
-        sep = isempty(inner_params) ? "" : ", "
-        println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
-        pos_args = String[]
-        for n in param_names
-            push!(pos_args, n == "var\"#unknown_fields\"" ? "_unknown_fields" : n)
-        end
-        println(io, "        return new(", join(pos_args, ", "), ")")
-        println(io, "    end")
-    end
+    # No explicit inner ctor: the @batteries kwconstructor=true call
+    # below pairs with `default_keywords` to give users a kwarg ctor
+    # whose defaults include `var\"#unknown_fields\" = UInt8[]`, so a
+    # buffer-less call site like `T(name=\"Alice\")` works through the
+    # kwarg form. Decode-side construction goes through Julia's
+    # auto-generated all-positional ctor with every field passed
+    # explicitly.
     println(io, "end")
 
     # Metadata. (`default_values` is no longer emitted per type — the

@@ -16,9 +16,6 @@ struct Mixin <: PB.AbstractProtoBufMessage
     name::var"#base".String
     root::var"#base".String
     var"#unknown_fields"::Vector{UInt8}
-    function Mixin(name, root, _unknown_fields=UInt8[])
-        return new(name, root, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Mixin})
     return (;name = 1, root = 2)
@@ -75,9 +72,6 @@ struct Method <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     syntax::Syntax.T
     var"#unknown_fields"::Vector{UInt8}
-    function Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[])
-        return new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Method})
     return (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
@@ -159,9 +153,6 @@ struct Api <: PB.AbstractProtoBufMessage
     mixins::Vector{Mixin}
     syntax::Syntax.T
     var"#unknown_fields"::Vector{UInt8}
-    function Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[])
-        return new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Api})
     return (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)

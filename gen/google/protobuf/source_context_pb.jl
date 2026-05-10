@@ -15,9 +15,6 @@ export SourceContext
 struct SourceContext <: PB.AbstractProtoBufMessage
     file_name::var"#base".String
     var"#unknown_fields"::Vector{UInt8}
-    function SourceContext(file_name, _unknown_fields=UInt8[])
-        return new(file_name, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{SourceContext})
     return (;file_name = 1)

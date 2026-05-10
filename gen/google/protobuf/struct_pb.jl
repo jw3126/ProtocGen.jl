@@ -25,9 +25,6 @@ abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 struct Struct <: AbstractStruct
     fields::OrderedDict{var"#base".String,AbstractValue}
     var"#unknown_fields"::Vector{UInt8}
-    function Struct(fields, _unknown_fields=UInt8[])
-        return new(fields, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Struct})
     return (;fields = 1)
@@ -73,9 +70,6 @@ end
 struct Value <: AbstractValue
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,var"#base".Float64,var"#base".String,var"#base".Bool,AbstractStruct,AbstractListValue}}}
     var"#unknown_fields"::Vector{UInt8}
-    function Value(kind, _unknown_fields=UInt8[])
-        return new(kind, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Value})
     return (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
@@ -196,9 +190,6 @@ end
 struct ListValue <: AbstractListValue
     values::Vector{AbstractValue}
     var"#unknown_fields"::Vector{UInt8}
-    function ListValue(values, _unknown_fields=UInt8[])
-        return new(values, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{ListValue})
     return (;values = 1)

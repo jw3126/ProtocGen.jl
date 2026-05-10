@@ -21,11 +21,13 @@ include("setup.jl")
     # Eval the generated module and verify a round-trip.
     sample_mod = eval_generated(f.content, :GeneratedSample)
 
-    inner = Base.invokelatest(sample_mod.Inner, Int32(42))
-    outer = Base.invokelatest(sample_mod.Outer,
-                              "hello", Int32(7), inner,
-                              Int64[1, 2, 3, 4],
-                              ProtocGen.OneOf(:ci, Int32(99)))
+    inner = pb_make(sample_mod.Inner; a = Int32(42))
+    outer = pb_make(sample_mod.Outer;
+                              name = "hello",
+                              maybe = Int32(7),
+                              nested = inner,
+                              packed_ints = Int64[1, 2, 3, 4],
+                              choice = ProtocGen.OneOf(:ci, Int32(99)))
     decoded = decode_latest(sample_mod.Outer, encode_latest(outer))
     @test decoded.name == outer.name
     @test decoded.maybe == outer.maybe
@@ -53,7 +55,9 @@ include("setup.jl")
     @test !occursin("unknown_fields", s)
     # When the buffer carries bytes, it's shown — `kwshow` prints the
     # field's Symbol name verbatim (no `var""` wrapping).
-    inner_with_unknown = Base.invokelatest(sample_mod.Inner, Int32(1), UInt8[0xff])
+    inner_with_unknown = pb_make(sample_mod.Inner;
+                                           a = Int32(1),
+                                           var"#unknown_fields" = UInt8[0xff])
     s2 = sprint(show, inner_with_unknown)
     @test occursin("#unknown_fields = ", s2)
 end
@@ -224,14 +228,15 @@ end
 
     # Holder ties them together — round-trip through binary format
     # exercises the generated decode/encode plus the @batteries-
-    # decorated structs.
-    msg = Base.invokelatest(m.Holder,
-        Base.invokelatest(m.Core, Int32(1)),
-        Base.invokelatest(m.Base, "label"),
-        Base.invokelatest(m.Type, "type-name"),
-        Base.invokelatest(m.Any, "url"),
-        Base.invokelatest(m.Bool, true),
-        Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
+    # decorated structs. Use kwarg construction so the buffer fills in
+    # from `default_keywords`.
+    msg = pb_make(m.Holder;
+        c  = pb_make(m.Core; v = Int32(1)),
+        b  = pb_make(m.Base; label = "label"),
+        t  = pb_make(m.Type; name = "type-name"),
+        a  = pb_make(m.Any;  url = "url"),
+        bl = pb_make(m.Bool; flag = true),
+        i  = Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
     )
     bytes = encode_latest(msg)
     back  = decode_latest(m.Holder, bytes)

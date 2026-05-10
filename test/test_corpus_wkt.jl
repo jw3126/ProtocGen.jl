@@ -38,20 +38,20 @@ include("setup.jl")
     WKT = ProtocGen.google.protobuf
 
     # Build a TestWellKnownTypes populating a representative subset.
-    ts = Base.invokelatest(WKT.Timestamp, Int64(1_700_000_000), Int32(0))
-    dur = Base.invokelatest(WKT.Duration, Int64(60), Int32(0))
-    fm = Base.invokelatest(WKT.FieldMask, ["foo", "bar"])
-    sc = Base.invokelatest(WKT.SourceContext, "src.proto")
-    i32w = Base.invokelatest(WKT.Int32Value, Int32(42))
-    sw = Base.invokelatest(WKT.StringValue, "hello")
-    bw = Base.invokelatest(WKT.BoolValue, true)
-    any_inst = Base.invokelatest(WKT.Any,
+    ts = pb_make(WKT.Timestamp, Int64(1_700_000_000), Int32(0))
+    dur = pb_make(WKT.Duration, Int64(60), Int32(0))
+    fm = pb_make(WKT.FieldMask, ["foo", "bar"])
+    sc = pb_make(WKT.SourceContext, "src.proto")
+    i32w = pb_make(WKT.Int32Value, Int32(42))
+    sw = pb_make(WKT.StringValue, "hello")
+    bw = pb_make(WKT.BoolValue, true)
+    any_inst = pb_make(WKT.Any,
         "type.googleapis.com/google.protobuf.Empty", UInt8[])
-    type_inst = Base.invokelatest(WKT.Type,
+    type_inst = pb_make(WKT.Type,
         "Foo", WKT.Field[], String[], WKT.Option[],
         nothing, WKT.Syntax.SYNTAX_PROTO3)
 
-    t = Base.invokelatest(m.TestWellKnownTypes,
+    t = pb_make(m.TestWellKnownTypes,
         any_inst, nothing, dur, nothing, fm, sc,
         nothing, ts, type_inst, nothing, nothing, nothing, nothing,
         i32w, nothing, bw, sw, nothing, nothing,

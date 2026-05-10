@@ -24,7 +24,7 @@ end
     @testset "Timestamp" begin
         # epoch + 1.7e9 sec, 123_456_789 nanos. Field 1 = seconds (varint),
         # field 2 = nanos (varint). protoc emits in field-number order.
-        t = Base.invokelatest(WKT.Timestamp, Int64(1_700_000_000), Int32(123_456_789))
+        t = pb_make(WKT.Timestamp, Int64(1_700_000_000), Int32(123_456_789))
         decoded, bytes = rt(t)
         @test decoded.seconds == t.seconds
         @test decoded.nanos == t.nanos
@@ -36,14 +36,14 @@ end
     @testset "Timestamp epoch" begin
         # All-zero Timestamp encodes to zero bytes (proto3 implicit
         # presence: zero is indistinguishable from unset).
-        t = Base.invokelatest(WKT.Timestamp, Int64(0), Int32(0))
+        t = pb_make(WKT.Timestamp, Int64(0), Int32(0))
         decoded, bytes = rt(t)
         @test decoded.seconds == 0 && decoded.nanos == 0
         @test isempty(bytes)
     end
 
     @testset "Duration" begin
-        d = Base.invokelatest(WKT.Duration, Int64(-3600), Int32(-500_000_000))
+        d = pb_make(WKT.Duration, Int64(-3600), Int32(-500_000_000))
         decoded, bytes = rt(d)
         @test decoded.seconds == d.seconds
         @test decoded.nanos == d.nanos
@@ -54,7 +54,7 @@ end
     end
 
     @testset "Empty" begin
-        e = Base.invokelatest(WKT.Empty)
+        e = pb_make(WKT.Empty)
         decoded, bytes = rt(e)
         @test decoded isa WKT.Empty
         @test isempty(bytes)
@@ -63,14 +63,14 @@ end
     @testset "FieldMask" begin
         # paths is `repeated string` — proto3 repeated, but strings are
         # length-delimited per element regardless of packed/unpacked.
-        m = Base.invokelatest(WKT.FieldMask, ["foo", "bar.baz", "qux"])
+        m = pb_make(WKT.FieldMask, ["foo", "bar.baz", "qux"])
         decoded, bytes = rt(m)
         @test decoded.paths == m.paths
         @test !isempty(bytes)
     end
 
     @testset "SourceContext" begin
-        s = Base.invokelatest(WKT.SourceContext, "/path/to/file.proto")
+        s = pb_make(WKT.SourceContext, "/path/to/file.proto")
         decoded, _ = rt(s)
         @test decoded.file_name == s.file_name
     end
@@ -79,7 +79,7 @@ end
         # Any holds an opaque message in `value::Bytes`, identified by a
         # type URL. The package doesn't unmarshal — that's a v1
         # limitation. Just round-trip the wrapper.
-        a = Base.invokelatest(WKT.Any,
+        a = pb_make(WKT.Any,
             "type.googleapis.com/google.protobuf.Timestamp",
             UInt8[0x08, 0xC0, 0x84, 0x3D])  # seconds=1_000_000 in varint
         decoded, _ = rt(a)
@@ -91,14 +91,14 @@ end
         # `Type.source_context : SourceContext` and `Option.value : Any`
         # are cross-file references. Both should resolve to bare names
         # because they live in the same Julia submodule.
-        opt = Base.invokelatest(WKT.Option, "deprecated", nothing)
-        sc = Base.invokelatest(WKT.SourceContext, "foo.proto")
-        field = Base.invokelatest(WKT.Field,
+        opt = pb_make(WKT.Option, "deprecated", nothing)
+        sc = pb_make(WKT.SourceContext, "foo.proto")
+        field = pb_make(WKT.Field,
             WKT.var"Field.Kind".TYPE_STRING,
             WKT.var"Field.Cardinality".CARDINALITY_OPTIONAL,
             Int32(1), "name", "", Int32(0), false,
             WKT.Option[], "name", "")
-        t = Base.invokelatest(WKT.Type,
+        t = pb_make(WKT.Type,
             "MyType", [field], String[], [opt], sc,
             WKT.Syntax.SYNTAX_PROTO3)
         decoded, _ = rt(t)
@@ -114,7 +114,7 @@ end
     end
 
     @testset "Api / Method / Mixin (cross-file refs)" begin
-        m = Base.invokelatest(WKT.Method,
+        m = pb_make(WKT.Method,
             "DoIt",
             "google.example.Request",   # request_type_url
             false,                       # request_streaming
@@ -122,7 +122,7 @@ end
             false,                       # response_streaming
             WKT.Option[],
             WKT.Syntax.SYNTAX_PROTO3)
-        a = Base.invokelatest(WKT.Api,
+        a = pb_make(WKT.Api,
             "google.example.Service",
             [m],
             WKT.Option[],
@@ -145,13 +145,13 @@ end
         # `AbstractValue` / `AbstractListValue` and forwarding decode
         # methods. Round-trip exercises every variant of Value.kind:
         # null, number, string, bool, struct, list.
-        v_num  = Base.invokelatest(WKT.Value, OneOf(:number_value, 3.14))
-        v_str  = Base.invokelatest(WKT.Value, OneOf(:string_value, "hello"))
-        v_bool = Base.invokelatest(WKT.Value, OneOf(:bool_value, true))
-        v_null = Base.invokelatest(WKT.Value, OneOf(:null_value, WKT.NullValue.NULL_VALUE))
+        v_num  = pb_make(WKT.Value, OneOf(:number_value, 3.14))
+        v_str  = pb_make(WKT.Value, OneOf(:string_value, "hello"))
+        v_bool = pb_make(WKT.Value, OneOf(:bool_value, true))
+        v_null = pb_make(WKT.Value, OneOf(:null_value, WKT.NullValue.NULL_VALUE))
 
-        lv = Base.invokelatest(WKT.ListValue, WKT.AbstractValue[v_num, v_str, v_bool, v_null])
-        v_list = Base.invokelatest(WKT.Value, OneOf(:list_value, lv))
+        lv = pb_make(WKT.ListValue, WKT.AbstractValue[v_num, v_str, v_bool, v_null])
+        v_list = pb_make(WKT.Value, OneOf(:list_value, lv))
 
         fields = OrderedDict{String,WKT.AbstractValue}(
             "n"    => v_num,
@@ -160,7 +160,7 @@ end
             "z"    => v_null,
             "list" => v_list,
         )
-        s = Base.invokelatest(WKT.Struct, fields)
+        s = pb_make(WKT.Struct, fields)
 
         # Round-trip Struct end-to-end.
         decoded, _ = rt(s)
@@ -202,7 +202,7 @@ end
             (WKT.BytesValue, UInt8[0x00, 0xFF, 0xAB]),
         ]
         for (T, v) in wrappers
-            w = Base.invokelatest(T, v)
+            w = pb_make(T, v)
             decoded, _ = rt(w)
             @test decoded.value == w.value
         end

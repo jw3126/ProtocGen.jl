@@ -19,9 +19,6 @@ struct Option <: PB.AbstractProtoBufMessage
     name::var"#base".String
     value::Union{Nothing,Any}
     var"#unknown_fields"::Vector{UInt8}
-    function Option(name, value, _unknown_fields=UInt8[])
-        return new(name, value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Option})
     return (;name = 1, value = 2)
@@ -87,9 +84,6 @@ struct Field <: PB.AbstractProtoBufMessage
     json_name::var"#base".String
     default_value::var"#base".String
     var"#unknown_fields"::Vector{UInt8}
-    function Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[])
-        return new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Field})
     return (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
@@ -185,9 +179,6 @@ struct Type <: PB.AbstractProtoBufMessage
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
     var"#unknown_fields"::Vector{UInt8}
-    function Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[])
-        return new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Type})
     return (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
@@ -260,9 +251,6 @@ struct EnumValue <: PB.AbstractProtoBufMessage
     number::var"#base".Int32
     options::Vector{Option}
     var"#unknown_fields"::Vector{UInt8}
-    function EnumValue(name, number, options, _unknown_fields=UInt8[])
-        return new(name, number, options, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{EnumValue})
     return (;name = 1, number = 2, options = 3)
@@ -322,9 +310,6 @@ struct Enum <: PB.AbstractProtoBufMessage
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
     var"#unknown_fields"::Vector{UInt8}
-    function Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[])
-        return new(name, enumvalue, options, source_context, syntax, _unknown_fields)
-    end
 end
 function PB.field_numbers(::var"#core".Type{Enum})
     return (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
