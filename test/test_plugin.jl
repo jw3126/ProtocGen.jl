@@ -6,13 +6,7 @@ include("setup.jl")
     # Build an empty CodeGeneratorRequest (no files to generate). This test
     # exercises the read-decode / encode-write plumbing only — actual codegen
     # is covered by test_codegen.jl.
-    request = GC.CodeGeneratorRequest(
-        String[],
-        nothing,
-        G.FileDescriptorProto[],
-        G.FileDescriptorProto[],
-        nothing,
-    )
+    request = GC.CodeGeneratorRequest()
 
     req_bytes = ProtoBufDescriptors.encode(request)
 
@@ -51,9 +45,7 @@ end
     # and no error string. The redirect_stdout test also guards against
     # stray writes to stdout (e.g. an accidental @info) corrupting the
     # protoc plugin protocol.
-    request = GC.CodeGeneratorRequest(
-        String[], nothing, G.FileDescriptorProto[], G.FileDescriptorProto[], nothing,
-    )
+    request = GC.CodeGeneratorRequest()
     req_bytes = ProtoBufDescriptors.encode(request)
 
     in_pipe = Pipe();  Base.link_pipe!(in_pipe)

@@ -11,12 +11,12 @@ import ProtoBufDescriptors.google.protobuf as google_protobuf
 
 export Version, CodeGeneratorRequest, CodeGeneratorResponse
 
-struct Version <: PB.AbstractProtoBufMessage
-    major::Union{Nothing,Int32}
-    minor::Union{Nothing,Int32}
-    patch::Union{Nothing,Int32}
-    suffix::Union{Nothing,String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Version <: PB.AbstractProtoBufMessage
+    major::Union{Nothing,Int32} = nothing
+    minor::Union{Nothing,Int32} = nothing
+    patch::Union{Nothing,Int32} = nothing
+    suffix::Union{Nothing,String} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Version(major, minor, patch, suffix, _unknown_fields=UInt8[])
         return new(major, minor, patch, suffix, _unknown_fields)
     end
@@ -76,13 +76,13 @@ function PB._encoded_size(_x::Version)
     return encoded_size
 end
 
-struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
-    file_to_generate::Vector{String}
-    parameter::Union{Nothing,String}
-    proto_file::Vector{google_protobuf.FileDescriptorProto}
-    source_file_descriptors::Vector{google_protobuf.FileDescriptorProto}
-    compiler_version::Union{Nothing,Version}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
+    file_to_generate::Vector{String} = Vector{String}()
+    parameter::Union{Nothing,String} = nothing
+    proto_file::Vector{google_protobuf.FileDescriptorProto} = Vector{google_protobuf.FileDescriptorProto}()
+    source_file_descriptors::Vector{google_protobuf.FileDescriptorProto} = Vector{google_protobuf.FileDescriptorProto}()
+    compiler_version::Union{Nothing,Version} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function CodeGeneratorRequest(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields=UInt8[])
         return new(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields)
     end
@@ -149,12 +149,12 @@ end
 
 @enumx var"CodeGeneratorResponse.Feature" FEATURE_NONE=0 FEATURE_PROTO3_OPTIONAL=1 FEATURE_SUPPORTS_EDITIONS=2
 
-struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    insertion_point::Union{Nothing,String}
-    content::Union{Nothing,String}
-    generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    insertion_point::Union{Nothing,String} = nothing
+    content::Union{Nothing,String} = nothing
+    generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info, _unknown_fields=UInt8[])
         return new(name, insertion_point, content, generated_code_info, _unknown_fields)
     end
@@ -214,13 +214,13 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     return encoded_size
 end
 
-struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
-    error::Union{Nothing,String}
-    supported_features::Union{Nothing,UInt64}
-    minimum_edition::Union{Nothing,Int32}
-    maximum_edition::Union{Nothing,Int32}
-    file::Vector{var"CodeGeneratorResponse.File"}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
+    error::Union{Nothing,String} = nothing
+    supported_features::Union{Nothing,UInt64} = nothing
+    minimum_edition::Union{Nothing,Int32} = nothing
+    maximum_edition::Union{Nothing,Int32} = nothing
+    file::Vector{var"CodeGeneratorResponse.File"} = Vector{var"CodeGeneratorResponse.File"}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields=UInt8[])
         return new(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields)
     end

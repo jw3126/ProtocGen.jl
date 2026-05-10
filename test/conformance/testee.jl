@@ -41,13 +41,10 @@ const FDS_PATH = joinpath(HERE, "conformance_descriptors.pb")
 function load_generated_modules()
     fds = PBD.decode(read(FDS_PATH), _G.FileDescriptorSet)
     request = _GC.CodeGeneratorRequest(
-        ["conformance.proto",
-         "test_messages_proto2_patched.proto",
-         "test_messages_proto3.proto"],
-        nothing,
-        fds.file,
-        _G.FileDescriptorProto[],
-        nothing,
+        file_to_generate = ["conformance.proto",
+                            "test_messages_proto2_patched.proto",
+                            "test_messages_proto3.proto"],
+        proto_file = fds.file,
     )
     response = PBD.generate(request)
     if response.error !== nothing && !isempty(response.error)

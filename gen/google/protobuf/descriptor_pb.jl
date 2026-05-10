@@ -9,10 +9,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export FileDescriptorSet, FileDescriptorProto, DescriptorProto, ExtensionRangeOptions, FieldDescriptorProto, OneofDescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, ServiceDescriptorProto, MethodDescriptorProto, FileOptions, MessageOptions, FieldOptions, OneofOptions, EnumOptions, EnumValueOptions, ServiceOptions, MethodOptions, UninterpretedOption, SourceCodeInfo, GeneratedCodeInfo
 
-struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
-    name_part::String
-    is_extension::Bool
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
+    name_part::String = ""
+    is_extension::Bool = false
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[])
         return new(name_part, is_extension, _unknown_fields)
     end
@@ -68,15 +68,15 @@ function PB._encoded_size(_x::var"UninterpretedOption.NamePart")
     return encoded_size
 end
 
-struct UninterpretedOption <: PB.AbstractProtoBufMessage
-    name::Vector{var"UninterpretedOption.NamePart"}
-    identifier_value::Union{Nothing,String}
-    positive_int_value::Union{Nothing,UInt64}
-    negative_int_value::Union{Nothing,Int64}
-    double_value::Union{Nothing,Float64}
-    string_value::Union{Nothing,Vector{UInt8}}
-    aggregate_value::Union{Nothing,String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct UninterpretedOption <: PB.AbstractProtoBufMessage
+    name::Vector{var"UninterpretedOption.NamePart"} = Vector{var"UninterpretedOption.NamePart"}()
+    identifier_value::Union{Nothing,String} = nothing
+    positive_int_value::Union{Nothing,UInt64} = nothing
+    negative_int_value::Union{Nothing,Int64} = nothing
+    double_value::Union{Nothing,Float64} = nothing
+    string_value::Union{Nothing,Vector{UInt8}} = nothing
+    aggregate_value::Union{Nothing,String} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[])
         return new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
     end
@@ -155,15 +155,15 @@ end
 
 @enumx var"FieldOptions.JSType" JS_NORMAL=0 JS_STRING=1 JS_NUMBER=2
 
-struct FieldOptions <: PB.AbstractProtoBufMessage
-    ctype::Union{Nothing,var"FieldOptions.CType".T}
-    packed::Union{Nothing,Bool}
-    jstype::Union{Nothing,var"FieldOptions.JSType".T}
-    lazy::Union{Nothing,Bool}
-    deprecated::Union{Nothing,Bool}
-    weak::Union{Nothing,Bool}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FieldOptions <: PB.AbstractProtoBufMessage
+    ctype::Union{Nothing,var"FieldOptions.CType".T} = nothing
+    packed::Union{Nothing,Bool} = nothing
+    jstype::Union{Nothing,var"FieldOptions.JSType".T} = nothing
+    lazy::Union{Nothing,Bool} = nothing
+    deprecated::Union{Nothing,Bool} = nothing
+    weak::Union{Nothing,Bool} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[])
         return new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
     end
@@ -245,19 +245,19 @@ end
 
 @enumx var"FieldDescriptorProto.Label" LABEL_OPTIONAL=1 LABEL_REQUIRED=2 LABEL_REPEATED=3
 
-struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    number::Union{Nothing,Int32}
-    label::Union{Nothing,var"FieldDescriptorProto.Label".T}
-    type::Union{Nothing,var"FieldDescriptorProto.Type".T}
-    type_name::Union{Nothing,String}
-    extendee::Union{Nothing,String}
-    default_value::Union{Nothing,String}
-    oneof_index::Union{Nothing,Int32}
-    json_name::Union{Nothing,String}
-    options::Union{Nothing,FieldOptions}
-    proto3_optional::Union{Nothing,Bool}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    number::Union{Nothing,Int32} = nothing
+    label::Union{Nothing,var"FieldDescriptorProto.Label".T} = nothing
+    type::Union{Nothing,var"FieldDescriptorProto.Type".T} = nothing
+    type_name::Union{Nothing,String} = nothing
+    extendee::Union{Nothing,String} = nothing
+    default_value::Union{Nothing,String} = nothing
+    oneof_index::Union{Nothing,Int32} = nothing
+    json_name::Union{Nothing,String} = nothing
+    options::Union{Nothing,FieldOptions} = nothing
+    proto3_optional::Union{Nothing,Bool} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FieldDescriptorProto(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
         return new(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
     end
@@ -354,11 +354,11 @@ end
 
 @enumx var"MethodOptions.IdempotencyLevel" IDEMPOTENCY_UNKNOWN=0 NO_SIDE_EFFECTS=1 IDEMPOTENT=2
 
-struct MethodOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,Bool}
-    idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct MethodOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,Bool} = nothing
+    idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
     end
@@ -413,14 +413,14 @@ function PB._encoded_size(_x::MethodOptions)
     return encoded_size
 end
 
-struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    input_type::Union{Nothing,String}
-    output_type::Union{Nothing,String}
-    options::Union{Nothing,MethodOptions}
-    client_streaming::Union{Nothing,Bool}
-    server_streaming::Union{Nothing,Bool}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    input_type::Union{Nothing,String} = nothing
+    output_type::Union{Nothing,String} = nothing
+    options::Union{Nothing,MethodOptions} = nothing
+    client_streaming::Union{Nothing,Bool} = nothing
+    server_streaming::Union{Nothing,Bool} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[])
         return new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
     end
@@ -490,10 +490,10 @@ function PB._encoded_size(_x::MethodDescriptorProto)
     return encoded_size
 end
 
-struct ServiceOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,Bool}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct ServiceOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,Bool} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, uninterpreted_option, _unknown_fields)
     end
@@ -543,11 +543,11 @@ function PB._encoded_size(_x::ServiceOptions)
     return encoded_size
 end
 
-struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    method::Vector{MethodDescriptorProto}
-    options::Union{Nothing,ServiceOptions}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    method::Vector{MethodDescriptorProto} = Vector{MethodDescriptorProto}()
+    options::Union{Nothing,ServiceOptions} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[])
         return new(name, method, options, _unknown_fields)
     end
@@ -602,9 +602,9 @@ function PB._encoded_size(_x::ServiceDescriptorProto)
     return encoded_size
 end
 
-struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[])
         return new(uninterpreted_option, _unknown_fields)
     end
@@ -649,9 +649,9 @@ function PB._encoded_size(_x::ExtensionRangeOptions)
     return encoded_size
 end
 
-struct OneofOptions <: PB.AbstractProtoBufMessage
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct OneofOptions <: PB.AbstractProtoBufMessage
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function OneofOptions(uninterpreted_option, _unknown_fields=UInt8[])
         return new(uninterpreted_option, _unknown_fields)
     end
@@ -696,10 +696,10 @@ function PB._encoded_size(_x::OneofOptions)
     return encoded_size
 end
 
-struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    options::Union{Nothing,OneofOptions}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    options::Union{Nothing,OneofOptions} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function OneofDescriptorProto(name, options, _unknown_fields=UInt8[])
         return new(name, options, _unknown_fields)
     end
@@ -749,10 +749,10 @@ function PB._encoded_size(_x::OneofDescriptorProto)
     return encoded_size
 end
 
-struct EnumValueOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,Bool}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct EnumValueOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,Bool} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, uninterpreted_option, _unknown_fields)
     end
@@ -802,11 +802,11 @@ function PB._encoded_size(_x::EnumValueOptions)
     return encoded_size
 end
 
-struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    number::Union{Nothing,Int32}
-    options::Union{Nothing,EnumValueOptions}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    number::Union{Nothing,Int32} = nothing
+    options::Union{Nothing,EnumValueOptions} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[])
         return new(name, number, options, _unknown_fields)
     end
@@ -861,11 +861,11 @@ function PB._encoded_size(_x::EnumValueDescriptorProto)
     return encoded_size
 end
 
-struct EnumOptions <: PB.AbstractProtoBufMessage
-    allow_alias::Union{Nothing,Bool}
-    deprecated::Union{Nothing,Bool}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct EnumOptions <: PB.AbstractProtoBufMessage
+    allow_alias::Union{Nothing,Bool} = nothing
+    deprecated::Union{Nothing,Bool} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
     end
@@ -923,10 +923,10 @@ function PB._encoded_size(_x::EnumOptions)
     return encoded_size
 end
 
-struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,Int32}
-    var"#end"::Union{Nothing,Int32}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,Int32} = nothing
+    var"#end"::Union{Nothing,Int32} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[])
         return new(start, var"#end", _unknown_fields)
     end
@@ -976,13 +976,13 @@ function PB._encoded_size(_x::var"EnumDescriptorProto.EnumReservedRange")
     return encoded_size
 end
 
-struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    value::Vector{EnumValueDescriptorProto}
-    options::Union{Nothing,EnumOptions}
-    reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
-    reserved_name::Vector{String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    value::Vector{EnumValueDescriptorProto} = Vector{EnumValueDescriptorProto}()
+    options::Union{Nothing,EnumOptions} = nothing
+    reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"} = Vector{var"EnumDescriptorProto.EnumReservedRange"}()
+    reserved_name::Vector{String} = Vector{String}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
         return new(name, value, options, reserved_range, reserved_name, _unknown_fields)
     end
@@ -1047,13 +1047,13 @@ function PB._encoded_size(_x::EnumDescriptorProto)
     return encoded_size
 end
 
-struct MessageOptions <: PB.AbstractProtoBufMessage
-    message_set_wire_format::Union{Nothing,Bool}
-    no_standard_descriptor_accessor::Union{Nothing,Bool}
-    deprecated::Union{Nothing,Bool}
-    map_entry::Union{Nothing,Bool}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct MessageOptions <: PB.AbstractProtoBufMessage
+    message_set_wire_format::Union{Nothing,Bool} = nothing
+    no_standard_descriptor_accessor::Union{Nothing,Bool} = nothing
+    deprecated::Union{Nothing,Bool} = nothing
+    map_entry::Union{Nothing,Bool} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[])
         return new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
     end
@@ -1121,11 +1121,11 @@ function PB._encoded_size(_x::MessageOptions)
     return encoded_size
 end
 
-struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,Int32}
-    var"#end"::Union{Nothing,Int32}
-    options::Union{Nothing,ExtensionRangeOptions}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,Int32} = nothing
+    var"#end"::Union{Nothing,Int32} = nothing
+    options::Union{Nothing,ExtensionRangeOptions} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[])
         return new(start, var"#end", options, _unknown_fields)
     end
@@ -1180,10 +1180,10 @@ function PB._encoded_size(_x::var"DescriptorProto.ExtensionRange")
     return encoded_size
 end
 
-struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,Int32}
-    var"#end"::Union{Nothing,Int32}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,Int32} = nothing
+    var"#end"::Union{Nothing,Int32} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[])
         return new(start, var"#end", _unknown_fields)
     end
@@ -1233,18 +1233,18 @@ function PB._encoded_size(_x::var"DescriptorProto.ReservedRange")
     return encoded_size
 end
 
-struct DescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    field::Vector{FieldDescriptorProto}
-    extension::Vector{FieldDescriptorProto}
-    nested_type::Vector{DescriptorProto}
-    enum_type::Vector{EnumDescriptorProto}
-    extension_range::Vector{var"DescriptorProto.ExtensionRange"}
-    oneof_decl::Vector{OneofDescriptorProto}
-    options::Union{Nothing,MessageOptions}
-    reserved_range::Vector{var"DescriptorProto.ReservedRange"}
-    reserved_name::Vector{String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct DescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    field::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
+    extension::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
+    nested_type::Vector{DescriptorProto} = Vector{DescriptorProto}()
+    enum_type::Vector{EnumDescriptorProto} = Vector{EnumDescriptorProto}()
+    extension_range::Vector{var"DescriptorProto.ExtensionRange"} = Vector{var"DescriptorProto.ExtensionRange"}()
+    oneof_decl::Vector{OneofDescriptorProto} = Vector{OneofDescriptorProto}()
+    options::Union{Nothing,MessageOptions} = nothing
+    reserved_range::Vector{var"DescriptorProto.ReservedRange"} = Vector{var"DescriptorProto.ReservedRange"}()
+    reserved_name::Vector{String} = Vector{String}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
         return new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
     end
@@ -1334,13 +1334,13 @@ function PB._encoded_size(_x::DescriptorProto)
     return encoded_size
 end
 
-struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
-    path::Vector{Int32}
-    span::Vector{Int32}
-    leading_comments::Union{Nothing,String}
-    trailing_comments::Union{Nothing,String}
-    leading_detached_comments::Vector{String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
+    path::Vector{Int32} = Vector{Int32}()
+    span::Vector{Int32} = Vector{Int32}()
+    leading_comments::Union{Nothing,String} = nothing
+    trailing_comments::Union{Nothing,String} = nothing
+    leading_detached_comments::Vector{String} = Vector{String}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[])
         return new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
     end
@@ -1405,9 +1405,9 @@ function PB._encoded_size(_x::var"SourceCodeInfo.Location")
     return encoded_size
 end
 
-struct SourceCodeInfo <: PB.AbstractProtoBufMessage
-    location::Vector{var"SourceCodeInfo.Location"}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct SourceCodeInfo <: PB.AbstractProtoBufMessage
+    location::Vector{var"SourceCodeInfo.Location"} = Vector{var"SourceCodeInfo.Location"}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function SourceCodeInfo(location, _unknown_fields=UInt8[])
         return new(location, _unknown_fields)
     end
@@ -1454,29 +1454,29 @@ end
 
 @enumx var"FileOptions.OptimizeMode" SPEED=1 CODE_SIZE=2 LITE_RUNTIME=3
 
-struct FileOptions <: PB.AbstractProtoBufMessage
-    java_package::Union{Nothing,String}
-    java_outer_classname::Union{Nothing,String}
-    java_multiple_files::Union{Nothing,Bool}
-    java_generate_equals_and_hash::Union{Nothing,Bool}
-    java_string_check_utf8::Union{Nothing,Bool}
-    optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T}
-    go_package::Union{Nothing,String}
-    cc_generic_services::Union{Nothing,Bool}
-    java_generic_services::Union{Nothing,Bool}
-    py_generic_services::Union{Nothing,Bool}
-    php_generic_services::Union{Nothing,Bool}
-    deprecated::Union{Nothing,Bool}
-    cc_enable_arenas::Union{Nothing,Bool}
-    objc_class_prefix::Union{Nothing,String}
-    csharp_namespace::Union{Nothing,String}
-    swift_prefix::Union{Nothing,String}
-    php_class_prefix::Union{Nothing,String}
-    php_namespace::Union{Nothing,String}
-    php_metadata_namespace::Union{Nothing,String}
-    ruby_package::Union{Nothing,String}
-    uninterpreted_option::Vector{UninterpretedOption}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FileOptions <: PB.AbstractProtoBufMessage
+    java_package::Union{Nothing,String} = nothing
+    java_outer_classname::Union{Nothing,String} = nothing
+    java_multiple_files::Union{Nothing,Bool} = nothing
+    java_generate_equals_and_hash::Union{Nothing,Bool} = nothing
+    java_string_check_utf8::Union{Nothing,Bool} = nothing
+    optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T} = nothing
+    go_package::Union{Nothing,String} = nothing
+    cc_generic_services::Union{Nothing,Bool} = nothing
+    java_generic_services::Union{Nothing,Bool} = nothing
+    py_generic_services::Union{Nothing,Bool} = nothing
+    php_generic_services::Union{Nothing,Bool} = nothing
+    deprecated::Union{Nothing,Bool} = nothing
+    cc_enable_arenas::Union{Nothing,Bool} = nothing
+    objc_class_prefix::Union{Nothing,String} = nothing
+    csharp_namespace::Union{Nothing,String} = nothing
+    swift_prefix::Union{Nothing,String} = nothing
+    php_class_prefix::Union{Nothing,String} = nothing
+    php_namespace::Union{Nothing,String} = nothing
+    php_metadata_namespace::Union{Nothing,String} = nothing
+    ruby_package::Union{Nothing,String} = nothing
+    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[])
         return new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
     end
@@ -1624,20 +1624,20 @@ function PB._encoded_size(_x::FileOptions)
     return encoded_size
 end
 
-struct FileDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,String}
-    package::Union{Nothing,String}
-    dependency::Vector{String}
-    public_dependency::Vector{Int32}
-    weak_dependency::Vector{Int32}
-    message_type::Vector{DescriptorProto}
-    enum_type::Vector{EnumDescriptorProto}
-    service::Vector{ServiceDescriptorProto}
-    extension::Vector{FieldDescriptorProto}
-    options::Union{Nothing,FileOptions}
-    source_code_info::Union{Nothing,SourceCodeInfo}
-    syntax::Union{Nothing,String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FileDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,String} = nothing
+    package::Union{Nothing,String} = nothing
+    dependency::Vector{String} = Vector{String}()
+    public_dependency::Vector{Int32} = Vector{Int32}()
+    weak_dependency::Vector{Int32} = Vector{Int32}()
+    message_type::Vector{DescriptorProto} = Vector{DescriptorProto}()
+    enum_type::Vector{EnumDescriptorProto} = Vector{EnumDescriptorProto}()
+    service::Vector{ServiceDescriptorProto} = Vector{ServiceDescriptorProto}()
+    extension::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
+    options::Union{Nothing,FileOptions} = nothing
+    source_code_info::Union{Nothing,SourceCodeInfo} = nothing
+    syntax::Union{Nothing,String} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[])
         return new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
     end
@@ -1753,9 +1753,9 @@ function PB._encoded_size(_x::FileDescriptorProto)
     return encoded_size
 end
 
-struct FileDescriptorSet <: PB.AbstractProtoBufMessage
-    file::Vector{FileDescriptorProto}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FileDescriptorSet <: PB.AbstractProtoBufMessage
+    file::Vector{FileDescriptorProto} = Vector{FileDescriptorProto}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FileDescriptorSet(file, _unknown_fields=UInt8[])
         return new(file, _unknown_fields)
     end
@@ -1800,12 +1800,12 @@ function PB._encoded_size(_x::FileDescriptorSet)
     return encoded_size
 end
 
-struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
-    path::Vector{Int32}
-    source_file::Union{Nothing,String}
-    var"#begin"::Union{Nothing,Int32}
-    var"#end"::Union{Nothing,Int32}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
+    path::Vector{Int32} = Vector{Int32}()
+    source_file::Union{Nothing,String} = nothing
+    var"#begin"::Union{Nothing,Int32} = nothing
+    var"#end"::Union{Nothing,Int32} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[])
         return new(path, source_file, var"#begin", var"#end", _unknown_fields)
     end
@@ -1865,9 +1865,9 @@ function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
     return encoded_size
 end
 
-struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
-    annotation::Vector{var"GeneratedCodeInfo.Annotation"}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
+    annotation::Vector{var"GeneratedCodeInfo.Annotation"} = Vector{var"GeneratedCodeInfo.Annotation"}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function GeneratedCodeInfo(annotation, _unknown_fields=UInt8[])
         return new(annotation, _unknown_fields)
     end

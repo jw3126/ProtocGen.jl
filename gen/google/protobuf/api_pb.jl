@@ -9,10 +9,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Api, Method, Mixin
 
-struct Mixin <: PB.AbstractProtoBufMessage
-    name::String
-    root::String
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Mixin <: PB.AbstractProtoBufMessage
+    name::String = ""
+    root::String = ""
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Mixin(name, root, _unknown_fields=UInt8[])
         return new(name, root, _unknown_fields)
     end
@@ -62,15 +62,15 @@ function PB._encoded_size(_x::Mixin)
     return encoded_size
 end
 
-struct Method <: PB.AbstractProtoBufMessage
-    name::String
-    request_type_url::String
-    request_streaming::Bool
-    response_type_url::String
-    response_streaming::Bool
-    options::Vector{Option}
-    syntax::Syntax.T
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Method <: PB.AbstractProtoBufMessage
+    name::String = ""
+    request_type_url::String = ""
+    request_streaming::Bool = false
+    response_type_url::String = ""
+    response_streaming::Bool = false
+    options::Vector{Option} = Vector{Option}()
+    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[])
         return new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
     end
@@ -145,15 +145,15 @@ function PB._encoded_size(_x::Method)
     return encoded_size
 end
 
-struct Api <: PB.AbstractProtoBufMessage
-    name::String
-    methods::Vector{Method}
-    options::Vector{Option}
-    version::String
-    source_context::Union{Nothing,SourceContext}
-    mixins::Vector{Mixin}
-    syntax::Syntax.T
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Api <: PB.AbstractProtoBufMessage
+    name::String = ""
+    methods::Vector{Method} = Vector{Method}()
+    options::Vector{Option} = Vector{Option}()
+    version::String = ""
+    source_context::Union{Nothing,SourceContext} = nothing
+    mixins::Vector{Mixin} = Vector{Mixin}()
+    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[])
         return new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
     end

@@ -9,11 +9,8 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Empty
 
-struct Empty <: PB.AbstractProtoBufMessage
-    var"#unknown_fields"::Vector{UInt8}
-    function Empty(_unknown_fields=UInt8[])
-        return new(_unknown_fields)
-    end
+Base.@kwdef struct Empty <: PB.AbstractProtoBufMessage
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
 end
 function PB.default_values(::Core.Type{Empty})
     return (;var"#unknown_fields" = UInt8[])

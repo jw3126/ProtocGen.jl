@@ -32,8 +32,8 @@ hand it to `run_plugin`, and return the decoded response.
 function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
     fdset = load_fdset(fdset_fixture)
     request = GC.CodeGeneratorRequest(
-        proto_paths, nothing,
-        fdset.file, G.FileDescriptorProto[], nothing,
+        file_to_generate = proto_paths,
+        proto_file = fdset.file,
     )
     req_bytes = ProtoBufDescriptors.encode(request)
     out_io = IOBuffer()

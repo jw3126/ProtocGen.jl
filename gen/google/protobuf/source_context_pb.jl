@@ -9,9 +9,9 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export SourceContext
 
-struct SourceContext <: PB.AbstractProtoBufMessage
-    file_name::String
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct SourceContext <: PB.AbstractProtoBufMessage
+    file_name::String = ""
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function SourceContext(file_name, _unknown_fields=UInt8[])
         return new(file_name, _unknown_fields)
     end

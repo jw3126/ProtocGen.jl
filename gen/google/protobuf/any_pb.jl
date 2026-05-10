@@ -9,10 +9,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Any
 
-struct Any <: PB.AbstractProtoBufMessage
-    type_url::String
-    value::Vector{UInt8}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Any <: PB.AbstractProtoBufMessage
+    type_url::String = ""
+    value::Vector{UInt8} = UInt8[]
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Any(type_url, value, _unknown_fields=UInt8[])
         return new(type_url, value, _unknown_fields)
     end

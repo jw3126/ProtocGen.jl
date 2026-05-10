@@ -695,46 +695,59 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # their abstract supertype so other participants can type their
     # fields against the abstract.
     #
-    # The constructor that defaults `_unknown_fields` to an empty buffer
-    # is emitted as an *inner* constructor with a default argument.
-    # An *outer* `function T(args)` defined right after `struct T` would
-    # split the type's binding partition on Julia 1.12 — methods that
-    # later reference `Type{<:T}` (decode, encode, …) end up tied to a
-    # binding that's stale by the time the package is loaded into a fresh
-    # session, and dispatch fails with a confusing MethodError. Keeping
-    # the convenience constructor inside the struct body avoids the split.
-    if is_cycle_participant
-        println(io, "struct ", jl_name, " <: ", _abstract_name(jl_name))
-    else
-        println(io, "struct ", jl_name, " <: PB.AbstractProtoBufMessage")
-    end
+    # `Base.@kwdef` synthesizes an outer kwarg constructor next to the
+    # struct, giving users `T(; field1=val, ...)` ergonomics. Plain
+    # positional construction (used by the generated decode body) still
+    # works through Julia's compiler-generated all-fields constructor.
+    # `var\"#unknown_fields\"` instead of plain `_unknown_fields` for the
+    # buffer field so it can't collide with a user proto field of that
+    # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
+    # forever out of reach for protoc.
+    println(io, "Base.@kwdef ", is_cycle_participant ?
+            "struct $(jl_name) <: $(_abstract_name(jl_name))" :
+            "struct $(jl_name) <: PB.AbstractProtoBufMessage")
     param_names = String[]
     for f in plain_fields
-        println(io, "    ", f.jl_fieldname, "::", f.jl_type)
+        # proto2 required submessages have `default_value = Ref{T}()`,
+        # which doesn't fit the concrete field type T. Emit those without
+        # a default — kwarg construction then requires the user to pass
+        # them explicitly, mirroring the protocol's "required" semantics.
+        if f.is_required && f.is_message
+            println(io, "    ", f.jl_fieldname, "::", f.jl_type)
+        else
+            println(io, "    ", f.jl_fieldname, "::", f.jl_type, " = ", f.default_value)
+        end
         push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
-        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
+        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
         push!(param_names, o.jl_fieldname)
     end
-    # `var\"#unknown_fields\"` instead of plain `_unknown_fields` so the
-    # buffer field can never collide with a user proto field called
-    # `_unknown_fields` — proto field names are restricted to
-    # `[a-zA-Z_][a-zA-Z0-9_]*`, so `#` is forever out of reach for protoc.
-    println(io, "    var\"#unknown_fields\"::Vector{UInt8}")
+    println(io, "    var\"#unknown_fields\"::Vector{UInt8} = UInt8[]")
     push!(param_names, "var\"#unknown_fields\"")
-    inner_params = join(param_names[1:end-1], ", ")
-    sep = isempty(inner_params) ? "" : ", "
-    # Constructor uses a plain local-variable name `_unknown_fields` for
-    # the default-arg parameter — locals don't need escaping, only the
-    # struct field does.
-    println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
-    pos_args = String[]
-    for n in param_names
-        push!(pos_args, n == "var\"#unknown_fields\"" ? "_unknown_fields" : n)
+    # Inner constructor with `_unknown_fields=UInt8[]` default. Coexists
+    # with @kwdef's outer kwarg constructor and replaces Julia's auto-
+    # generated all-positional constructor; users get
+    #     T(field1, ..., fieldN-1)              (buffer defaults to UInt8[])
+    #     T(field1, ..., fieldN-1, buffer)      (explicit buffer)
+    #     T(; field1=val, ...)                  (kwarg form, all optional)
+    # The constructor is *inner* — emitting it as outer would split the
+    # binding partition on Julia 1.12 and break `Type{<:T}` dispatch.
+    #
+    # Skip the inner ctor for messages whose only field is the buffer
+    # (e.g. WKT `Empty`): there it collides with @kwdef's auto-positional
+    # `T(::Vector{UInt8})` since both take exactly the buffer arg.
+    if length(param_names) > 1
+        inner_params = join(param_names[1:end-1], ", ")
+        sep = isempty(inner_params) ? "" : ", "
+        println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
+        pos_args = String[]
+        for n in param_names
+            push!(pos_args, n == "var\"#unknown_fields\"" ? "_unknown_fields" : n)
+        end
+        println(io, "        return new(", join(pos_args, ", "), ")")
+        println(io, "    end")
     end
-    println(io, "        return new(", join(pos_args, ", "), ")")
-    println(io, "    end")
     println(io, "end")
 
     # Metadata.

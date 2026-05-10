@@ -9,10 +9,10 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export Timestamp
 
-struct Timestamp <: PB.AbstractProtoBufMessage
-    seconds::Int64
-    nanos::Int32
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Timestamp <: PB.AbstractProtoBufMessage
+    seconds::Int64 = zero(Int64)
+    nanos::Int32 = zero(Int32)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Timestamp(seconds, nanos, _unknown_fields=UInt8[])
         return new(seconds, nanos, _unknown_fields)
     end

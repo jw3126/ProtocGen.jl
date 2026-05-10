@@ -18,9 +18,9 @@ abstract type AbstractListValue <: PB.AbstractProtoBufMessage end
 abstract type AbstractStruct <: PB.AbstractProtoBufMessage end
 abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
-struct Struct <: AbstractStruct
-    fields::OrderedDict{String,AbstractValue}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Struct <: AbstractStruct
+    fields::OrderedDict{String,AbstractValue} = OrderedDict{String,AbstractValue}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Struct(fields, _unknown_fields=UInt8[])
         return new(fields, _unknown_fields)
     end
@@ -65,9 +65,9 @@ function PB._encoded_size(_x::Struct)
     return encoded_size
 end
 
-struct Value <: AbstractValue
-    kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Value <: AbstractValue
+    kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Value(kind, _unknown_fields=UInt8[])
         return new(kind, _unknown_fields)
     end
@@ -187,9 +187,9 @@ function PB._encoded_size(_x::Value)
     return encoded_size
 end
 
-struct ListValue <: AbstractListValue
-    values::Vector{AbstractValue}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct ListValue <: AbstractListValue
+    values::Vector{AbstractValue} = Vector{AbstractValue}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function ListValue(values, _unknown_fields=UInt8[])
         return new(values, _unknown_fields)
     end

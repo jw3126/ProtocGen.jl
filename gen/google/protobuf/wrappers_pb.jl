@@ -9,9 +9,9 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value, BoolValue, StringValue, BytesValue
 
-struct DoubleValue <: PB.AbstractProtoBufMessage
-    value::Float64
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct DoubleValue <: PB.AbstractProtoBufMessage
+    value::Float64 = zero(Float64)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function DoubleValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -56,9 +56,9 @@ function PB._encoded_size(_x::DoubleValue)
     return encoded_size
 end
 
-struct FloatValue <: PB.AbstractProtoBufMessage
-    value::Float32
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FloatValue <: PB.AbstractProtoBufMessage
+    value::Float32 = zero(Float32)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FloatValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -103,9 +103,9 @@ function PB._encoded_size(_x::FloatValue)
     return encoded_size
 end
 
-struct Int64Value <: PB.AbstractProtoBufMessage
-    value::Int64
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Int64Value <: PB.AbstractProtoBufMessage
+    value::Int64 = zero(Int64)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Int64Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -150,9 +150,9 @@ function PB._encoded_size(_x::Int64Value)
     return encoded_size
 end
 
-struct UInt64Value <: PB.AbstractProtoBufMessage
-    value::UInt64
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct UInt64Value <: PB.AbstractProtoBufMessage
+    value::UInt64 = zero(UInt64)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function UInt64Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -197,9 +197,9 @@ function PB._encoded_size(_x::UInt64Value)
     return encoded_size
 end
 
-struct Int32Value <: PB.AbstractProtoBufMessage
-    value::Int32
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Int32Value <: PB.AbstractProtoBufMessage
+    value::Int32 = zero(Int32)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Int32Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -244,9 +244,9 @@ function PB._encoded_size(_x::Int32Value)
     return encoded_size
 end
 
-struct UInt32Value <: PB.AbstractProtoBufMessage
-    value::UInt32
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct UInt32Value <: PB.AbstractProtoBufMessage
+    value::UInt32 = zero(UInt32)
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function UInt32Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -291,9 +291,9 @@ function PB._encoded_size(_x::UInt32Value)
     return encoded_size
 end
 
-struct BoolValue <: PB.AbstractProtoBufMessage
-    value::Bool
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct BoolValue <: PB.AbstractProtoBufMessage
+    value::Bool = false
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function BoolValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -338,9 +338,9 @@ function PB._encoded_size(_x::BoolValue)
     return encoded_size
 end
 
-struct StringValue <: PB.AbstractProtoBufMessage
-    value::String
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct StringValue <: PB.AbstractProtoBufMessage
+    value::String = ""
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function StringValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
@@ -385,9 +385,9 @@ function PB._encoded_size(_x::StringValue)
     return encoded_size
 end
 
-struct BytesValue <: PB.AbstractProtoBufMessage
-    value::Vector{UInt8}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct BytesValue <: PB.AbstractProtoBufMessage
+    value::Vector{UInt8} = UInt8[]
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function BytesValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end

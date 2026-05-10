@@ -9,9 +9,9 @@ using ProtoBufDescriptors.EnumX: @enumx
 
 export FieldMask
 
-struct FieldMask <: PB.AbstractProtoBufMessage
-    paths::Vector{String}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct FieldMask <: PB.AbstractProtoBufMessage
+    paths::Vector{String} = Vector{String}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function FieldMask(paths, _unknown_fields=UInt8[])
         return new(paths, _unknown_fields)
     end

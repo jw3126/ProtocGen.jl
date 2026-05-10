@@ -11,10 +11,10 @@ export Syntax, Type, Field, Enum, EnumValue, Option
 
 @enumx Syntax SYNTAX_PROTO2=0 SYNTAX_PROTO3=1
 
-struct Option <: PB.AbstractProtoBufMessage
-    name::String
-    value::Union{Nothing,Any}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Option <: PB.AbstractProtoBufMessage
+    name::String = ""
+    value::Union{Nothing,Any} = nothing
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Option(name, value, _unknown_fields=UInt8[])
         return new(name, value, _unknown_fields)
     end
@@ -68,18 +68,18 @@ end
 
 @enumx var"Field.Cardinality" CARDINALITY_UNKNOWN=0 CARDINALITY_OPTIONAL=1 CARDINALITY_REQUIRED=2 CARDINALITY_REPEATED=3
 
-struct Field <: PB.AbstractProtoBufMessage
-    kind::var"Field.Kind".T
-    cardinality::var"Field.Cardinality".T
-    number::Int32
-    name::String
-    type_url::String
-    oneof_index::Int32
-    packed::Bool
-    options::Vector{Option}
-    json_name::String
-    default_value::String
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Field <: PB.AbstractProtoBufMessage
+    kind::var"Field.Kind".T = var"Field.Kind".TYPE_UNKNOWN
+    cardinality::var"Field.Cardinality".T = var"Field.Cardinality".CARDINALITY_UNKNOWN
+    number::Int32 = zero(Int32)
+    name::String = ""
+    type_url::String = ""
+    oneof_index::Int32 = zero(Int32)
+    packed::Bool = false
+    options::Vector{Option} = Vector{Option}()
+    json_name::String = ""
+    default_value::String = ""
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[])
         return new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
     end
@@ -169,14 +169,14 @@ function PB._encoded_size(_x::Field)
     return encoded_size
 end
 
-struct Type <: PB.AbstractProtoBufMessage
-    name::String
-    fields::Vector{Field}
-    oneofs::Vector{String}
-    options::Vector{Option}
-    source_context::Union{Nothing,SourceContext}
-    syntax::Syntax.T
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Type <: PB.AbstractProtoBufMessage
+    name::String = ""
+    fields::Vector{Field} = Vector{Field}()
+    oneofs::Vector{String} = Vector{String}()
+    options::Vector{Option} = Vector{Option}()
+    source_context::Union{Nothing,SourceContext} = nothing
+    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
     end
@@ -246,11 +246,11 @@ function PB._encoded_size(_x::Type)
     return encoded_size
 end
 
-struct EnumValue <: PB.AbstractProtoBufMessage
-    name::String
-    number::Int32
-    options::Vector{Option}
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct EnumValue <: PB.AbstractProtoBufMessage
+    name::String = ""
+    number::Int32 = zero(Int32)
+    options::Vector{Option} = Vector{Option}()
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function EnumValue(name, number, options, _unknown_fields=UInt8[])
         return new(name, number, options, _unknown_fields)
     end
@@ -305,13 +305,13 @@ function PB._encoded_size(_x::EnumValue)
     return encoded_size
 end
 
-struct Enum <: PB.AbstractProtoBufMessage
-    name::String
-    enumvalue::Vector{EnumValue}
-    options::Vector{Option}
-    source_context::Union{Nothing,SourceContext}
-    syntax::Syntax.T
-    var"#unknown_fields"::Vector{UInt8}
+Base.@kwdef struct Enum <: PB.AbstractProtoBufMessage
+    name::String = ""
+    enumvalue::Vector{EnumValue} = Vector{EnumValue}()
+    options::Vector{Option} = Vector{Option}()
+    source_context::Union{Nothing,SourceContext} = nothing
+    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
+    var"#unknown_fields"::Vector{UInt8} = UInt8[]
     function Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, enumvalue, options, source_context, syntax, _unknown_fields)
     end

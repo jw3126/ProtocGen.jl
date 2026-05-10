@@ -31,7 +31,7 @@ function generate(request::_GC.CodeGeneratorRequest)
         proto = by_name[path]
         out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
         content = Codegen.codegen(proto, universe)
-        push!(files, _GC.var"CodeGeneratorResponse.File"(out_name, nothing, content, nothing))
+        push!(files, _GC.var"CodeGeneratorResponse.File"(out_name, nothing, content, nothing, UInt8[]))
     end
     # Driver file: only useful when more than one .proto is being generated
     # (single-file outputs don't benefit from a wrapping skeleton). The user
@@ -39,7 +39,7 @@ function generate(request::_GC.CodeGeneratorRequest)
     if length(request.file_to_generate) > 1
         driver = Codegen.codegen_driver(collect(request.file_to_generate), by_name)
         push!(files, _GC.var"CodeGeneratorResponse.File"(
-            "_pb_includes.jl", nothing, driver, nothing))
+            "_pb_includes.jl", nothing, driver, nothing, UInt8[]))
     end
     return _GC.CodeGeneratorResponse(
         nothing,
@@ -47,6 +47,7 @@ function generate(request::_GC.CodeGeneratorRequest)
         nothing,
         nothing,
         files,
+        UInt8[],
     )
 end
 
@@ -86,6 +87,7 @@ function run_plugin(input::IO=stdin, output::IO=stdout)
             nothing,
             nothing,
             _GC.var"CodeGeneratorResponse.File"[],
+            UInt8[],
         )
     end
     write(output, encode(response))
