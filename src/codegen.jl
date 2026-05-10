@@ -6,6 +6,25 @@ using ..ProtocGen.google.protobuf: FieldDescriptorProto, DescriptorProto,
     var"FieldDescriptorProto.Type"
 
 # ----------------------------------------------------------------------------
+# `[batteries]` / `[enumbatteries]` config table → `@batteries` macro call
+# kwargs. Each entry becomes `key=<julia repr of value>`. `repr` handles
+# the bool / number / string variants TOML can produce; nested tables
+# would round-trip as `Dict(...)` literals (currently no @batteries
+# option needs that, but the helper is type-agnostic).
+# ----------------------------------------------------------------------------
+function _config_kw_table(config::AbstractDict, table::AbstractString)
+    haskey(config, table) || return ""
+    inner = config[table]
+    inner isa AbstractDict || return ""
+    isempty(inner) && return ""
+    parts = String[]
+    for (k, v) in pairs(inner)
+        push!(parts, "$(k)=$(repr(v))")
+    end
+    return join(parts, " ")
+end
+
+# ----------------------------------------------------------------------------
 # Type translation. Each scalar proto type maps to (julia_type, wire_annotation).
 # wire_annotation is the third positional argument we pass to decode/encode for
 # non-default wire encodings ("", "Val{:fixed}", "Val{:zigzag}").
@@ -657,7 +676,9 @@ end
 # ----------------------------------------------------------------------------
 
 function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames,
-                       parent_proto::String = isempty(names.package) ? "" : ".$(names.package)")
+                       parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
+                       batteries_kw::String = "",
+                       enumbatteries_kw::String = "")
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -669,11 +690,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # those are surfaced as `OrderedDict{K,V}` on the parent field, never as a
     # standalone Julia struct.
     for e in msg.enum_type
-        _emit_enum(io, e, jl_name_plain)
+        _emit_enum(io, e, jl_name_plain; enumbatteries_kw = enumbatteries_kw)
     end
     for nested in msg.nested_type
         _is_map_entry(nested) && continue
-        _emit_message(io, nested, jl_name_plain, names, proto_fqn)
+        _emit_message(io, nested, jl_name_plain, names, proto_fqn;
+                      batteries_kw = batteries_kw,
+                      enumbatteries_kw = enumbatteries_kw)
     end
 
     synthetic = _synthetic_oneof_indices(msg)
@@ -924,6 +947,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "    return encoded_size")
     println(io, "end")
 
+    # Optional StructHelpers `@batteries` decoration. Forwarded from the
+    # plugin's `--julia_opt=config=...` TOML; empty string means the
+    # user didn't opt in for messages, so we skip the line entirely.
+    if !isempty(batteries_kw)
+        println(io, "@batteries ", jl_name, " ", batteries_kw)
+    end
+
     println(io)
 end
 
@@ -1098,7 +1128,8 @@ function _emit_encoded_size_field(io::IO, f::FieldModel)
     end
 end
 
-function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String)
+function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
+                    enumbatteries_kw::String = "")
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -1107,6 +1138,12 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String)
     if !allow_alias
         members = join((string(something(v.name, ""), "=", Int(something(v.number, Int32(0)))) for v in e.value), " ")
         println(io, "@enumx ", jl_name, " ", members)
+        # `@enumx` wraps the underlying `Base.@enum` in a baremodule
+        # named after the enum; the enum *type* is `<EnumName>.T`. That
+        # is what `@enumbatteries` operates on.
+        if !isempty(enumbatteries_kw)
+            println(io, "@enumbatteries ", jl_name, ".T ", enumbatteries_kw)
+        end
         println(io)
         return
     end
@@ -1139,6 +1176,9 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String)
     # `Base.eval`.
     for (alias, canonical) in aliases
         println(io, "Core.eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
+    end
+    if !isempty(enumbatteries_kw)
+        println(io, "@enumbatteries ", jl_name, ".T ", enumbatteries_kw)
     end
     println(io)
 end
@@ -1362,11 +1402,23 @@ end
 
 codegen(file::FileDescriptorProto) = codegen(file, gather_universe([file]))
 
-function codegen(file::FileDescriptorProto, universe::Universe)
+function codegen(file::FileDescriptorProto, universe::Universe;
+                 config::AbstractDict = Dict{String,Any}())
     names = _make_local_names(universe, file)
     io = IOBuffer()
     proto_name = something(file.name, "<unknown>")
     syntax = something(file.syntax, "proto2")
+
+    # Per-type customization toggles. The user-supplied `config` dict
+    # may carry a `[batteries]` and/or `[enumbatteries]` table whose
+    # entries are forwarded as keyword arguments to `@batteries` /
+    # `@enumbatteries` invocations on every generated message / enum.
+    # Any other top-level config key is currently ignored.
+    batteries_kw     = _config_kw_table(config, "batteries")
+    enumbatteries_kw = _config_kw_table(config, "enumbatteries")
+    has_batteries     = !isempty(batteries_kw)
+    has_enumbatteries = !isempty(enumbatteries_kw)
+
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
     println(io, "#! format: off")
@@ -1378,6 +1430,12 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     # work without the caller importing ProtocGen themselves.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io, "using ProtocGen.EnumX: @enumx")
+    if has_batteries || has_enumbatteries
+        # @batteries / @enumbatteries reach the user's namespace via the
+        # ProtocGen → StructHelpers re-export, so users only need to
+        # depend on ProtocGen.
+        println(io, "using ProtocGen.StructHelpers: @batteries, @enumbatteries")
+    end
 
     # Cross-package imports. Walk the file's referenced FQNs to find
     # external packages and emit one import line per package so
@@ -1423,7 +1481,7 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     end
 
     for e in file.enum_type
-        _emit_enum(io, e, "")
+        _emit_enum(io, e, ""; enumbatteries_kw = enumbatteries_kw)
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
     # Build a cycle-aware `LocalNames` view. _resolve_typename consults
@@ -1456,7 +1514,9 @@ function codegen(file::FileDescriptorProto, universe::Universe)
         println(io)
     end
     for msg in sorted_msgs
-        _emit_message(io, msg, "", cycle_names)
+        _emit_message(io, msg, "", cycle_names;
+                      batteries_kw = batteries_kw,
+                      enumbatteries_kw = enumbatteries_kw)
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.

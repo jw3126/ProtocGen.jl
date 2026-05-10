@@ -135,4 +135,41 @@ end
     @test encode_latest(bag) == sample_pb
 end
 
+@testset "codegen: --julia_opt=config=…  threads @batteries" begin
+    fdset = load_fdset("sample.pb")
+    universe = ProtocGen.Codegen.gather_universe(fdset.file)
+    file = first(fdset.file)
+
+    # Default — no config — must not emit any @batteries / @enumbatteries
+    # lines or the StructHelpers import. Guards the user-facing default
+    # against accidental drift.
+    baseline = ProtocGen.Codegen.codegen(file, universe)
+    @test !occursin("@batteries", baseline)
+    @test !occursin("@enumbatteries", baseline)
+    @test !occursin("StructHelpers", baseline)
+
+    # `[batteries]` populated → one `@batteries` line per generated
+    # message, plus the StructHelpers re-export import. sample.proto
+    # carries Inner and Outer, so we expect both.
+    cfg = Dict("batteries" => Dict("kwshow" => true, "hash" => false))
+    with_msgs = ProtocGen.Codegen.codegen(file, universe; config = cfg)
+    @test occursin("using ProtocGen.StructHelpers: @batteries, @enumbatteries", with_msgs)
+    @test occursin("@batteries Inner", with_msgs)
+    @test occursin("@batteries Outer", with_msgs)
+    # Both kwargs land on the line, in either order (Dict iteration).
+    @test occursin("hash=false", with_msgs)
+    @test occursin("kwshow=true", with_msgs)
+
+    # `[enumbatteries]` populated → `@enumbatteries <Name>.T …` per enum.
+    # corpus.proto carries the `Color` enum.
+    corpus_fdset = load_fdset("corpus.pb")
+    corpus_universe = ProtocGen.Codegen.gather_universe(corpus_fdset.file)
+    corpus_file = first(corpus_fdset.file)
+    enum_cfg = Dict("enumbatteries" => Dict("kwshow" => true))
+    with_enums = ProtocGen.Codegen.codegen(corpus_file, corpus_universe; config = enum_cfg)
+    @test occursin("@enumbatteries Color.T kwshow=true", with_enums)
+    # No `[batteries]` table → no `@batteries` for messages.
+    @test !occursin("@batteries Wide", with_enums)
+end
+
 end  # module TestCodegen

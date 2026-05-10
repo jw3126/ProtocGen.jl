@@ -3,6 +3,7 @@ module ProtocGen
 import EnumX
 import BufferedStreams
 import OrderedCollections: OrderedDict
+import StructHelpers
 using TOML
 
 const PACKAGE_VERSION = let
