@@ -1,5 +1,4 @@
 using Aqua
-using JET
 using ProtocGenJulia
 using Test
 
