@@ -49,15 +49,25 @@ jobs:
         run: |
           which protoc-gen-julia
           ls -l "$HOME/.julia/bin"
-      - name: Run example generator
-        run: bash examples/generate.sh
+      - name: Run example using installed protoc-gen-julia
+        # protoc auto-discovers `protoc-gen-julia` from PATH — that's
+        # the binary we just installed via Pkg.Apps.add, with its own
+        # self-contained dep environment. We do not invoke the dev
+        # shim under bin/ (which would point at the un-instantiated
+        # local checkout), so this step is a faithful test of the
+        # installed-app end-user path.
+        working-directory: examples
+        run: |
+          mkdir -p out
+          protoc --julia_out=out addressbook.proto
+          test -f out/addressbook_pb.jl
       - name: Round-trip the generated bindings
-        # Re-use the package's own project so `import ProtocGenJulia`
-        # resolves to the source under test (the same one we just
-        # installed as an app). The example file is content-identical
-        # to whatever the binary just emitted.
+        # The generated file does `import ProtocGenJulia as PB`, so the
+        # smoke test needs ProtocGenJulia loadable. Use the package's
+        # own project + Pkg.instantiate to bring deps in.
         run: |
           julia --project=. --color=no -e '
+            using Pkg; Pkg.instantiate()
             include("examples/out/addressbook_pb.jl")
             person = Person(
                 name = "Alice",
