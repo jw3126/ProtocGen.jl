@@ -13,11 +13,19 @@ struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
     name_part::String
     is_extension::Bool
     _unknown_fields::Vector{UInt8}
-    var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[]) = new(name_part, is_extension, _unknown_fields)
+    function var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[])
+        return new(name_part, is_extension, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "", is_extension = false, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = 1, is_extension = 2)
-PB.json_field_names(::Core.Type{var"UninterpretedOption.NamePart"}) = (;name_part = "namePart", is_extension = "isExtension")
+function PB.default_values(::Core.Type{var"UninterpretedOption.NamePart"})
+    return (;name_part = "", is_extension = false, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"UninterpretedOption.NamePart"})
+    return (;name_part = 1, is_extension = 2)
+end
+function PB.json_field_names(::Core.Type{var"UninterpretedOption.NamePart"})
+    return (;name_part = "namePart", is_extension = "isExtension")
+end
 PB.register_message_type("google.protobuf.UninterpretedOption.NamePart", var"UninterpretedOption.NamePart")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"UninterpretedOption.NamePart"}, _endpos::Int=0, _group::Bool=false)
@@ -69,11 +77,19 @@ struct UninterpretedOption <: PB.AbstractProtoBufMessage
     string_value::Union{Nothing,Vector{UInt8}}
     aggregate_value::Union{Nothing,String}
     _unknown_fields::Vector{UInt8}
-    UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[]) = new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
+    function UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[])
+        return new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{UninterpretedOption}) = (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{UninterpretedOption}) = (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
-PB.json_field_names(::Core.Type{UninterpretedOption}) = (;name = "name", identifier_value = "identifierValue", positive_int_value = "positiveIntValue", negative_int_value = "negativeIntValue", double_value = "doubleValue", string_value = "stringValue", aggregate_value = "aggregateValue")
+function PB.default_values(::Core.Type{UninterpretedOption})
+    return (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{UninterpretedOption})
+    return (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
+end
+function PB.json_field_names(::Core.Type{UninterpretedOption})
+    return (;name = "name", identifier_value = "identifierValue", positive_int_value = "positiveIntValue", negative_int_value = "negativeIntValue", double_value = "doubleValue", string_value = "stringValue", aggregate_value = "aggregateValue")
+end
 PB.register_message_type("google.protobuf.UninterpretedOption", UninterpretedOption)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UninterpretedOption}, _endpos::Int=0, _group::Bool=false)
@@ -148,13 +164,23 @@ struct FieldOptions <: PB.AbstractProtoBufMessage
     weak::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[]) = new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
+    function FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FieldOptions}) = (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FieldOptions}) = (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{FieldOptions}) = (;ctype = "ctype", packed = "packed", jstype = "jstype", lazy = "lazy", deprecated = "deprecated", weak = "weak", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{FieldOptions})
+    return (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FieldOptions})
+    return (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{FieldOptions})
+    return (;ctype = "ctype", packed = "packed", jstype = "jstype", lazy = "lazy", deprecated = "deprecated", weak = "weak", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.FieldOptions", FieldOptions)
-PB.reserved_fields(::Core.Type{FieldOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[4])
+function PB.reserved_fields(::Core.Type{FieldOptions})
+    return (names = String[], numbers = Union{Int,UnitRange{Int}}[4])
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldOptions}, _endpos::Int=0, _group::Bool=false)
     ctype = nothing
@@ -232,11 +258,19 @@ struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,FieldOptions}
     proto3_optional::Union{Nothing,Bool}
     _unknown_fields::Vector{UInt8}
-    FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[]) = new(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
+    function FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
+        return new(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FieldDescriptorProto}) = (;name = nothing, number = nothing, label = nothing, var"#type" = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FieldDescriptorProto}) = (;name = 1, number = 3, label = 4, var"#type" = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
-PB.json_field_names(::Core.Type{FieldDescriptorProto}) = (;name = "name", number = "number", label = "label", var"#type" = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
+function PB.default_values(::Core.Type{FieldDescriptorProto})
+    return (;name = nothing, number = nothing, label = nothing, var"#type" = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FieldDescriptorProto})
+    return (;name = 1, number = 3, label = 4, var"#type" = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
+end
+function PB.json_field_names(::Core.Type{FieldDescriptorProto})
+    return (;name = "name", number = "number", label = "label", var"#type" = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
+end
 PB.register_message_type("google.protobuf.FieldDescriptorProto", FieldDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -325,11 +359,19 @@ struct MethodOptions <: PB.AbstractProtoBufMessage
     idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
+    function MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{MethodOptions}) = (;deprecated = nothing, idempotency_level = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{MethodOptions}) = (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{MethodOptions}) = (;deprecated = "deprecated", idempotency_level = "idempotencyLevel", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{MethodOptions})
+    return (;deprecated = nothing, idempotency_level = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{MethodOptions})
+    return (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{MethodOptions})
+    return (;deprecated = "deprecated", idempotency_level = "idempotencyLevel", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.MethodOptions", MethodOptions)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodOptions}, _endpos::Int=0, _group::Bool=false)
@@ -379,11 +421,19 @@ struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
     client_streaming::Union{Nothing,Bool}
     server_streaming::Union{Nothing,Bool}
     _unknown_fields::Vector{UInt8}
-    MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[]) = new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
+    function MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[])
+        return new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{MethodDescriptorProto}) = (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{MethodDescriptorProto}) = (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
-PB.json_field_names(::Core.Type{MethodDescriptorProto}) = (;name = "name", input_type = "inputType", output_type = "outputType", options = "options", client_streaming = "clientStreaming", server_streaming = "serverStreaming")
+function PB.default_values(::Core.Type{MethodDescriptorProto})
+    return (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{MethodDescriptorProto})
+    return (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
+end
+function PB.json_field_names(::Core.Type{MethodDescriptorProto})
+    return (;name = "name", input_type = "inputType", output_type = "outputType", options = "options", client_streaming = "clientStreaming", server_streaming = "serverStreaming")
+end
 PB.register_message_type("google.protobuf.MethodDescriptorProto", MethodDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MethodDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -444,11 +494,19 @@ struct ServiceOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, uninterpreted_option, _unknown_fields)
+    function ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(deprecated, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{ServiceOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{ServiceOptions}) = (;deprecated = 33, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{ServiceOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{ServiceOptions})
+    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{ServiceOptions})
+    return (;deprecated = 33, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{ServiceOptions})
+    return (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.ServiceOptions", ServiceOptions)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceOptions}, _endpos::Int=0, _group::Bool=false)
@@ -490,11 +548,19 @@ struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
     method::Vector{MethodDescriptorProto}
     options::Union{Nothing,ServiceOptions}
     _unknown_fields::Vector{UInt8}
-    ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[]) = new(name, method, options, _unknown_fields)
+    function ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[])
+        return new(name, method, options, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{ServiceDescriptorProto}) = (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{ServiceDescriptorProto}) = (;name = 1, method = 2, options = 3)
-PB.json_field_names(::Core.Type{ServiceDescriptorProto}) = (;name = "name", method = "method", options = "options")
+function PB.default_values(::Core.Type{ServiceDescriptorProto})
+    return (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{ServiceDescriptorProto})
+    return (;name = 1, method = 2, options = 3)
+end
+function PB.json_field_names(::Core.Type{ServiceDescriptorProto})
+    return (;name = "name", method = "method", options = "options")
+end
 PB.register_message_type("google.protobuf.ServiceDescriptorProto", ServiceDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ServiceDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -539,11 +605,19 @@ end
 struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[]) = new(uninterpreted_option, _unknown_fields)
+    function ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[])
+        return new(uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{ExtensionRangeOptions}) = (;uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{ExtensionRangeOptions})
+    return (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{ExtensionRangeOptions})
+    return (;uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{ExtensionRangeOptions})
+    return (;uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.ExtensionRangeOptions", ExtensionRangeOptions)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ExtensionRangeOptions}, _endpos::Int=0, _group::Bool=false)
@@ -578,11 +652,19 @@ end
 struct OneofOptions <: PB.AbstractProtoBufMessage
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    OneofOptions(uninterpreted_option, _unknown_fields=UInt8[]) = new(uninterpreted_option, _unknown_fields)
+    function OneofOptions(uninterpreted_option, _unknown_fields=UInt8[])
+        return new(uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{OneofOptions}) = (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{OneofOptions}) = (;uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{OneofOptions}) = (;uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{OneofOptions})
+    return (;uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{OneofOptions})
+    return (;uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{OneofOptions})
+    return (;uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.OneofOptions", OneofOptions)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofOptions}, _endpos::Int=0, _group::Bool=false)
@@ -618,11 +700,19 @@ struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     options::Union{Nothing,OneofOptions}
     _unknown_fields::Vector{UInt8}
-    OneofDescriptorProto(name, options, _unknown_fields=UInt8[]) = new(name, options, _unknown_fields)
+    function OneofDescriptorProto(name, options, _unknown_fields=UInt8[])
+        return new(name, options, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{OneofDescriptorProto}) = (;name = nothing, options = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{OneofDescriptorProto}) = (;name = 1, options = 2)
-PB.json_field_names(::Core.Type{OneofDescriptorProto}) = (;name = "name", options = "options")
+function PB.default_values(::Core.Type{OneofDescriptorProto})
+    return (;name = nothing, options = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{OneofDescriptorProto})
+    return (;name = 1, options = 2)
+end
+function PB.json_field_names(::Core.Type{OneofDescriptorProto})
+    return (;name = "name", options = "options")
+end
 PB.register_message_type("google.protobuf.OneofDescriptorProto", OneofDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:OneofDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -663,11 +753,19 @@ struct EnumValueOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(deprecated, uninterpreted_option, _unknown_fields)
+    function EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(deprecated, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{EnumValueOptions}) = (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{EnumValueOptions}) = (;deprecated = 1, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{EnumValueOptions}) = (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{EnumValueOptions})
+    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{EnumValueOptions})
+    return (;deprecated = 1, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{EnumValueOptions})
+    return (;deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.EnumValueOptions", EnumValueOptions)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueOptions}, _endpos::Int=0, _group::Bool=false)
@@ -709,11 +807,19 @@ struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
     number::Union{Nothing,Int32}
     options::Union{Nothing,EnumValueOptions}
     _unknown_fields::Vector{UInt8}
-    EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[]) = new(name, number, options, _unknown_fields)
+    function EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[])
+        return new(name, number, options, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{EnumValueDescriptorProto}) = (;name = nothing, number = nothing, options = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{EnumValueDescriptorProto}) = (;name = 1, number = 2, options = 3)
-PB.json_field_names(::Core.Type{EnumValueDescriptorProto}) = (;name = "name", number = "number", options = "options")
+function PB.default_values(::Core.Type{EnumValueDescriptorProto})
+    return (;name = nothing, number = nothing, options = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{EnumValueDescriptorProto})
+    return (;name = 1, number = 2, options = 3)
+end
+function PB.json_field_names(::Core.Type{EnumValueDescriptorProto})
+    return (;name = "name", number = "number", options = "options")
+end
 PB.register_message_type("google.protobuf.EnumValueDescriptorProto", EnumValueDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValueDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -760,13 +866,23 @@ struct EnumOptions <: PB.AbstractProtoBufMessage
     deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[]) = new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
+    function EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{EnumOptions}) = (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{EnumOptions}) = (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{EnumOptions}) = (;allow_alias = "allowAlias", deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{EnumOptions})
+    return (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{EnumOptions})
+    return (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{EnumOptions})
+    return (;allow_alias = "allowAlias", deprecated = "deprecated", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.EnumOptions", EnumOptions)
-PB.reserved_fields(::Core.Type{EnumOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[5])
+function PB.reserved_fields(::Core.Type{EnumOptions})
+    return (names = String[], numbers = Union{Int,UnitRange{Int}}[5])
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumOptions}, _endpos::Int=0, _group::Bool=false)
     allow_alias = nothing
@@ -811,11 +927,19 @@ struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
     _unknown_fields::Vector{UInt8}
-    var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[]) = new(start, var"#end", _unknown_fields)
+    function var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[])
+        return new(start, var"#end", _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = 1, var"#end" = 2)
-PB.json_field_names(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"}) = (;start = "start", var"#end" = "end")
+function PB.default_values(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"})
+    return (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"})
+    return (;start = 1, var"#end" = 2)
+end
+function PB.json_field_names(::Core.Type{var"EnumDescriptorProto.EnumReservedRange"})
+    return (;start = "start", var"#end" = "end")
+end
 PB.register_message_type("google.protobuf.EnumDescriptorProto.EnumReservedRange", var"EnumDescriptorProto.EnumReservedRange")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"EnumDescriptorProto.EnumReservedRange"}, _endpos::Int=0, _group::Bool=false)
@@ -859,11 +983,19 @@ struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
     reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
     reserved_name::Vector{String}
     _unknown_fields::Vector{UInt8}
-    EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[]) = new(name, value, options, reserved_range, reserved_name, _unknown_fields)
+    function EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
+        return new(name, value, options, reserved_range, reserved_name, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{EnumDescriptorProto}) = (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{EnumDescriptorProto}) = (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
-PB.json_field_names(::Core.Type{EnumDescriptorProto}) = (;name = "name", value = "value", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
+function PB.default_values(::Core.Type{EnumDescriptorProto})
+    return (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{EnumDescriptorProto})
+    return (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
+end
+function PB.json_field_names(::Core.Type{EnumDescriptorProto})
+    return (;name = "name", value = "value", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
+end
 PB.register_message_type("google.protobuf.EnumDescriptorProto", EnumDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -922,13 +1054,23 @@ struct MessageOptions <: PB.AbstractProtoBufMessage
     map_entry::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[]) = new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
+    function MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{MessageOptions}) = (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{MessageOptions}) = (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{MessageOptions}) = (;message_set_wire_format = "messageSetWireFormat", no_standard_descriptor_accessor = "noStandardDescriptorAccessor", deprecated = "deprecated", map_entry = "mapEntry", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{MessageOptions})
+    return (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{MessageOptions})
+    return (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{MessageOptions})
+    return (;message_set_wire_format = "messageSetWireFormat", no_standard_descriptor_accessor = "noStandardDescriptorAccessor", deprecated = "deprecated", map_entry = "mapEntry", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.MessageOptions", MessageOptions)
-PB.reserved_fields(::Core.Type{MessageOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[8, 9])
+function PB.reserved_fields(::Core.Type{MessageOptions})
+    return (names = String[], numbers = Union{Int,UnitRange{Int}}[8, 9])
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:MessageOptions}, _endpos::Int=0, _group::Bool=false)
     message_set_wire_format = nothing
@@ -984,11 +1126,19 @@ struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
     var"#end"::Union{Nothing,Int32}
     options::Union{Nothing,ExtensionRangeOptions}
     _unknown_fields::Vector{UInt8}
-    var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[]) = new(start, var"#end", options, _unknown_fields)
+    function var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[])
+        return new(start, var"#end", options, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = nothing, var"#end" = nothing, options = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = 1, var"#end" = 2, options = 3)
-PB.json_field_names(::Core.Type{var"DescriptorProto.ExtensionRange"}) = (;start = "start", var"#end" = "end", options = "options")
+function PB.default_values(::Core.Type{var"DescriptorProto.ExtensionRange"})
+    return (;start = nothing, var"#end" = nothing, options = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"DescriptorProto.ExtensionRange"})
+    return (;start = 1, var"#end" = 2, options = 3)
+end
+function PB.json_field_names(::Core.Type{var"DescriptorProto.ExtensionRange"})
+    return (;start = "start", var"#end" = "end", options = "options")
+end
 PB.register_message_type("google.protobuf.DescriptorProto.ExtensionRange", var"DescriptorProto.ExtensionRange")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProto.ExtensionRange"}, _endpos::Int=0, _group::Bool=false)
@@ -1034,11 +1184,19 @@ struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
     start::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
     _unknown_fields::Vector{UInt8}
-    var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[]) = new(start, var"#end", _unknown_fields)
+    function var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[])
+        return new(start, var"#end", _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = 1, var"#end" = 2)
-PB.json_field_names(::Core.Type{var"DescriptorProto.ReservedRange"}) = (;start = "start", var"#end" = "end")
+function PB.default_values(::Core.Type{var"DescriptorProto.ReservedRange"})
+    return (;start = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"DescriptorProto.ReservedRange"})
+    return (;start = 1, var"#end" = 2)
+end
+function PB.json_field_names(::Core.Type{var"DescriptorProto.ReservedRange"})
+    return (;start = "start", var"#end" = "end")
+end
 PB.register_message_type("google.protobuf.DescriptorProto.ReservedRange", var"DescriptorProto.ReservedRange")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"DescriptorProto.ReservedRange"}, _endpos::Int=0, _group::Bool=false)
@@ -1087,11 +1245,19 @@ struct DescriptorProto <: PB.AbstractProtoBufMessage
     reserved_range::Vector{var"DescriptorProto.ReservedRange"}
     reserved_name::Vector{String}
     _unknown_fields::Vector{UInt8}
-    DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[]) = new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
+    function DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
+        return new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{DescriptorProto}) = (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{DescriptorProto}) = (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
-PB.json_field_names(::Core.Type{DescriptorProto}) = (;name = "name", field = "field", extension = "extension", nested_type = "nestedType", enum_type = "enumType", extension_range = "extensionRange", oneof_decl = "oneofDecl", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
+function PB.default_values(::Core.Type{DescriptorProto})
+    return (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{DescriptorProto})
+    return (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
+end
+function PB.json_field_names(::Core.Type{DescriptorProto})
+    return (;name = "name", field = "field", extension = "extension", nested_type = "nestedType", enum_type = "enumType", extension_range = "extensionRange", oneof_decl = "oneofDecl", options = "options", reserved_range = "reservedRange", reserved_name = "reservedName")
+end
 PB.register_message_type("google.protobuf.DescriptorProto", DescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -1175,11 +1341,19 @@ struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
     trailing_comments::Union{Nothing,String}
     leading_detached_comments::Vector{String}
     _unknown_fields::Vector{UInt8}
-    var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[]) = new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
+    function var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[])
+        return new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
-PB.json_field_names(::Core.Type{var"SourceCodeInfo.Location"}) = (;path = "path", span = "span", leading_comments = "leadingComments", trailing_comments = "trailingComments", leading_detached_comments = "leadingDetachedComments")
+function PB.default_values(::Core.Type{var"SourceCodeInfo.Location"})
+    return (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"SourceCodeInfo.Location"})
+    return (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
+end
+function PB.json_field_names(::Core.Type{var"SourceCodeInfo.Location"})
+    return (;path = "path", span = "span", leading_comments = "leadingComments", trailing_comments = "trailingComments", leading_detached_comments = "leadingDetachedComments")
+end
 PB.register_message_type("google.protobuf.SourceCodeInfo.Location", var"SourceCodeInfo.Location")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"SourceCodeInfo.Location"}, _endpos::Int=0, _group::Bool=false)
@@ -1234,11 +1408,19 @@ end
 struct SourceCodeInfo <: PB.AbstractProtoBufMessage
     location::Vector{var"SourceCodeInfo.Location"}
     _unknown_fields::Vector{UInt8}
-    SourceCodeInfo(location, _unknown_fields=UInt8[]) = new(location, _unknown_fields)
+    function SourceCodeInfo(location, _unknown_fields=UInt8[])
+        return new(location, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{SourceCodeInfo}) = (;location = Vector{var"SourceCodeInfo.Location"}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{SourceCodeInfo}) = (;location = 1)
-PB.json_field_names(::Core.Type{SourceCodeInfo}) = (;location = "location")
+function PB.default_values(::Core.Type{SourceCodeInfo})
+    return (;location = Vector{var"SourceCodeInfo.Location"}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{SourceCodeInfo})
+    return (;location = 1)
+end
+function PB.json_field_names(::Core.Type{SourceCodeInfo})
+    return (;location = "location")
+end
 PB.register_message_type("google.protobuf.SourceCodeInfo", SourceCodeInfo)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceCodeInfo}, _endpos::Int=0, _group::Bool=false)
@@ -1295,13 +1477,23 @@ struct FileOptions <: PB.AbstractProtoBufMessage
     ruby_package::Union{Nothing,String}
     uninterpreted_option::Vector{UninterpretedOption}
     _unknown_fields::Vector{UInt8}
-    FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[]) = new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
+    function FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[])
+        return new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FileOptions}) = (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = nothing, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FileOptions}) = (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
-PB.json_field_names(::Core.Type{FileOptions}) = (;java_package = "javaPackage", java_outer_classname = "javaOuterClassname", java_multiple_files = "javaMultipleFiles", java_generate_equals_and_hash = "javaGenerateEqualsAndHash", java_string_check_utf8 = "javaStringCheckUtf8", optimize_for = "optimizeFor", go_package = "goPackage", cc_generic_services = "ccGenericServices", java_generic_services = "javaGenericServices", py_generic_services = "pyGenericServices", php_generic_services = "phpGenericServices", deprecated = "deprecated", cc_enable_arenas = "ccEnableArenas", objc_class_prefix = "objcClassPrefix", csharp_namespace = "csharpNamespace", swift_prefix = "swiftPrefix", php_class_prefix = "phpClassPrefix", php_namespace = "phpNamespace", php_metadata_namespace = "phpMetadataNamespace", ruby_package = "rubyPackage", uninterpreted_option = "uninterpretedOption")
+function PB.default_values(::Core.Type{FileOptions})
+    return (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = nothing, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FileOptions})
+    return (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
+end
+function PB.json_field_names(::Core.Type{FileOptions})
+    return (;java_package = "javaPackage", java_outer_classname = "javaOuterClassname", java_multiple_files = "javaMultipleFiles", java_generate_equals_and_hash = "javaGenerateEqualsAndHash", java_string_check_utf8 = "javaStringCheckUtf8", optimize_for = "optimizeFor", go_package = "goPackage", cc_generic_services = "ccGenericServices", java_generic_services = "javaGenericServices", py_generic_services = "pyGenericServices", php_generic_services = "phpGenericServices", deprecated = "deprecated", cc_enable_arenas = "ccEnableArenas", objc_class_prefix = "objcClassPrefix", csharp_namespace = "csharpNamespace", swift_prefix = "swiftPrefix", php_class_prefix = "phpClassPrefix", php_namespace = "phpNamespace", php_metadata_namespace = "phpMetadataNamespace", ruby_package = "rubyPackage", uninterpreted_option = "uninterpretedOption")
+end
 PB.register_message_type("google.protobuf.FileOptions", FileOptions)
-PB.reserved_fields(::Core.Type{FileOptions}) = (names = String[], numbers = Union{Int,UnitRange{Int}}[38])
+function PB.reserved_fields(::Core.Type{FileOptions})
+    return (names = String[], numbers = Union{Int,UnitRange{Int}}[38])
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileOptions}, _endpos::Int=0, _group::Bool=false)
     java_package = nothing
@@ -1446,11 +1638,19 @@ struct FileDescriptorProto <: PB.AbstractProtoBufMessage
     source_code_info::Union{Nothing,SourceCodeInfo}
     syntax::Union{Nothing,String}
     _unknown_fields::Vector{UInt8}
-    FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[]) = new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
+    function FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[])
+        return new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FileDescriptorProto}) = (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FileDescriptorProto}) = (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
-PB.json_field_names(::Core.Type{FileDescriptorProto}) = (;name = "name", package = "package", dependency = "dependency", public_dependency = "publicDependency", weak_dependency = "weakDependency", message_type = "messageType", enum_type = "enumType", service = "service", extension = "extension", options = "options", source_code_info = "sourceCodeInfo", syntax = "syntax")
+function PB.default_values(::Core.Type{FileDescriptorProto})
+    return (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FileDescriptorProto})
+    return (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
+end
+function PB.json_field_names(::Core.Type{FileDescriptorProto})
+    return (;name = "name", package = "package", dependency = "dependency", public_dependency = "publicDependency", weak_dependency = "weakDependency", message_type = "messageType", enum_type = "enumType", service = "service", extension = "extension", options = "options", source_code_info = "sourceCodeInfo", syntax = "syntax")
+end
 PB.register_message_type("google.protobuf.FileDescriptorProto", FileDescriptorProto)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorProto}, _endpos::Int=0, _group::Bool=false)
@@ -1556,11 +1756,19 @@ end
 struct FileDescriptorSet <: PB.AbstractProtoBufMessage
     file::Vector{FileDescriptorProto}
     _unknown_fields::Vector{UInt8}
-    FileDescriptorSet(file, _unknown_fields=UInt8[]) = new(file, _unknown_fields)
+    function FileDescriptorSet(file, _unknown_fields=UInt8[])
+        return new(file, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FileDescriptorSet}) = (;file = Vector{FileDescriptorProto}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FileDescriptorSet}) = (;file = 1)
-PB.json_field_names(::Core.Type{FileDescriptorSet}) = (;file = "file")
+function PB.default_values(::Core.Type{FileDescriptorSet})
+    return (;file = Vector{FileDescriptorProto}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FileDescriptorSet})
+    return (;file = 1)
+end
+function PB.json_field_names(::Core.Type{FileDescriptorSet})
+    return (;file = "file")
+end
 PB.register_message_type("google.protobuf.FileDescriptorSet", FileDescriptorSet)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FileDescriptorSet}, _endpos::Int=0, _group::Bool=false)
@@ -1598,11 +1806,19 @@ struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
     var"#begin"::Union{Nothing,Int32}
     var"#end"::Union{Nothing,Int32}
     _unknown_fields::Vector{UInt8}
-    var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[]) = new(path, source_file, var"#begin", var"#end", _unknown_fields)
+    function var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[])
+        return new(path, source_file, var"#begin", var"#end", _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
-PB.json_field_names(::Core.Type{var"GeneratedCodeInfo.Annotation"}) = (;path = "path", source_file = "sourceFile", var"#begin" = "begin", var"#end" = "end")
+function PB.default_values(::Core.Type{var"GeneratedCodeInfo.Annotation"})
+    return (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{var"GeneratedCodeInfo.Annotation"})
+    return (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
+end
+function PB.json_field_names(::Core.Type{var"GeneratedCodeInfo.Annotation"})
+    return (;path = "path", source_file = "sourceFile", var"#begin" = "begin", var"#end" = "end")
+end
 PB.register_message_type("google.protobuf.GeneratedCodeInfo.Annotation", var"GeneratedCodeInfo.Annotation")
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:var"GeneratedCodeInfo.Annotation"}, _endpos::Int=0, _group::Bool=false)
@@ -1652,11 +1868,19 @@ end
 struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
     annotation::Vector{var"GeneratedCodeInfo.Annotation"}
     _unknown_fields::Vector{UInt8}
-    GeneratedCodeInfo(annotation, _unknown_fields=UInt8[]) = new(annotation, _unknown_fields)
+    function GeneratedCodeInfo(annotation, _unknown_fields=UInt8[])
+        return new(annotation, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{GeneratedCodeInfo}) = (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{GeneratedCodeInfo}) = (;annotation = 1)
-PB.json_field_names(::Core.Type{GeneratedCodeInfo}) = (;annotation = "annotation")
+function PB.default_values(::Core.Type{GeneratedCodeInfo})
+    return (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{GeneratedCodeInfo})
+    return (;annotation = 1)
+end
+function PB.json_field_names(::Core.Type{GeneratedCodeInfo})
+    return (;annotation = "annotation")
+end
 PB.register_message_type("google.protobuf.GeneratedCodeInfo", GeneratedCodeInfo)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:GeneratedCodeInfo}, _endpos::Int=0, _group::Bool=false)

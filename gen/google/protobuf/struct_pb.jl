@@ -21,11 +21,19 @@ abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 struct Struct <: AbstractStruct
     fields::OrderedDict{String,AbstractValue}
     _unknown_fields::Vector{UInt8}
-    Struct(fields, _unknown_fields=UInt8[]) = new(fields, _unknown_fields)
+    function Struct(fields, _unknown_fields=UInt8[])
+        return new(fields, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Struct}) = (;fields = OrderedDict{String,AbstractValue}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Struct}) = (;fields = 1)
-PB.json_field_names(::Core.Type{Struct}) = (;fields = "fields")
+function PB.default_values(::Core.Type{Struct})
+    return (;fields = OrderedDict{String,AbstractValue}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Struct})
+    return (;fields = 1)
+end
+function PB.json_field_names(::Core.Type{Struct})
+    return (;fields = "fields")
+end
 PB.register_message_type("google.protobuf.Struct", Struct)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Struct}, _endpos::Int=0, _group::Bool=false)
@@ -60,13 +68,23 @@ end
 struct Value <: AbstractValue
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}}
     _unknown_fields::Vector{UInt8}
-    Value(kind, _unknown_fields=UInt8[]) = new(kind, _unknown_fields)
+    function Value(kind, _unknown_fields=UInt8[])
+        return new(kind, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Value}) = (;kind = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Value}) = (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
-PB.json_field_names(::Core.Type{Value}) = (;null_value = "nullValue", number_value = "numberValue", string_value = "stringValue", bool_value = "boolValue", struct_value = "structValue", list_value = "listValue")
+function PB.default_values(::Core.Type{Value})
+    return (;kind = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Value})
+    return (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
+end
+function PB.json_field_names(::Core.Type{Value})
+    return (;null_value = "nullValue", number_value = "numberValue", string_value = "stringValue", bool_value = "boolValue", struct_value = "structValue", list_value = "listValue")
+end
 PB.register_message_type("google.protobuf.Value", Value)
-PB.oneof_field_types(::Core.Type{Value}) = (;kind = (;null_value = NullValue.T, number_value = Float64, string_value = String, bool_value = Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
+function PB.oneof_field_types(::Core.Type{Value})
+    return (;kind = (;null_value = NullValue.T, number_value = Float64, string_value = String, bool_value = Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Value}, _endpos::Int=0, _group::Bool=false)
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}} = nothing
@@ -172,11 +190,19 @@ end
 struct ListValue <: AbstractListValue
     values::Vector{AbstractValue}
     _unknown_fields::Vector{UInt8}
-    ListValue(values, _unknown_fields=UInt8[]) = new(values, _unknown_fields)
+    function ListValue(values, _unknown_fields=UInt8[])
+        return new(values, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{ListValue}) = (;values = Vector{AbstractValue}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{ListValue}) = (;values = 1)
-PB.json_field_names(::Core.Type{ListValue}) = (;values = "values")
+function PB.default_values(::Core.Type{ListValue})
+    return (;values = Vector{AbstractValue}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{ListValue})
+    return (;values = 1)
+end
+function PB.json_field_names(::Core.Type{ListValue})
+    return (;values = "values")
+end
 PB.register_message_type("google.protobuf.ListValue", ListValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:ListValue}, _endpos::Int=0, _group::Bool=false)
@@ -208,11 +234,23 @@ function PB._encoded_size(_x::ListValue)
     return encoded_size
 end
 
-PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractListValue}, _endpos::Int=0, _group::Bool=false) = PB._decode(_d, ListValue, _endpos, _group)
-PB._decode_json_message(::Core.Type{AbstractListValue}, json::AbstractDict; kw...) = PB._decode_json_message(ListValue, json; kw...)
-PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractStruct}, _endpos::Int=0, _group::Bool=false) = PB._decode(_d, Struct, _endpos, _group)
-PB._decode_json_message(::Core.Type{AbstractStruct}, json::AbstractDict; kw...) = PB._decode_json_message(Struct, json; kw...)
-PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractValue}, _endpos::Int=0, _group::Bool=false) = PB._decode(_d, Value, _endpos, _group)
-PB._decode_json_message(::Core.Type{AbstractValue}, json::AbstractDict; kw...) = PB._decode_json_message(Value, json; kw...)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractListValue}, _endpos::Int=0, _group::Bool=false)
+    return PB._decode(_d, ListValue, _endpos, _group)
+end
+function PB._decode_json_message(::Core.Type{AbstractListValue}, json::AbstractDict; kw...)
+    return PB._decode_json_message(ListValue, json; kw...)
+end
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractStruct}, _endpos::Int=0, _group::Bool=false)
+    return PB._decode(_d, Struct, _endpos, _group)
+end
+function PB._decode_json_message(::Core.Type{AbstractStruct}, json::AbstractDict; kw...)
+    return PB._decode_json_message(Struct, json; kw...)
+end
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:AbstractValue}, _endpos::Int=0, _group::Bool=false)
+    return PB._decode(_d, Value, _endpos, _group)
+end
+function PB._decode_json_message(::Core.Type{AbstractValue}, json::AbstractDict; kw...)
+    return PB._decode_json_message(Value, json; kw...)
+end
 
 #! format: on

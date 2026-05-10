@@ -13,11 +13,19 @@ struct Duration <: PB.AbstractProtoBufMessage
     seconds::Int64
     nanos::Int32
     _unknown_fields::Vector{UInt8}
-    Duration(seconds, nanos, _unknown_fields=UInt8[]) = new(seconds, nanos, _unknown_fields)
+    function Duration(seconds, nanos, _unknown_fields=UInt8[])
+        return new(seconds, nanos, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Duration}) = (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Duration}) = (;seconds = 1, nanos = 2)
-PB.json_field_names(::Core.Type{Duration}) = (;seconds = "seconds", nanos = "nanos")
+function PB.default_values(::Core.Type{Duration})
+    return (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Duration})
+    return (;seconds = 1, nanos = 2)
+end
+function PB.json_field_names(::Core.Type{Duration})
+    return (;seconds = "seconds", nanos = "nanos")
+end
 PB.register_message_type("google.protobuf.Duration", Duration)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Duration}, _endpos::Int=0, _group::Bool=false)

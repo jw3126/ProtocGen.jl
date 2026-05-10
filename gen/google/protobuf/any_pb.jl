@@ -13,11 +13,19 @@ struct Any <: PB.AbstractProtoBufMessage
     type_url::String
     value::Vector{UInt8}
     _unknown_fields::Vector{UInt8}
-    Any(type_url, value, _unknown_fields=UInt8[]) = new(type_url, value, _unknown_fields)
+    function Any(type_url, value, _unknown_fields=UInt8[])
+        return new(type_url, value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Any}) = (;type_url = "", value = UInt8[], _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Any}) = (;type_url = 1, value = 2)
-PB.json_field_names(::Core.Type{Any}) = (;type_url = "typeUrl", value = "value")
+function PB.default_values(::Core.Type{Any})
+    return (;type_url = "", value = UInt8[], _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Any})
+    return (;type_url = 1, value = 2)
+end
+function PB.json_field_names(::Core.Type{Any})
+    return (;type_url = "typeUrl", value = "value")
+end
 PB.register_message_type("google.protobuf.Any", Any)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Any}, _endpos::Int=0, _group::Bool=false)

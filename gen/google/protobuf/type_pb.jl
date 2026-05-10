@@ -15,11 +15,19 @@ struct Option <: PB.AbstractProtoBufMessage
     name::String
     value::Union{Nothing,Any}
     _unknown_fields::Vector{UInt8}
-    Option(name, value, _unknown_fields=UInt8[]) = new(name, value, _unknown_fields)
+    function Option(name, value, _unknown_fields=UInt8[])
+        return new(name, value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Option}) = (;name = "", value = nothing, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Option}) = (;name = 1, value = 2)
-PB.json_field_names(::Core.Type{Option}) = (;name = "name", value = "value")
+function PB.default_values(::Core.Type{Option})
+    return (;name = "", value = nothing, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Option})
+    return (;name = 1, value = 2)
+end
+function PB.json_field_names(::Core.Type{Option})
+    return (;name = "name", value = "value")
+end
 PB.register_message_type("google.protobuf.Option", Option)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Option}, _endpos::Int=0, _group::Bool=false)
@@ -72,11 +80,19 @@ struct Field <: PB.AbstractProtoBufMessage
     json_name::String
     default_value::String
     _unknown_fields::Vector{UInt8}
-    Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[]) = new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
+    function Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[])
+        return new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Field}) = (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Field}) = (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
-PB.json_field_names(::Core.Type{Field}) = (;kind = "kind", cardinality = "cardinality", number = "number", name = "name", type_url = "typeUrl", oneof_index = "oneofIndex", packed = "packed", options = "options", json_name = "jsonName", default_value = "defaultValue")
+function PB.default_values(::Core.Type{Field})
+    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Field})
+    return (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
+end
+function PB.json_field_names(::Core.Type{Field})
+    return (;kind = "kind", cardinality = "cardinality", number = "number", name = "name", type_url = "typeUrl", oneof_index = "oneofIndex", packed = "packed", options = "options", json_name = "jsonName", default_value = "defaultValue")
+end
 PB.register_message_type("google.protobuf.Field", Field)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Field}, _endpos::Int=0, _group::Bool=false)
@@ -161,11 +177,19 @@ struct Type <: PB.AbstractProtoBufMessage
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
     _unknown_fields::Vector{UInt8}
-    Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[]) = new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
+    function Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[])
+        return new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Type}) = (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Type}) = (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
-PB.json_field_names(::Core.Type{Type}) = (;name = "name", fields = "fields", oneofs = "oneofs", options = "options", source_context = "sourceContext", syntax = "syntax")
+function PB.default_values(::Core.Type{Type})
+    return (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Type})
+    return (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
+end
+function PB.json_field_names(::Core.Type{Type})
+    return (;name = "name", fields = "fields", oneofs = "oneofs", options = "options", source_context = "sourceContext", syntax = "syntax")
+end
 PB.register_message_type("google.protobuf.Type", Type)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Type}, _endpos::Int=0, _group::Bool=false)
@@ -227,11 +251,19 @@ struct EnumValue <: PB.AbstractProtoBufMessage
     number::Int32
     options::Vector{Option}
     _unknown_fields::Vector{UInt8}
-    EnumValue(name, number, options, _unknown_fields=UInt8[]) = new(name, number, options, _unknown_fields)
+    function EnumValue(name, number, options, _unknown_fields=UInt8[])
+        return new(name, number, options, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{EnumValue}) = (;name = "", number = zero(Int32), options = Vector{Option}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{EnumValue}) = (;name = 1, number = 2, options = 3)
-PB.json_field_names(::Core.Type{EnumValue}) = (;name = "name", number = "number", options = "options")
+function PB.default_values(::Core.Type{EnumValue})
+    return (;name = "", number = zero(Int32), options = Vector{Option}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{EnumValue})
+    return (;name = 1, number = 2, options = 3)
+end
+function PB.json_field_names(::Core.Type{EnumValue})
+    return (;name = "name", number = "number", options = "options")
+end
 PB.register_message_type("google.protobuf.EnumValue", EnumValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:EnumValue}, _endpos::Int=0, _group::Bool=false)
@@ -280,11 +312,19 @@ struct Enum <: PB.AbstractProtoBufMessage
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
     _unknown_fields::Vector{UInt8}
-    Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[]) = new(name, enumvalue, options, source_context, syntax, _unknown_fields)
+    function Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[])
+        return new(name, enumvalue, options, source_context, syntax, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Enum}) = (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Enum}) = (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
-PB.json_field_names(::Core.Type{Enum}) = (;name = "name", enumvalue = "enumvalue", options = "options", source_context = "sourceContext", syntax = "syntax")
+function PB.default_values(::Core.Type{Enum})
+    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Enum})
+    return (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
+end
+function PB.json_field_names(::Core.Type{Enum})
+    return (;name = "name", enumvalue = "enumvalue", options = "options", source_context = "sourceContext", syntax = "syntax")
+end
 PB.register_message_type("google.protobuf.Enum", Enum)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Enum}, _endpos::Int=0, _group::Bool=false)

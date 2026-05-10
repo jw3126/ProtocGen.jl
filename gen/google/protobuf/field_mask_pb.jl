@@ -12,11 +12,19 @@ export FieldMask
 struct FieldMask <: PB.AbstractProtoBufMessage
     paths::Vector{String}
     _unknown_fields::Vector{UInt8}
-    FieldMask(paths, _unknown_fields=UInt8[]) = new(paths, _unknown_fields)
+    function FieldMask(paths, _unknown_fields=UInt8[])
+        return new(paths, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FieldMask}) = (;paths = Vector{String}(), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FieldMask}) = (;paths = 1)
-PB.json_field_names(::Core.Type{FieldMask}) = (;paths = "paths")
+function PB.default_values(::Core.Type{FieldMask})
+    return (;paths = Vector{String}(), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FieldMask})
+    return (;paths = 1)
+end
+function PB.json_field_names(::Core.Type{FieldMask})
+    return (;paths = "paths")
+end
 PB.register_message_type("google.protobuf.FieldMask", FieldMask)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)

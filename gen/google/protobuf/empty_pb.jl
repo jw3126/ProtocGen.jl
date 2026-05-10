@@ -11,11 +11,19 @@ export Empty
 
 struct Empty <: PB.AbstractProtoBufMessage
     _unknown_fields::Vector{UInt8}
-    Empty(_unknown_fields=UInt8[]) = new(_unknown_fields)
+    function Empty(_unknown_fields=UInt8[])
+        return new(_unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Empty}) = (;_unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Empty}) = (;)
-PB.json_field_names(::Core.Type{Empty}) = (;)
+function PB.default_values(::Core.Type{Empty})
+    return (;_unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Empty})
+    return (;)
+end
+function PB.json_field_names(::Core.Type{Empty})
+    return (;)
+end
 PB.register_message_type("google.protobuf.Empty", Empty)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Empty}, _endpos::Int=0, _group::Bool=false)

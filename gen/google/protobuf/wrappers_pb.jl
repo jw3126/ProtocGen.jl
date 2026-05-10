@@ -12,11 +12,19 @@ export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value
 struct DoubleValue <: PB.AbstractProtoBufMessage
     value::Float64
     _unknown_fields::Vector{UInt8}
-    DoubleValue(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function DoubleValue(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{DoubleValue}) = (;value = zero(Float64), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{DoubleValue}) = (;value = 1)
-PB.json_field_names(::Core.Type{DoubleValue}) = (;value = "value")
+function PB.default_values(::Core.Type{DoubleValue})
+    return (;value = zero(Float64), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{DoubleValue})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{DoubleValue})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.DoubleValue", DoubleValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
@@ -51,11 +59,19 @@ end
 struct FloatValue <: PB.AbstractProtoBufMessage
     value::Float32
     _unknown_fields::Vector{UInt8}
-    FloatValue(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function FloatValue(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{FloatValue}) = (;value = zero(Float32), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{FloatValue}) = (;value = 1)
-PB.json_field_names(::Core.Type{FloatValue}) = (;value = "value")
+function PB.default_values(::Core.Type{FloatValue})
+    return (;value = zero(Float32), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{FloatValue})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{FloatValue})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.FloatValue", FloatValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
@@ -90,11 +106,19 @@ end
 struct Int64Value <: PB.AbstractProtoBufMessage
     value::Int64
     _unknown_fields::Vector{UInt8}
-    Int64Value(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function Int64Value(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Int64Value}) = (;value = zero(Int64), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Int64Value}) = (;value = 1)
-PB.json_field_names(::Core.Type{Int64Value}) = (;value = "value")
+function PB.default_values(::Core.Type{Int64Value})
+    return (;value = zero(Int64), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Int64Value})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{Int64Value})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.Int64Value", Int64Value)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
@@ -129,11 +153,19 @@ end
 struct UInt64Value <: PB.AbstractProtoBufMessage
     value::UInt64
     _unknown_fields::Vector{UInt8}
-    UInt64Value(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function UInt64Value(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{UInt64Value}) = (;value = zero(UInt64), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{UInt64Value}) = (;value = 1)
-PB.json_field_names(::Core.Type{UInt64Value}) = (;value = "value")
+function PB.default_values(::Core.Type{UInt64Value})
+    return (;value = zero(UInt64), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{UInt64Value})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{UInt64Value})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.UInt64Value", UInt64Value)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
@@ -168,11 +200,19 @@ end
 struct Int32Value <: PB.AbstractProtoBufMessage
     value::Int32
     _unknown_fields::Vector{UInt8}
-    Int32Value(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function Int32Value(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Int32Value}) = (;value = zero(Int32), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Int32Value}) = (;value = 1)
-PB.json_field_names(::Core.Type{Int32Value}) = (;value = "value")
+function PB.default_values(::Core.Type{Int32Value})
+    return (;value = zero(Int32), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Int32Value})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{Int32Value})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.Int32Value", Int32Value)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
@@ -207,11 +247,19 @@ end
 struct UInt32Value <: PB.AbstractProtoBufMessage
     value::UInt32
     _unknown_fields::Vector{UInt8}
-    UInt32Value(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function UInt32Value(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{UInt32Value}) = (;value = zero(UInt32), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{UInt32Value}) = (;value = 1)
-PB.json_field_names(::Core.Type{UInt32Value}) = (;value = "value")
+function PB.default_values(::Core.Type{UInt32Value})
+    return (;value = zero(UInt32), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{UInt32Value})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{UInt32Value})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.UInt32Value", UInt32Value)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
@@ -246,11 +294,19 @@ end
 struct BoolValue <: PB.AbstractProtoBufMessage
     value::Bool
     _unknown_fields::Vector{UInt8}
-    BoolValue(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function BoolValue(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{BoolValue}) = (;value = false, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{BoolValue}) = (;value = 1)
-PB.json_field_names(::Core.Type{BoolValue}) = (;value = "value")
+function PB.default_values(::Core.Type{BoolValue})
+    return (;value = false, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{BoolValue})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{BoolValue})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.BoolValue", BoolValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
@@ -285,11 +341,19 @@ end
 struct StringValue <: PB.AbstractProtoBufMessage
     value::String
     _unknown_fields::Vector{UInt8}
-    StringValue(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function StringValue(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{StringValue}) = (;value = "", _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{StringValue}) = (;value = 1)
-PB.json_field_names(::Core.Type{StringValue}) = (;value = "value")
+function PB.default_values(::Core.Type{StringValue})
+    return (;value = "", _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{StringValue})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{StringValue})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.StringValue", StringValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
@@ -324,11 +388,19 @@ end
 struct BytesValue <: PB.AbstractProtoBufMessage
     value::Vector{UInt8}
     _unknown_fields::Vector{UInt8}
-    BytesValue(value, _unknown_fields=UInt8[]) = new(value, _unknown_fields)
+    function BytesValue(value, _unknown_fields=UInt8[])
+        return new(value, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{BytesValue}) = (;value = UInt8[], _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{BytesValue}) = (;value = 1)
-PB.json_field_names(::Core.Type{BytesValue}) = (;value = "value")
+function PB.default_values(::Core.Type{BytesValue})
+    return (;value = UInt8[], _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{BytesValue})
+    return (;value = 1)
+end
+function PB.json_field_names(::Core.Type{BytesValue})
+    return (;value = "value")
+end
 PB.register_message_type("google.protobuf.BytesValue", BytesValue)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)

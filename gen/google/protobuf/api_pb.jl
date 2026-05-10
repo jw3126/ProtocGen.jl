@@ -13,11 +13,19 @@ struct Mixin <: PB.AbstractProtoBufMessage
     name::String
     root::String
     _unknown_fields::Vector{UInt8}
-    Mixin(name, root, _unknown_fields=UInt8[]) = new(name, root, _unknown_fields)
+    function Mixin(name, root, _unknown_fields=UInt8[])
+        return new(name, root, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Mixin}) = (;name = "", root = "", _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Mixin}) = (;name = 1, root = 2)
-PB.json_field_names(::Core.Type{Mixin}) = (;name = "name", root = "root")
+function PB.default_values(::Core.Type{Mixin})
+    return (;name = "", root = "", _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Mixin})
+    return (;name = 1, root = 2)
+end
+function PB.json_field_names(::Core.Type{Mixin})
+    return (;name = "name", root = "root")
+end
 PB.register_message_type("google.protobuf.Mixin", Mixin)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Mixin}, _endpos::Int=0, _group::Bool=false)
@@ -63,11 +71,19 @@ struct Method <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     syntax::Syntax.T
     _unknown_fields::Vector{UInt8}
-    Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[]) = new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
+    function Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[])
+        return new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Method}) = (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Method}) = (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
-PB.json_field_names(::Core.Type{Method}) = (;name = "name", request_type_url = "requestTypeUrl", request_streaming = "requestStreaming", response_type_url = "responseTypeUrl", response_streaming = "responseStreaming", options = "options", syntax = "syntax")
+function PB.default_values(::Core.Type{Method})
+    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Method})
+    return (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
+end
+function PB.json_field_names(::Core.Type{Method})
+    return (;name = "name", request_type_url = "requestTypeUrl", request_streaming = "requestStreaming", response_type_url = "responseTypeUrl", response_streaming = "responseStreaming", options = "options", syntax = "syntax")
+end
 PB.register_message_type("google.protobuf.Method", Method)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos::Int=0, _group::Bool=false)
@@ -138,11 +154,19 @@ struct Api <: PB.AbstractProtoBufMessage
     mixins::Vector{Mixin}
     syntax::Syntax.T
     _unknown_fields::Vector{UInt8}
-    Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[]) = new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
+    function Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[])
+        return new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Api}) = (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Api}) = (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
-PB.json_field_names(::Core.Type{Api}) = (;name = "name", methods = "methods", options = "options", version = "version", source_context = "sourceContext", mixins = "mixins", syntax = "syntax")
+function PB.default_values(::Core.Type{Api})
+    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Api})
+    return (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
+end
+function PB.json_field_names(::Core.Type{Api})
+    return (;name = "name", methods = "methods", options = "options", version = "version", source_context = "sourceContext", mixins = "mixins", syntax = "syntax")
+end
 PB.register_message_type("google.protobuf.Api", Api)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::Int=0, _group::Bool=false)

@@ -717,11 +717,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     push!(param_names, "_unknown_fields")
     inner_params = join(param_names[1:end-1], ", ")
     sep = isempty(inner_params) ? "" : ", "
-    println(io, "    ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[]) = new(", join(param_names, ", "), ")")
+    println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
+    println(io, "        return new(", join(param_names, ", "), ")")
+    println(io, "    end")
     println(io, "end")
 
     # Metadata.
-    print(io, "PB.default_values(::Core.Type{", jl_name, "}) = (;")
+    println(io, "function PB.default_values(::Core.Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
@@ -730,10 +732,10 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         push!(pieces, "$(o.jl_fieldname) = nothing")
     end
     push!(pieces, "_unknown_fields = UInt8[]")
-    print(io, join(pieces, ", "))
-    println(io, ")")
+    println(io, "    return (;", join(pieces, ", "), ")")
+    println(io, "end")
 
-    print(io, "PB.field_numbers(::Core.Type{", jl_name, "}) = (;")
+    println(io, "function PB.field_numbers(::Core.Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(f.number)")
@@ -743,10 +745,10 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
             push!(pieces, "$(m.jl_fieldname) = $(m.number)")
         end
     end
-    print(io, join(pieces, ", "))
-    println(io, ")")
+    println(io, "    return (;", join(pieces, ", "), ")")
+    println(io, "end")
 
-    print(io, "PB.json_field_names(::Core.Type{", jl_name, "}) = (;")
+    println(io, "function PB.json_field_names(::Core.Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(repr(f.json_name))")
@@ -756,8 +758,8 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
             push!(pieces, "$(m.jl_fieldname) = $(repr(m.json_name))")
         end
     end
-    print(io, join(pieces, ", "))
-    println(io, ")")
+    println(io, "    return (;", join(pieces, ", "), ")")
+    println(io, "end")
 
     # Register the message type by its protobuf FQN so `Any` (which
     # carries `type.googleapis.com/<FQN>` URLs) and any other
@@ -768,14 +770,14 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "PB.register_message_type(", repr(fqn), ", ", jl_name, ")")
 
     if !isempty(real_oneofs)
-        print(io, "PB.oneof_field_types(::Core.Type{", jl_name, "}) = (;")
+        println(io, "function PB.oneof_field_types(::Core.Type{", jl_name, "})")
         oneof_pieces = String[]
         for o in real_oneofs
             inner = join(("$(m.jl_fieldname) = $(m.elem_jl_type)" for m in o.members), ", ")
             push!(oneof_pieces, "$(o.jl_fieldname) = (;$(inner))")
         end
-        print(io, join(oneof_pieces, ", "))
-        println(io, ")")
+        println(io, "    return (;", join(oneof_pieces, ", "), ")")
+        println(io, "end")
     end
 
     _emit_reserved_fields(io, jl_name, msg)
@@ -1034,7 +1036,9 @@ function _emit_reserved_fields(io::IO, jl_name::String, msg::DescriptorProto)
         "String[]" :
         string("[", join(("\"$(n)\"" for n in names), ", "), "]")
 
-    println(io, "PB.reserved_fields(::Core.Type{", jl_name, "}) = (names = ", name_str, ", numbers = ", range_str, ")")
+    println(io, "function PB.reserved_fields(::Core.Type{", jl_name, "})")
+    println(io, "    return (names = ", name_str, ", numbers = ", range_str, ")")
+    println(io, "end")
 end
 
 function _emit_encode_field(io::IO, f::FieldModel)
@@ -1436,12 +1440,16 @@ function codegen(file::FileDescriptorProto, universe::Universe)
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
-            println(io, "PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false) = PB._decode(_d, ", jl, ", _endpos, _group)")
+            println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false)")
+            println(io, "    return PB._decode(_d, ", jl, ", _endpos, _group)")
+            println(io, "end")
             # NOTE: invariant `Type{X}` (no `<:`) so the forwarding fires
             # only for the abstract supertype itself; the concrete struct
             # falls through to the generic walker via the
             # `T <: AbstractProtoBufMessage` method on `_decode_json_message`.
-            println(io, "PB._decode_json_message(::Core.Type{", abs_jl, "}, json::AbstractDict; kw...) = PB._decode_json_message(", jl, ", json; kw...)")
+            println(io, "function PB._decode_json_message(::Core.Type{", abs_jl, "}, json::AbstractDict; kw...)")
+            println(io, "    return PB._decode_json_message(", jl, ", json; kw...)")
+            println(io, "end")
         end
     end
 

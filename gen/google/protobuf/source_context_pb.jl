@@ -12,11 +12,19 @@ export SourceContext
 struct SourceContext <: PB.AbstractProtoBufMessage
     file_name::String
     _unknown_fields::Vector{UInt8}
-    SourceContext(file_name, _unknown_fields=UInt8[]) = new(file_name, _unknown_fields)
+    function SourceContext(file_name, _unknown_fields=UInt8[])
+        return new(file_name, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{SourceContext}) = (;file_name = "", _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{SourceContext}) = (;file_name = 1)
-PB.json_field_names(::Core.Type{SourceContext}) = (;file_name = "fileName")
+function PB.default_values(::Core.Type{SourceContext})
+    return (;file_name = "", _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{SourceContext})
+    return (;file_name = 1)
+end
+function PB.json_field_names(::Core.Type{SourceContext})
+    return (;file_name = "fileName")
+end
 PB.register_message_type("google.protobuf.SourceContext", SourceContext)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)

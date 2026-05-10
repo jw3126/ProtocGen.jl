@@ -13,11 +13,19 @@ struct Timestamp <: PB.AbstractProtoBufMessage
     seconds::Int64
     nanos::Int32
     _unknown_fields::Vector{UInt8}
-    Timestamp(seconds, nanos, _unknown_fields=UInt8[]) = new(seconds, nanos, _unknown_fields)
+    function Timestamp(seconds, nanos, _unknown_fields=UInt8[])
+        return new(seconds, nanos, _unknown_fields)
+    end
 end
-PB.default_values(::Core.Type{Timestamp}) = (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
-PB.field_numbers(::Core.Type{Timestamp}) = (;seconds = 1, nanos = 2)
-PB.json_field_names(::Core.Type{Timestamp}) = (;seconds = "seconds", nanos = "nanos")
+function PB.default_values(::Core.Type{Timestamp})
+    return (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
+end
+function PB.field_numbers(::Core.Type{Timestamp})
+    return (;seconds = 1, nanos = 2)
+end
+function PB.json_field_names(::Core.Type{Timestamp})
+    return (;seconds = "seconds", nanos = "nanos")
+end
 PB.register_message_type("google.protobuf.Timestamp", Timestamp)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Timestamp}, _endpos::Int=0, _group::Bool=false)
