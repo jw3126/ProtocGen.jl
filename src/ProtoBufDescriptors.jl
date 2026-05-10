@@ -47,7 +47,7 @@ include("codec/Codecs.jl")
 @inline Codecs._merge_structs(::OneOf, s2::OneOf) = s2
 
 import .Codecs
-import .Codecs: decode, decode!, encode, AbstractProtoDecoder, AbstractProtoEncoder,
+import .Codecs: _decode, _decode!, _encode, AbstractProtoDecoder, AbstractProtoEncoder,
     ProtoDecoder, ProtoEncoder, BufferedVector, message_done, decode_tag, _encoded_size,
     _skip_and_capture!
 
@@ -104,6 +104,28 @@ function json_field_names(::Type{T}) where {T}
     return (;)
 end
 
+# Public binary codec surface. The underscore-prefixed `_encode` /
+# `_decode` are the wire-level workhorses used by generated code; users
+# should not have to touch `ProtoEncoder` / `ProtoDecoder` at all.
+function encode(io::IO, msg::AbstractProtoBufMessage)
+    _encode(ProtoEncoder(io), msg)
+    return io
+end
+
+function encode(msg::AbstractProtoBufMessage)
+    buf = IOBuffer()
+    _encode(ProtoEncoder(buf), msg)
+    return take!(buf)
+end
+
+function decode(io::IO, ::Type{T}) where {T<:AbstractProtoBufMessage}
+    return _decode(ProtoDecoder(io), T)
+end
+
+function decode(bytes::AbstractVector{UInt8}, ::Type{T}) where {T<:AbstractProtoBufMessage}
+    return _decode(ProtoDecoder(IOBuffer(bytes)), T)
+end
+
 # `json.jl` defines `_decode_json_message`, which the generated bootstrap
 # files extend (forwarding methods so abstract cycle supertypes route to
 # the concrete struct). It has to load *before* `gen/google/google.jl`
@@ -118,8 +140,7 @@ include("plugin_app.jl")
 include("json_wkt.jl")
 include("testing.jl")
 
-export encode, ProtoEncoder, decode, decode!, ProtoDecoder
-export encode_json, decode_json
+export encode, decode, encode_json, decode_json
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values, json_field_names
 

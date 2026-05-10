@@ -407,7 +407,7 @@ function _encode_json_value(io::IO, a::_Any_)
         "Any: no message type registered for $(repr(fqn)); " *
         "load the proto module that defines it (or call ProtoBufDescriptors.register_message_type)"))
     # Decode the embedded binary payload into the concrete type.
-    msg = decode(ProtoDecoder(IOBuffer(a.value)), T)
+    msg = decode(a.value, T)
 
     if fqn in _WKT_VALUE_FORM
         # `{"@type": ..., "value": <special>}`
@@ -484,9 +484,7 @@ function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
     end
 
     # Re-encode to bytes for the Any wire form.
-    buf = IOBuffer()
-    encode(ProtoEncoder(buf), msg)
-    return _Any_(String(type_url), take!(buf))
+    return _Any_(String(type_url), encode(msg))
 end
 
 # -----------------------------------------------------------------------------

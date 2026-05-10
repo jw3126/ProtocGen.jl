@@ -66,7 +66,7 @@ plugin itself is broken (I/O failure, signal, etc.) by letting them escape.
 function run_plugin(input::IO=stdin, output::IO=stdout)
     blob = read(input)
     response = try
-        request = decode(ProtoDecoder(IOBuffer(blob)), _GC.CodeGeneratorRequest)
+        request = decode(blob, _GC.CodeGeneratorRequest)
         generate(request)
     catch e
         # Include the backtrace in `response.error` so codegen bugs surface
@@ -88,8 +88,6 @@ function run_plugin(input::IO=stdin, output::IO=stdout)
             _GC.var"CodeGeneratorResponse.File"[],
         )
     end
-    out_io = IOBuffer()
-    encode(ProtoEncoder(out_io), response)
-    write(output, take!(out_io))
+    write(output, encode(response))
     return response
 end

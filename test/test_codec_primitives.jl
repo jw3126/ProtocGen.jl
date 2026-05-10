@@ -3,32 +3,31 @@ module TestCodecPrimitives
 include("setup.jl")
 
 using ProtoBufDescriptors: Codecs
-using .Codecs: encode, decode, ProtoEncoder, ProtoDecoder, vbyte_encode, vbyte_decode,
-    zigzag_encode, zigzag_decode
+using .Codecs: ProtoDecoder, vbyte_encode, vbyte_decode,
+    zigzag_encode, zigzag_decode, _encode, _decode
 
 function roundtrip(::Type{T}, x::T) where {T}
     io = IOBuffer()
-    e = ProtoEncoder(io)
-    Codecs._encode(io, x)
+    _encode(io, x)
     seekstart(io)
     d = ProtoDecoder(io)
-    return decode(d, T)
+    return _decode(d, T)
 end
 
 function roundtrip_fixed(::Type{T}, x::T) where {T}
     io = IOBuffer()
-    Codecs._encode(io, x, Val{:fixed})
+    _encode(io, x, Val{:fixed})
     seekstart(io)
     d = ProtoDecoder(io)
-    return decode(d, T, Val{:fixed})
+    return _decode(d, T, Val{:fixed})
 end
 
 function roundtrip_zigzag(::Type{T}, x::T) where {T}
     io = IOBuffer()
-    Codecs._encode(io, x, Val{:zigzag})
+    _encode(io, x, Val{:zigzag})
     seekstart(io)
     d = ProtoDecoder(io)
-    return decode(d, T, Val{:zigzag})
+    return _decode(d, T, Val{:zigzag})
 end
 
 @testset "codec primitives" begin

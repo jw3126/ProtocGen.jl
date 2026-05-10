@@ -39,7 +39,7 @@ const HERE     = @__DIR__
 const FDS_PATH = joinpath(HERE, "conformance_descriptors.pb")
 
 function load_generated_modules()
-    fds = PBD.decode(PBD.ProtoDecoder(IOBuffer(read(FDS_PATH))), _G.FileDescriptorSet)
+    fds = PBD.decode(read(FDS_PATH), _G.FileDescriptorSet)
     request = _GC.CodeGeneratorRequest(
         ["conformance.proto",
          "test_messages_proto2_patched.proto",
@@ -106,13 +106,11 @@ function write_le_uint32(io, n::Integer)
 end
 
 function pb_encode(x)::Vector{UInt8}
-    io = IOBuffer()
-    PBD.encode(PBD.ProtoEncoder(io), x)
-    return take!(io)
+    return PBD.encode(x)
 end
 
 function pb_decode(::Type{T}, bytes::AbstractVector{UInt8}) where {T}
-    return PBD.decode(PBD.ProtoDecoder(IOBuffer(bytes)), T)
+    return PBD.decode(bytes, T)
 end
 
 function skipped_response(reason::AbstractString)

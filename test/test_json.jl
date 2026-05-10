@@ -321,22 +321,21 @@ end
     @testset "WKT: Any wraps WKTs as `{\"@type\": …, \"value\": …}`" begin
         # Any wrapping a Timestamp: WKT special form under "value".
         ts = _G.Timestamp(Int64(1715188800), Int32(0))
-        buf = IOBuffer(); ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(buf), ts)
-        a = _G.var"Any"("type.googleapis.com/google.protobuf.Timestamp", take!(buf))
+        a = _G.var"Any"("type.googleapis.com/google.protobuf.Timestamp",
+                        ProtoBufDescriptors.encode(ts))
         d = JSON.parse(encode_json(a))
         @test d["@type"] == "type.googleapis.com/google.protobuf.Timestamp"
         @test endswith(d["value"], "Z")
         # Round-trip: decode JSON, re-decode binary payload.
         back_a = decode_json(_G.var"Any", encode_json(a))
-        back_ts = ProtoBufDescriptors.decode(
-            ProtoBufDescriptors.ProtoDecoder(IOBuffer(back_a.value)), _G.Timestamp)
+        back_ts = ProtoBufDescriptors.decode(back_a.value, _G.Timestamp)
         @test back_ts.seconds == ts.seconds
         @test back_ts.nanos   == ts.nanos
 
         # Any wrapping a BoolValue.
         bv = _G.BoolValue(true)
-        buf = IOBuffer(); ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(buf), bv)
-        a2 = _G.var"Any"("type.googleapis.com/google.protobuf.BoolValue", take!(buf))
+        a2 = _G.var"Any"("type.googleapis.com/google.protobuf.BoolValue",
+                         ProtoBufDescriptors.encode(bv))
         d2 = JSON.parse(encode_json(a2))
         @test d2["@type"] == "type.googleapis.com/google.protobuf.BoolValue"
         @test d2["value"] == true
@@ -344,8 +343,8 @@ end
 
     @testset "WKT: Any wraps ordinary messages with fields inlined" begin
         sc = _G.SourceContext("foo.proto")
-        buf = IOBuffer(); ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(buf), sc)
-        a = _G.var"Any"("type.googleapis.com/google.protobuf.SourceContext", take!(buf))
+        a = _G.var"Any"("type.googleapis.com/google.protobuf.SourceContext",
+                        ProtoBufDescriptors.encode(sc))
         d = JSON.parse(encode_json(a))
         @test d == Dict(
             "@type"    => "type.googleapis.com/google.protobuf.SourceContext",
@@ -353,8 +352,7 @@ end
         )
         # Round-trip
         back_a = decode_json(_G.var"Any", encode_json(a))
-        back_sc = ProtoBufDescriptors.decode(
-            ProtoBufDescriptors.ProtoDecoder(IOBuffer(back_a.value)), _G.SourceContext)
+        back_sc = ProtoBufDescriptors.decode(back_a.value, _G.SourceContext)
         @test back_sc.file_name == "foo.proto"
     end
 

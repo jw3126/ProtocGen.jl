@@ -14,9 +14,7 @@ include("setup.jl")
         nothing,
     )
 
-    req_io = IOBuffer()
-    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(req_io), request)
-    req_bytes = take!(req_io)
+    req_bytes = ProtoBufDescriptors.encode(request)
 
     out_io = IOBuffer()
     response = ProtoBufDescriptors.run_plugin(IOBuffer(req_bytes), out_io)
@@ -28,10 +26,7 @@ include("setup.jl")
     @test response.supported_features == UInt64(1)  # FEATURE_PROTO3_OPTIONAL
 
     # The bytes round-trip back to the same response.
-    response2 = ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(take!(out_io))),
-        GC.CodeGeneratorResponse,
-    )
+    response2 = ProtoBufDescriptors.decode(take!(out_io), GC.CodeGeneratorResponse)
     @test response2.error === nothing
     @test isempty(response2.file)
     @test response2.supported_features == UInt64(1)
@@ -59,9 +54,7 @@ end
     request = GC.CodeGeneratorRequest(
         String[], nothing, G.FileDescriptorProto[], G.FileDescriptorProto[], nothing,
     )
-    req_io = IOBuffer()
-    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(req_io), request)
-    req_bytes = take!(req_io)
+    req_bytes = ProtoBufDescriptors.encode(request)
 
     in_pipe = Pipe();  Base.link_pipe!(in_pipe)
     write(in_pipe.in, req_bytes); close(in_pipe.in)
@@ -76,10 +69,7 @@ end
     @test rc == 0
 
     out_bytes = read(out_pipe)
-    response = ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(out_bytes)),
-        GC.CodeGeneratorResponse,
-    )
+    response = ProtoBufDescriptors.decode(out_bytes, GC.CodeGeneratorResponse)
     @test response.error === nothing
     @test isempty(response.file)
     @test response.supported_features == UInt64(1)

@@ -81,6 +81,9 @@ include("vbyte.jl")
 include("decode.jl")
 include("encode.jl")
 
-export encode, decode
+# `_encode` / `_decode` / `_decode!` are the wrapper-form codec entry
+# points. They are not exported — the public surface (`encode(io, msg)`,
+# `decode(io, T)`, etc.) lives in ProtoBufDescriptors and forwards into
+# them.
 
 end # module

@@ -57,12 +57,8 @@ include("setup.jl")
     # message fields in struct-declaration order rather than proto-source
     # order, and enum fields still inherit the equal-to-default skip; both
     # are wire-format compatible but not byte-stable.)
-    out = IOBuffer()
-    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(out), fdset)
-    fdset2 = ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(take!(out))),
-        G.FileDescriptorSet,
-    )
+    bytes = ProtoBufDescriptors.encode(fdset)
+    fdset2 = ProtoBufDescriptors.decode(bytes, G.FileDescriptorSet)
     fd2 = fdset2.file[1]
     @test fd2.name == fd.name
     @test fd2.package == fd.package

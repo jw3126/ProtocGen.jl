@@ -783,7 +783,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io)
 
     # decode.
-    println(io, "function PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
+    println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, " = ", f.init_value)
         if f.is_required
@@ -870,7 +870,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     end
     sort!(encode_plan; by = first)
 
-    println(io, "function PB.encode(_e::PB.AbstractProtoEncoder, _x::", jl_name, ")")
+    println(io, "function PB._encode(_e::PB.AbstractProtoEncoder, _x::", jl_name, ")")
     println(io, "    initpos = position(_e.io)")
     for (_, emit_e, _) in encode_plan
         emit_e(io)
@@ -916,15 +916,15 @@ function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
         println(io, "            _v = Ref{Union{Nothing,$(elem)}}(",
                 "(!isnothing(", o.jl_fieldname, ") && ", o.jl_fieldname, ".name === :",
                 m.jl_fieldname, ") ? ", o.jl_fieldname, ".value::", elem, " : nothing)")
-        println(io, "            PB.decode!(_d, _v)")
+        println(io, "            PB._decode!(_d, _v)")
         println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", _v[]::", elem, ")")
     elseif m.is_enum
-        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, "))")
+        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, "))")
     else
         if !isempty(m.wire_annotation)
-            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, ", ", m.wire_annotation, "))")
+            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, ", ", m.wire_annotation, "))")
         else
-            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB.decode(_d, ", m.elem_jl_type, "))")
+            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, "))")
         end
     end
 end
@@ -941,7 +941,7 @@ end
 
 function _emit_encode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
-    _emit_oneof_member_guarded(io, o, m, "PB.encode(_e, $(m.number), _o.value$(args))")
+    _emit_oneof_member_guarded(io, o, m, "PB._encode(_e, $(m.number), _o.value$(args))")
 end
 
 function _emit_encoded_size_oneof_member(io::IO, o::OneofModel, m::FieldModel)
@@ -955,21 +955,21 @@ function _emit_decode_field(io::IO, f::FieldModel)
         # one entry off the wire and inserts (k, v). The optional 3rd arg is
         # only emitted when at least one of K/V uses fixed/zigzag wire format.
         if isempty(f.wire_annotation)
-            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
         else
-            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
+            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
         end
     elseif f.is_message
         if f.is_repeated
-            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
         else
-            println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
         end
     elseif f.is_enum
         if f.is_repeated
-            println(io, "            PB.decode!(_d, wire_type, ", f.jl_fieldname, ")")
+            println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ")")
         else
-            println(io, "            ", f.jl_fieldname, " = PB.decode(_d, ", f.elem_jl_type, ")")
+            println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ")")
         end
     else
         if f.is_repeated
@@ -978,17 +978,17 @@ function _emit_decode_field(io::IO, f::FieldModel)
                 # (decode.jl:107, 120). Bool/Float32/Float64 do *not* — they
                 # need the wire-type so the codec can switch between packed
                 # (LENGTH_DELIMITED) and unpacked (decode.jl:174).
-                println(io, "            PB.decode!(_d, ", f.jl_fieldname, ")")
+                println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
             elseif !isempty(f.wire_annotation)
-                println(io, "            PB.decode!(_d, wire_type, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
+                println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
             else
-                println(io, "            PB.decode!(_d, wire_type, ", f.jl_fieldname, ")")
+                println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ")")
             end
         else
             if !isempty(f.wire_annotation)
-                println(io, "            ", f.jl_fieldname, " = PB.decode(_d, ", f.elem_jl_type, ", ", f.wire_annotation, ")")
+                println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ", ", f.wire_annotation, ")")
             else
-                println(io, "            ", f.jl_fieldname, " = PB.decode(_d, ", f.elem_jl_type, ")")
+                println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ")")
             end
         end
     end
@@ -1045,11 +1045,11 @@ function _emit_encode_field(io::IO, f::FieldModel)
         # Emit per-element so the singular scalar encode paths apply.
         println(io, "    if !isempty(_x.", f.jl_fieldname, ")")
         println(io, "        for _v in _x.", f.jl_fieldname)
-        println(io, "            PB.encode(_e, ", f.number, ", _v", args, ")")
+        println(io, "            PB._encode(_e, ", f.number, ", _v", args, ")")
         println(io, "        end")
         println(io, "    end")
     else
-        println(io, "    ", f.encode_skip, " && PB.encode(_e, ", f.number, ", _x.", f.jl_fieldname, args, ")")
+        println(io, "    ", f.encode_skip, " && PB._encode(_e, ", f.number, ", _x.", f.jl_fieldname, args, ")")
     end
 end
 
@@ -1337,9 +1337,14 @@ function codegen(file::FileDescriptorProto, universe::Universe)
     syntax = something(file.syntax, "proto2")
     println(io, "# Generated by ProtoBufDescriptors. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
+    println(io, "#! format: off")
     println(io)
     println(io, "import ProtoBufDescriptors as PB")
     println(io, "using ProtoBufDescriptors: OneOf, OrderedDict")
+    # Pull the user-facing codec entry points into the include site so
+    # `encode(io, msg)` / `decode(io, T)` / `encode_json` / `decode_json`
+    # work without the caller importing ProtoBufDescriptors themselves.
+    println(io, "using ProtoBufDescriptors: encode, decode, encode_json, decode_json")
     println(io, "using ProtoBufDescriptors.EnumX: @enumx")
 
     # Cross-package imports. Walk the file's referenced FQNs to find
@@ -1431,7 +1436,7 @@ function codegen(file::FileDescriptorProto, universe::Universe)
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
-            println(io, "PB.decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false) = PB.decode(_d, ", jl, ", _endpos, _group)")
+            println(io, "PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false) = PB._decode(_d, ", jl, ", _endpos, _group)")
             # NOTE: invariant `Type{X}` (no `<:`) so the forwarding fires
             # only for the abstract supertype itself; the concrete struct
             # falls through to the generic walker via the
@@ -1440,6 +1445,8 @@ function codegen(file::FileDescriptorProto, universe::Universe)
         end
     end
 
+    println(io)
+    println(io, "#! format: on")
     return String(take!(io))
 end
 
@@ -1496,9 +1503,15 @@ function codegen_driver(file_to_generate::Vector{String},
     println(io, "# Driver file: declares the proto-package module skeleton")
     println(io, "# and includes each generated `_pb.jl` in topological order.")
     println(io, "# Include this file from wherever you want the namespace rooted.")
+    println(io, "#! format: off")
     println(io)
     println(io, "const _PB_DIR  = @__DIR__")
     println(io, "const _PB_ROOT = @__MODULE__")
+    println(io)
+    # Bring the codec entry points into the wrapping module so callers
+    # holding a `MyProtos.tutorial.Person` can do `MyProtos.encode(msg)`
+    # without needing their own `using ProtoBufDescriptors`.
+    println(io, "using ProtoBufDescriptors: encode, decode, encode_json, decode_json")
     println(io)
 
     # Emit empty skeleton modules (nested) so cross-module references in
@@ -1524,6 +1537,8 @@ function codegen_driver(file_to_generate::Vector{String},
                 ", joinpath(_PB_DIR, ", repr(out_name), "))")
     end
 
+    println(io)
+    println(io, "#! format: on")
     return String(take!(io))
 end
 

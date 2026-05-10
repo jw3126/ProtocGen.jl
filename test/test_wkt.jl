@@ -16,12 +16,8 @@ include("setup.jl")
 const WKT = ProtoBufDescriptors.google.protobuf
 
 function rt(x::T) where {T}
-    io = IOBuffer()
-    Base.invokelatest(ProtoBufDescriptors.encode,
-        ProtoBufDescriptors.ProtoEncoder(io), x)
-    bytes = take!(io)
-    decoded = Base.invokelatest(ProtoBufDescriptors.decode,
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(bytes)), T)
+    bytes = Base.invokelatest(ProtoBufDescriptors.encode, x)
+    decoded = Base.invokelatest(ProtoBufDescriptors.decode, bytes, T)
     return decoded, bytes
 end
 

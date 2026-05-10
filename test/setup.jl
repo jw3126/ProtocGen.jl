@@ -18,10 +18,7 @@ fixture(name) = read(joinpath(FIXTURES, name))
 
 # Decode a FileDescriptorSet straight out of a fixture name.
 function load_fdset(name::AbstractString)
-    return ProtoBufDescriptors.decode(
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(fixture(name))),
-        G.FileDescriptorSet,
-    )
+    return ProtoBufDescriptors.decode(fixture(name), G.FileDescriptorSet)
 end
 
 """
@@ -38,10 +35,9 @@ function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
         proto_paths, nothing,
         fdset.file, G.FileDescriptorProto[], nothing,
     )
-    req_io = IOBuffer()
-    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(req_io), request)
+    req_bytes = ProtoBufDescriptors.encode(request)
     out_io = IOBuffer()
-    return ProtoBufDescriptors.run_plugin(IOBuffer(take!(req_io)), out_io)
+    return ProtoBufDescriptors.run_plugin(IOBuffer(req_bytes), out_io)
 end
 
 """
@@ -60,14 +56,9 @@ end
 # `invokelatest`-wrapped wire ops. Generated types are eval'd partway through
 # a test, so dispatch from our codec into them needs the latest world.
 function decode_latest(::Type{T}, bytes::AbstractVector{UInt8}) where {T}
-    return Base.invokelatest(
-        ProtoBufDescriptors.decode,
-        ProtoBufDescriptors.ProtoDecoder(IOBuffer(bytes)), T,
-    )
+    return Base.invokelatest(ProtoBufDescriptors.decode, bytes, T)
 end
 
 function encode_latest(x)
-    io = IOBuffer()
-    Base.invokelatest(ProtoBufDescriptors.encode, ProtoBufDescriptors.ProtoEncoder(io), x)
-    return take!(io)
+    return Base.invokelatest(ProtoBufDescriptors.encode, x)
 end

@@ -1,136 +1,66 @@
 # ProtoBufDescriptors.jl
 
-A descriptor-driven Protocol Buffers compiler and runtime for Julia.
+Julia code generator for Protocol Buffers.
+It is meant to be used as a protoc plugin.
 
-This package consumes `FileDescriptorSet` blobs (the output of `protoc`) and
-emits Julia source. It can run as a `protoc-gen-julia` plugin or as an offline
-generator. It does **not** parse `.proto` text directly; that's `protoc`'s job.
+## Install
 
-## Status
+Install `protoc-gen-julia` binary:
 
-Pre-release. Phase 0 skeleton; APIs not stable.
+```julia
+julia> using Pkg
+pkg> app add ProtoBufDescriptors
+```
 
-## Differences from ProtoBuf.jl
-
-`ProtoBuf.jl` parses `.proto` text directly in Julia and has its own well-loved
-API. This package takes a different architectural route:
-
-- Codegen consumes `FileDescriptorSet` blobs from `protoc`. No Julia-side
-  `.proto` parser.
-- Operates as a standard `protoc` plugin, so it composes with the existing
-  protobuf tooling ecosystem (`buf`, Bazel `rules_proto`, etc.).
-- Nullable singular fields use `Union{Nothing, T}` instead of zero-default
-  scalars, so proto3 `optional` and proto2 `optional` track presence
-  correctly. This matters for round-tripping messages produced by
-  spec-conformant senders.
-- `proto2 required` fields throw on decode if absent, instead of silently
-  defaulting.
-
-## Generating Julia bindings from `.proto` files
-
-Codegen runs as a standard `protoc` plugin. Two pieces ship with the
-package:
-
-- `bin/protoc-gen-julia` — the plugin executable, a self-executing
-  Julia script.
-- A driver file (`_pb_includes.jl`) automatically emitted alongside the
-  per-`.proto` outputs whenever you generate more than one file. It
-  declares the proto-package module skeleton and `Core.include`s each
-  `_pb.jl` in dependency order so cross-package refs resolve.
-
-### Running the plugin
-
-Point `protoc` at the plugin and pick an output directory:
+## Usage
 
 ```sh
+cd examples
+mkdir out
+
 protoc \
-    --plugin=protoc-gen-julia=/path/to/ProtoBufDescriptors/bin/protoc-gen-julia \
-    --proto_path=/path/to/your/protos \
-    --julia_out=/path/to/output \
-    your/file_one.proto your/file_two.proto …
+    --julia_out=out \
+    addressbook.proto
 ```
 
-If your `.proto` files import any well-known types, also add the
-package's vendored copies to the proto path so `protoc` can find them:
-
-```sh
-    --proto_path=/path/to/ProtoBufDescriptors/gen/proto
-```
-
-After this, the output directory mirrors the `.proto` directory tree
-(one `<name>_pb.jl` per `.proto`) plus the `_pb_includes.jl` driver at
-the root.
-
-### Loading the generated tree
-
-You pick where the proto namespace lives in your Julia module
-hierarchy. The driver captures `@__MODULE__` and `@__DIR__` at load
-time, so `include`-ing it from any wrapping module roots the entire
-proto tree under that module:
+This will generate `out/addressbook_pb.jl`. It will depend on the `ProtoBufDescriptors.jl` package.
 
 ```julia
-using ProtoBufDescriptors
+include("out/addressbook_pb.jl")
 
-module MyProtos
-    include("/path/to/output/_pb_includes.jl")
-end
-
-# Example: if your protos define `package foo.bar` with a `Baz` message,
-# it's now reachable as MyProtos.foo.bar.Baz.
-b = MyProtos.foo.bar.Baz(...)
-```
-
-Cross-package imports inside the generated files are emitted as Julia
-_relative_ imports (`import ..bar as foo_bar`, `import ...other_pkg`),
-so the same generated tree works regardless of which wrapping module
-you mount it under. WKT references (`google.protobuf.Timestamp`,
-`google.protobuf.Any`, etc.) are absolute and always resolve to
-`ProtoBufDescriptors.google.protobuf` — no setup required.
-
-### Encoding and decoding
-
-The runtime API mirrors the binary and JSON sides:
-
-```julia
-using ProtoBufDescriptors
-
-msg = MyProtos.foo.bar.Baz(...)
+person = Person(
+    "Alice",
+    Int32(42),
+    "alice@example.com",
+    [
+        PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE),
+        PhoneNumber("+1-555-0101", PhoneType.PHONE_TYPE_WORK),
+    ],
+)
 
 # Binary wire format
-bin = let buf = IOBuffer()
-    encode(ProtoEncoder(buf), msg)
-    take!(buf)
-end
-back = decode(ProtoDecoder(IOBuffer(bin)), MyProtos.foo.bar.Baz)
+bytes = encode(person)
+@assert decode(bytes, Person) == person
 
-# JSON (protobuf JSON mapping, including all 11 well-known types
-# and `Any` via the per-load type registry)
-js = encode_json(msg)
-back_j = decode_json(MyProtos.foo.bar.Baz, js;
-                     ignore_unknown_fields = false)
+# Canonical protobuf JSON mapping
+js = encode_json(person)
+# {"name":"Alice","id":42,"email":"alice@example.com","phones":[{"number":"+1-555-0100","type":"PHONE_TYPE_MOBILE"},…]}
+@assert decode_json(Person, js) == person
 ```
 
-### Self-bootstrap
+`encode` / `decode` / `encode_json` / `decode_json` come in through the
+generated file's `using` line, so user code never has to import
+`ProtoBufDescriptors` itself.
 
-The descriptor types in `gen/` (`descriptor.proto`, `compiler/plugin.proto`,
-and the 11 well-known types) are produced by _this package's own
-codegen_. To regenerate them after a codegen change:
-
-```sh
-julia --project=. gen/regen.jl
-```
-
-That re-runs `protoc` over `gen/proto/*.proto` through
-`bin/protoc-gen-julia` and writes the result back into `gen/google/`.
-The previous bootstrap (originally generated by ProtoBuf.jl) is no
-longer on the build path; the package now self-hosts.
+WKT references resolve to `ProtoBufDescriptors.google.protobuf`
+automatically — no extra wiring.
 
 ## Acknowledgement
 
-The wire codec (`src/codec/`) is copied with light modifications from
-[ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl), copyright (c) 2022
-RelationalAI, Tomáš Drvoštěp, and contributors, MIT-licensed. The descriptor
-type bootstrap was generated using ProtoBuf.jl's `protojl` and committed to
-this repo. Also ProtoBuf.jl was used for the initial bootstrap.
-
-See [LICENSE.md](LICENSE.md) for the full licenses.
+The wire codec under `src/codec/` is copied with light modifications
+from [ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl)
+(MIT-licensed, © 2022 RelationalAI / Tomáš Drvoštěp / contributors).
+ProtoBuf.jl is the long-running Julia Protocol Buffers library; this
+package takes a different architectural route (descriptor-driven, with
+proto3 `optional` presence and proto2 `required` semantics fixed) but
+stands on its codec. See [LICENSE.md](LICENSE.md).
