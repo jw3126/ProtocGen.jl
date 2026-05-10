@@ -34,7 +34,15 @@ jobs:
           sudo apt-get install -y protobuf-compiler
           protoc --version
       - name: Install protoc-gen-julia via Pkg.Apps
-        run: julia --color=no -e 'using Pkg; Pkg.Apps.add(path = pwd())'
+        # `Pkg.Apps.add` resolves the app's deps against the user's
+        # installed registries — on a fresh runner that set is empty, so
+        # add the General registry first.
+        run: |
+          julia --color=no -e '
+            using Pkg
+            Pkg.Registry.add("General")
+            Pkg.Apps.add(path = pwd())
+          '
       - name: Add Julia bin to PATH
         run: echo "$HOME/.julia/bin" >> "$GITHUB_PATH"
       - name: Confirm app is on PATH
