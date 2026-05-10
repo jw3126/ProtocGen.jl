@@ -40,6 +40,17 @@ include("setup.jl")
     @test from_protoc.nested !== nothing && from_protoc.nested.a == 7
     @test from_protoc.choice !== nothing && from_protoc.choice.name === :ci && from_protoc.choice.value == 13
     @test from_protoc.packed_ints == [10, 20, 30]
+
+    # `Base.show` renders messages in @kwdef-style. The unknown-fields
+    # buffer is suppressed when empty (the common case).
+    s = sprint(show, inner)
+    @test occursin("Inner(", s)
+    @test occursin("a = ", s)
+    @test !occursin("unknown_fields", s)
+    # When the buffer carries bytes, it's shown with its var"" name.
+    inner_with_unknown = Base.invokelatest(sample_mod.Inner, Int32(1), UInt8[0xff])
+    s2 = sprint(show, inner_with_unknown)
+    @test occursin("var\"#unknown_fields\" = ", s2)
 end
 
 @testset "codegen corpus: every wire encoding" begin
