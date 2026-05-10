@@ -2,10 +2,10 @@ name: Examples
 on:
   pull_request:
     branches:
-      - master
+      - main
   push:
     branches:
-      - master
+      - main
 jobs:
   app-install-and-run:
     name: Install app + run addressbook example

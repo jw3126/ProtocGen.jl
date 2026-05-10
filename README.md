@@ -1,6 +1,6 @@
 # ProtocGenJulia.jl
 
-[![CI](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml)
+[![CI](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml)
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
 Passes the required proto2 and proto3 conformance test suites using binary + JSON.
