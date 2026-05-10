@@ -249,7 +249,7 @@ struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String}
     number::Union{Nothing,Int32}
     label::Union{Nothing,var"FieldDescriptorProto.Label".T}
-    var"#type"::Union{Nothing,var"FieldDescriptorProto.Type".T}
+    type::Union{Nothing,var"FieldDescriptorProto.Type".T}
     type_name::Union{Nothing,String}
     extendee::Union{Nothing,String}
     default_value::Union{Nothing,String}
@@ -258,18 +258,18 @@ struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     options::Union{Nothing,FieldOptions}
     proto3_optional::Union{Nothing,Bool}
     _unknown_fields::Vector{UInt8}
-    function FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
-        return new(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
+    function FieldDescriptorProto(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
+        return new(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{FieldDescriptorProto})
-    return (;name = nothing, number = nothing, label = nothing, var"#type" = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, _unknown_fields = UInt8[])
+    return (;name = nothing, number = nothing, label = nothing, type = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, _unknown_fields = UInt8[])
 end
 function PB.field_numbers(::Core.Type{FieldDescriptorProto})
-    return (;name = 1, number = 3, label = 4, var"#type" = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
+    return (;name = 1, number = 3, label = 4, type = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
 end
 function PB.json_field_names(::Core.Type{FieldDescriptorProto})
-    return (;name = "name", number = "number", label = "label", var"#type" = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
+    return (;name = "name", number = "number", label = "label", type = "type", type_name = "typeName", extendee = "extendee", default_value = "defaultValue", oneof_index = "oneofIndex", json_name = "jsonName", options = "options", proto3_optional = "proto3Optional")
 end
 PB.register_message_type("google.protobuf.FieldDescriptorProto", FieldDescriptorProto)
 
@@ -277,7 +277,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorPr
     name = nothing
     number = nothing
     label = nothing
-    var"#type" = nothing
+    type = nothing
     type_name = nothing
     extendee = nothing
     default_value = nothing
@@ -295,7 +295,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorPr
         elseif field_number == 4
             label = PB._decode(_d, var"FieldDescriptorProto.Label".T)
         elseif field_number == 5
-            var"#type" = PB._decode(_d, var"FieldDescriptorProto.Type".T)
+            type = PB._decode(_d, var"FieldDescriptorProto.Type".T)
         elseif field_number == 6
             type_name = PB._decode(_d, String)
         elseif field_number == 2
@@ -314,7 +314,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:FieldDescriptorPr
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
     end
-    return FieldDescriptorProto(name, number, label, var"#type", type_name, extendee, default_value, oneof_index, json_name, options[], proto3_optional, _unknown_fields)
+    return FieldDescriptorProto(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options[], proto3_optional, _unknown_fields)
 end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::FieldDescriptorProto)
@@ -323,7 +323,7 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::FieldDescriptorProto)
     !isnothing(_x.extendee) && PB._encode(_e, 2, _x.extendee)
     !isnothing(_x.number) && PB._encode(_e, 3, _x.number)
     !isnothing(_x.label) && PB._encode(_e, 4, _x.label)
-    !isnothing(_x.var"#type") && PB._encode(_e, 5, _x.var"#type")
+    !isnothing(_x.type) && PB._encode(_e, 5, _x.type)
     !isnothing(_x.type_name) && PB._encode(_e, 6, _x.type_name)
     !isnothing(_x.default_value) && PB._encode(_e, 7, _x.default_value)
     !isnothing(_x.options) && PB._encode(_e, 8, _x.options)
@@ -341,7 +341,7 @@ function PB._encoded_size(_x::FieldDescriptorProto)
     !isnothing(_x.extendee) && (encoded_size += PB._encoded_size(_x.extendee, 2))
     !isnothing(_x.number) && (encoded_size += PB._encoded_size(_x.number, 3))
     !isnothing(_x.label) && (encoded_size += PB._encoded_size(_x.label, 4))
-    !isnothing(_x.var"#type") && (encoded_size += PB._encoded_size(_x.var"#type", 5))
+    !isnothing(_x.type) && (encoded_size += PB._encoded_size(_x.type, 5))
     !isnothing(_x.type_name) && (encoded_size += PB._encoded_size(_x.type_name, 6))
     !isnothing(_x.default_value) && (encoded_size += PB._encoded_size(_x.default_value, 7))
     !isnothing(_x.options) && (encoded_size += PB._encoded_size(_x.options, 8))

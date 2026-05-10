@@ -294,13 +294,17 @@ function _is_packed_repeated(field::FieldDescriptorProto, syntax::String)
 end
 
 function _jl_fieldname(name::String)
-    # Julia keywords the proto schema actually uses are rare. The descriptor
-    # bootstrap shows the convention: `type` → `var"#type"`. Apply the same
-    # mangling for any keyword we hit.
+    # Julia keywords that are illegal as a struct field name. `type` is
+    # NOT one — only the two-token `abstract type` / `primitive type` are
+    # keywords, and `type` standalone is just an identifier; the
+    # descriptor bootstrap commonly carries a `type` field (e.g.
+    # FieldDescriptorProto.type) and tolerating it bare keeps the
+    # generated API readable. Anything in the list below is mangled to
+    # `var"#name"`.
     KEYWORDS = ("begin","while","if","for","try","return","break","continue",
                 "function","macro","quote","let","local","global","const",
                 "do","struct","module","baremodule","using","import","export",
-                "end","else","elseif","catch","finally","true","false","type")
+                "end","else","elseif","catch","finally","true","false")
     return name in KEYWORDS ? "var\"#$(name)\"" : name
 end
 
@@ -316,7 +320,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     json_name = something(field.json_name, proto_name)
     number = Int(something(field.number, Int32(0)))
     label = field.label
-    ftype = getfield(field, Symbol("#type"))
+    ftype = field.type
     is_repeated = label === L.LABEL_REPEATED
     is_message = ftype === T.TYPE_MESSAGE
     is_enum = ftype === T.TYPE_ENUM
@@ -520,7 +524,7 @@ end
 # the per-field-shape decoration (no Vector, no Union).
 function _resolve_field_jl_type(field::FieldDescriptorProto, names::LocalNames)
     T = var"FieldDescriptorProto.Type"
-    ftype = getfield(field, Symbol("#type"))
+    ftype = field.type
     if ftype === T.TYPE_MESSAGE
         return _resolve_typename(something(field.type_name, ""), names)
     elseif ftype === T.TYPE_ENUM
@@ -537,7 +541,7 @@ end
 # full `Val{:fixed}` form. See codec/decode.jl:58–98 / encode.jl:150–187.
 function _map_wire_annot(field::FieldDescriptorProto)
     T = var"FieldDescriptorProto.Type"
-    ftype = getfield(field, Symbol("#type"))
+    ftype = field.type
     if ftype === T.TYPE_FIXED32  || ftype === T.TYPE_FIXED64 ||
        ftype === T.TYPE_SFIXED32 || ftype === T.TYPE_SFIXED64
         return ":fixed"
@@ -1136,7 +1140,7 @@ function _direct_message_deps(msg::DescriptorProto, names::LocalNames)
     deps = Set{String}()
     T = var"FieldDescriptorProto.Type"
     for f in msg.field
-        ftype = getfield(f, Symbol("#type"))
+        ftype = f.type
         if ftype === T.TYPE_MESSAGE
             tn = something(f.type_name, "")
             if tn in names.messages
@@ -1156,7 +1160,7 @@ function _nested_message_deps(msg::DescriptorProto, names::LocalNames)
     T = var"FieldDescriptorProto.Type"
     function visit(m::DescriptorProto)
         for f in m.field
-            ftype = getfield(f, Symbol("#type"))
+            ftype = f.type
             if ftype === T.TYPE_MESSAGE
                 tn = something(f.type_name, "")
                 if tn in names.messages
@@ -1178,7 +1182,7 @@ function _toplevel_message_deps(msg::DescriptorProto, names::LocalNames)
     deps = Set{String}()
     function visit(m::DescriptorProto)
         for f in m.field
-            ftype = getfield(f, Symbol("#type"))
+            ftype = f.type
             if ftype === var"FieldDescriptorProto.Type".TYPE_MESSAGE
                 tn = something(f.type_name, "")
                 # Only count deps that resolve to a top-level message in this
