@@ -28,6 +28,13 @@ TOML = "1"
 Test = "1"
 julia = "1.10"
 
+[apps]
+# `--compile=min -O0` cuts cold-start ~4× by skipping redundant compilation
+# of methods already present in the package's pkgimage; verified to produce
+# byte-identical CodeGeneratorResponse output. See bin/protoc-gen-julia for
+# the matching dev-shim flags.
+protoc-gen-julia = { submodule = "PluginApp", julia_flags = ["--compile=min", "-O0", "--color=no"] }
+
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"

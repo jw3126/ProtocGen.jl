@@ -49,4 +49,49 @@ include("setup.jl")
     @test (uperm(plugin_path) & 0o1) != 0
 end
 
+@testset "PluginApp.main" begin
+    # Both the Pkg.Apps-installed binary and bin/protoc-gen-julia funnel
+    # into PluginApp.main, so exercise it end-to-end with redirected
+    # stdin/stdout. Empty CodeGeneratorRequest → response with no files
+    # and no error string. The redirect_stdout test also guards against
+    # stray writes to stdout (e.g. an accidental @info) corrupting the
+    # protoc plugin protocol.
+    request = GC.CodeGeneratorRequest(
+        String[], nothing, G.FileDescriptorProto[], G.FileDescriptorProto[], nothing,
+    )
+    req_io = IOBuffer()
+    ProtoBufDescriptors.encode(ProtoBufDescriptors.ProtoEncoder(req_io), request)
+    req_bytes = take!(req_io)
+
+    in_pipe = Pipe();  Base.link_pipe!(in_pipe)
+    write(in_pipe.in, req_bytes); close(in_pipe.in)
+    out_pipe = Pipe(); Base.link_pipe!(out_pipe)
+
+    rc = redirect_stdin(in_pipe) do
+        redirect_stdout(out_pipe) do
+            ProtoBufDescriptors.PluginApp.main(String[])
+        end
+    end
+    close(out_pipe.in)
+    @test rc == 0
+
+    out_bytes = read(out_pipe)
+    response = ProtoBufDescriptors.decode(
+        ProtoBufDescriptors.ProtoDecoder(IOBuffer(out_bytes)),
+        GC.CodeGeneratorResponse,
+    )
+    @test response.error === nothing
+    @test isempty(response.file)
+    @test response.supported_features == UInt64(1)
+
+    # Unexpected positional args → exit 2, no stdout output.
+    out_pipe2 = Pipe(); Base.link_pipe!(out_pipe2)
+    rc2 = redirect_stdout(out_pipe2) do
+        ProtoBufDescriptors.PluginApp.main(["--unexpected"])
+    end
+    close(out_pipe2.in)
+    @test rc2 == 2
+    @test isempty(read(out_pipe2))
+end
+
 end  # module TestPlugin

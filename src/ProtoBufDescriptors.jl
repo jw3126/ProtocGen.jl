@@ -114,6 +114,7 @@ include("../gen/google/google.jl")
 
 include("codegen.jl")
 include("plugin.jl")
+include("plugin_app.jl")
 include("json_wkt.jl")
 include("testing.jl")
 
