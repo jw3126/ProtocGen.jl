@@ -4,7 +4,7 @@ keywords = ["protobuf", "protoc", "descriptor"]
 license = "MIT"
 desc = "Descriptor-driven protobuf codec and codegen for Julia"
 version = "0.1.0"
-authors = ["Jan Weidner <jan.weidner@toolpath.com>"]
+authors = ["Jan Weidner <jw3126@gmail.com>"]
 
 [deps]
 BufferedStreams = "e1450e63-4bb3-523b-b2a4-4ffa8c0fd77d"
