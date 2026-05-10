@@ -14,26 +14,23 @@ pkg> app add ProtoBufDescriptors
 
 ## Usage
 
-`addressbook.proto` imports `google/protobuf/timestamp.proto`, so
-protoc needs the well-known-types vendored under
-`ProtoBufDescriptors/gen/proto` on its proto-path:
-
 ```sh
 cd examples
 mkdir out
 
 protoc \
     --julia_out=out \
-    --proto_path=. \
-    --proto_path=/path/to/ProtoBufDescriptors/gen/proto \
     addressbook.proto
 ```
+
+`addressbook.proto` imports `google/protobuf/timestamp.proto`; standard
+protoc installations ship the well-known-type protos on their default
+include path, so no extra `--proto_path` is needed.
 
 This generates `out/addressbook_pb.jl`. It depends on the
 `ProtoBufDescriptors.jl` package.
 
 ```julia
-import ProtoBufDescriptors as PB
 include("out/addressbook_pb.jl")
 
 person = Person(
@@ -44,7 +41,7 @@ person = Person(
         PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE),
         PhoneNumber("+1-555-0101", PhoneType.PHONE_TYPE_WORK),
     ],
-    last_updated = PB.google.protobuf.Timestamp(seconds = Int64(1_715_000_000)),
+    last_updated = google_protobuf.Timestamp(seconds = Int64(1_715_000_000)),
 )
 
 # Binary wire format
@@ -58,10 +55,10 @@ js = encode_json(person)
 @assert decode_json(Person, js) == person
 ```
 
-`encode` / `decode` / `encode_json` / `decode_json` come in through the
-generated file's `using` line; user code only needs `import
-ProtoBufDescriptors as PB` to reach the well-known-type modules at
-`PB.google.protobuf.<Type>`.
+The generated file pulls in everything user code needs: `encode` /
+`decode` / `encode_json` / `decode_json`, plus an alias for each
+imported proto package (here `google_protobuf` for
+`google.protobuf`, since proto-package dots become Julia underscores).
 
 ## Acknowledgement
 

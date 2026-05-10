@@ -19,7 +19,6 @@ protoc \
     --plugin=protoc-gen-julia="$PLUGIN" \
     --julia_out="$OUT_DIR" \
     --proto_path="$HERE" \
-    --proto_path="$REPO/gen/proto" \
     "$HERE"/*.proto
 
 echo "wrote Julia bindings to $OUT_DIR"
