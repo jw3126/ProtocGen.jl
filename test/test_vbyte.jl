@@ -2,7 +2,7 @@ module TestVbyte
 
 include("setup.jl")
 
-using ProtocGenJulia: Codecs
+using ProtocGen: Codecs
 using .Codecs: vbyte_decode, vbyte_encode
 
 test_vbyte_decode(bytes, expected) = @test vbyte_decode(PipeBuffer(bytes), typeof(unsigned(expected))) == unsigned(expected)

@@ -15,11 +15,11 @@
 module TestJSON
 
 using Test
-using ProtocGenJulia
-using ProtocGenJulia: encode_json, decode_json, OneOf, OrderedDict
+using ProtocGen
+using ProtocGen: encode_json, decode_json, OneOf, OrderedDict
 import JSON
 
-const _G = ProtocGenJulia.google.protobuf
+const _G = ProtocGen.google.protobuf
 
 _parsed(x) = JSON.parse(encode_json(x))
 
@@ -27,7 +27,7 @@ _parsed(x) = JSON.parse(encode_json(x))
 # overrides merged in. Lets us touch only the fields a test cares about
 # without listing every other slot as `nothing`.
 function _make(::Type{T}; overrides...) where {T}
-    d = ProtocGenJulia.default_values(T)
+    d = ProtocGen.default_values(T)
     merged = merge(d, NamedTuple(overrides))
     return T((merged[n] for n in fieldnames(T))...)
 end
@@ -179,10 +179,10 @@ end
         E = _G.var"FieldDescriptorProto.Type"
         v = E.TYPE_STRING
         io = IOBuffer()
-        ProtocGenJulia._encode_json_value(io, v)
+        ProtocGen._encode_json_value(io, v)
         @test String(take!(io)) == "\"TYPE_STRING\""
-        @test ProtocGenJulia._decode_json_value(typeof(v), "TYPE_STRING") === v
-        @test ProtocGenJulia._decode_json_value(typeof(v), 9) === v
+        @test ProtocGen._decode_json_value(typeof(v), "TYPE_STRING") === v
+        @test ProtocGen._decode_json_value(typeof(v), 9) === v
     end
 
     @testset "nested submessage" begin
@@ -322,20 +322,20 @@ end
         # Any wrapping a Timestamp: WKT special form under "value".
         ts = _G.Timestamp(Int64(1715188800), Int32(0))
         a = _G.var"Any"("type.googleapis.com/google.protobuf.Timestamp",
-                        ProtocGenJulia.encode(ts))
+                        ProtocGen.encode(ts))
         d = JSON.parse(encode_json(a))
         @test d["@type"] == "type.googleapis.com/google.protobuf.Timestamp"
         @test endswith(d["value"], "Z")
         # Round-trip: decode JSON, re-decode binary payload.
         back_a = decode_json(_G.var"Any", encode_json(a))
-        back_ts = ProtocGenJulia.decode(back_a.value, _G.Timestamp)
+        back_ts = ProtocGen.decode(back_a.value, _G.Timestamp)
         @test back_ts.seconds == ts.seconds
         @test back_ts.nanos   == ts.nanos
 
         # Any wrapping a BoolValue.
         bv = _G.BoolValue(true)
         a2 = _G.var"Any"("type.googleapis.com/google.protobuf.BoolValue",
-                         ProtocGenJulia.encode(bv))
+                         ProtocGen.encode(bv))
         d2 = JSON.parse(encode_json(a2))
         @test d2["@type"] == "type.googleapis.com/google.protobuf.BoolValue"
         @test d2["value"] == true
@@ -344,7 +344,7 @@ end
     @testset "WKT: Any wraps ordinary messages with fields inlined" begin
         sc = _G.SourceContext("foo.proto")
         a = _G.var"Any"("type.googleapis.com/google.protobuf.SourceContext",
-                        ProtocGenJulia.encode(sc))
+                        ProtocGen.encode(sc))
         d = JSON.parse(encode_json(a))
         @test d == Dict(
             "@type"    => "type.googleapis.com/google.protobuf.SourceContext",
@@ -352,7 +352,7 @@ end
         )
         # Round-trip
         back_a = decode_json(_G.var"Any", encode_json(a))
-        back_sc = ProtocGenJulia.decode(back_a.value, _G.SourceContext)
+        back_sc = ProtocGen.decode(back_a.value, _G.SourceContext)
         @test back_sc.file_name == "foo.proto"
     end
 
@@ -364,9 +364,9 @@ end
     end
 
     @testset "lookup_message_type covers self-bootstrap WKTs and descriptors" begin
-        @test ProtocGenJulia.lookup_message_type("google.protobuf.Timestamp") === _G.Timestamp
-        @test ProtocGenJulia.lookup_message_type("google.protobuf.FileDescriptorProto") === _G.FileDescriptorProto
-        @test ProtocGenJulia.lookup_message_type("nonexistent.Foo") === nothing
+        @test ProtocGen.lookup_message_type("google.protobuf.Timestamp") === _G.Timestamp
+        @test ProtocGen.lookup_message_type("google.protobuf.FileDescriptorProto") === _G.FileDescriptorProto
+        @test ProtocGen.lookup_message_type("nonexistent.Foo") === nothing
     end
 
 end

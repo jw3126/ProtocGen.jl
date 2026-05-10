@@ -49,7 +49,7 @@ from PATH.
   passes iff no *new* failures appear. The header inside the file
   groups failures by category and explains the underlying gaps.
 - The runner itself is *not* in this directory. It's built on
-  demand by `ProtocGenJulia.obtain_conformance_test_runner()`
+  demand by `ProtocGen.obtain_conformance_test_runner()`
   (defined in `src/testing.jl`), which clones protobuf at a pinned
   tag, cmake-builds the conformance target, and caches the binary
   in a Scratch.jl scratchspace.
@@ -80,8 +80,8 @@ suffixed with the version); the next test run rebuilds. Or call
 explicitly. To delete the cache manually:
 
 ```julia
-using Scratch, ProtocGenJulia
-Scratch.delete_scratch!(ProtocGenJulia, "conformance-runner-v25.9-1")
+using Scratch, ProtocGen
+Scratch.delete_scratch!(ProtocGen, "conformance-runner-v25.9-1")
 ```
 
 To run the runner directly (for debugging) and see every WARNING /

@@ -1,5 +1,5 @@
 using Aqua
-using ProtocGenJulia
+using ProtocGen
 using Test
 
 # Each `test_*.jl` is wrapped in its own module that begins with
@@ -8,8 +8,8 @@ using Test
 # wire ops; see test/setup.jl.
 
 @testset "smoke" begin
-    @test isdefined(ProtocGenJulia, :PACKAGE_VERSION)
-    @test ProtocGenJulia.PACKAGE_VERSION isa VersionNumber
+    @test isdefined(ProtocGen, :PACKAGE_VERSION)
+    @test ProtocGen.PACKAGE_VERSION isa VersionNumber
 end
 
 include("test_vbyte.jl")
@@ -27,5 +27,5 @@ include("test_json.jl")
 include("test_conformance_runner.jl")
 
 @testset "Aqua" begin
-    Aqua.test_all(ProtocGenJulia)
+    Aqua.test_all(ProtocGen)
 end

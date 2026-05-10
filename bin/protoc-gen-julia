@@ -7,7 +7,7 @@
 #
 # Dev shim — runs against the live worktree without `Pkg.Apps.add`.
 # Both this shim and the Pkg.Apps-installed binary dispatch through
-# `ProtocGenJulia.PluginApp.@main`, so the two install paths stay
+# `ProtocGen.PluginApp.@main`, so the two install paths stay
 # in lockstep.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 # `--compile=min -O0` mirrors the [apps] entry in Project.toml — both
@@ -15,6 +15,6 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 exec julia --project="${HERE}/.." --startup-file=no --color=no --compile=min -O0 "$0" "$@"
 =#
 
-using ProtocGenJulia
+using ProtocGen
 
-exit(ProtocGenJulia.PluginApp.main(ARGS))
+exit(ProtocGen.PluginApp.main(ARGS))

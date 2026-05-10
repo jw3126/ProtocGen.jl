@@ -55,8 +55,8 @@ include("setup.jl")
     # message fields in struct-declaration order rather than proto-source
     # order, and enum fields still inherit the equal-to-default skip; both
     # are wire-format compatible but not byte-stable.)
-    bytes = ProtocGenJulia.encode(fdset)
-    fdset2 = ProtocGenJulia.decode(bytes, G.FileDescriptorSet)
+    bytes = ProtocGen.encode(fdset)
+    fdset2 = ProtocGen.decode(bytes, G.FileDescriptorSet)
     fd2 = fdset2.file[1]
     @test fd2.name == fd.name
     @test fd2.package == fd.package

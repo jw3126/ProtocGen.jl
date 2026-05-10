@@ -52,7 +52,7 @@ include("setup.jl")
     catch e
         e
     end
-    @test err isa ProtocGenJulia.DecodeError
+    @test err isa ProtocGen.DecodeError
     @test occursin("required field", err.msg)
     @test occursin("name", err.msg)
 end

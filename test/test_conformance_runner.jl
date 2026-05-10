@@ -6,10 +6,10 @@
 # allowlisted tests fail, non-zero when something *new* fails — that's
 # the regression signal CI cares about.
 #
-# `ProtocGenJulia.obtain_conformance_test_runner` (in src/testing.jl)
+# `ProtocGen.obtain_conformance_test_runner` (in src/testing.jl)
 # clones protobuf at a pinned tag and builds the runner via cmake on
 # first use, then caches the binary in a Scratch.jl scratchspace owned
-# by ProtocGenJulia. First invocation takes ~5–10 minutes;
+# by ProtocGen. First invocation takes ~5–10 minutes;
 # afterwards it's an O(1) lookup.
 #
 # Skipped only when:
@@ -19,7 +19,7 @@
 module TestConformanceRunner
 
 using Test
-using ProtocGenJulia: obtain_conformance_test_runner
+using ProtocGen: obtain_conformance_test_runner
 
 const CONFORMANCE_DIR = joinpath(@__DIR__, "conformance")
 const TESTEE          = joinpath(CONFORMANCE_DIR, "testee.jl")

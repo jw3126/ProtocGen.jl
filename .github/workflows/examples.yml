@@ -62,8 +62,8 @@ jobs:
           protoc --julia_out=out addressbook.proto
           test -f out/addressbook_pb.jl
       - name: Round-trip the generated bindings
-        # The generated file does `import ProtocGenJulia as PB`, so the
-        # smoke test needs ProtocGenJulia loadable. Use the package's
+        # The generated file does `import ProtocGen as PB`, so the
+        # smoke test needs ProtocGen loadable. Use the package's
         # own project + Pkg.instantiate to bring deps in.
         run: |
           julia --project=. --color=no -e '

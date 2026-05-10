@@ -1,6 +1,6 @@
-# ProtocGenJulia.jl
+# ProtocGen.jl
 
-[![CI](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jw3126/ProtocGenJulia.jl/actions/workflows/ci.yml)
+[![CI](https://github.com/jw3126/ProtocGen.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jw3126/ProtocGen.jl/actions/workflows/ci.yml)
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
@@ -12,7 +12,7 @@ Install `protoc-gen-julia` binary:
 
 ```julia
 julia> using Pkg
-pkg> app add ProtocGenJulia
+pkg> app add ProtocGen
 ```
 
 ## Usage
@@ -31,7 +31,7 @@ protoc installations ship the well-known-type protos on their default
 include path, so no extra `--proto_path` is needed.
 
 This generates `out/addressbook_pb.jl`. It depends on the
-`ProtocGenJulia.jl` package.
+`ProtocGen.jl` package.
 
 ```julia
 include("out/addressbook_pb.jl")

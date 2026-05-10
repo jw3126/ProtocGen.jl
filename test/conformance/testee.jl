@@ -9,7 +9,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 exec julia --project="${HERE}/../.." --startup-file=no --color=no "$0" "$@"
 =#
 
-# Conformance testee for ProtocGenJulia.
+# Conformance testee for ProtocGen.
 #
 # Runs as a subprocess of Google's `conformance_test_runner`. The runner
 # spawns one testee, then sends framed `conformance.ConformanceRequest`
@@ -30,8 +30,8 @@ exec julia --project="${HERE}/../.." --startup-file=no --color=no "$0" "$@"
 # input or output is reported via `response.skipped`, which the runner
 # treats as a non-failure.
 
-using ProtocGenJulia
-const PBD = ProtocGenJulia
+using ProtocGen
+const PBD = ProtocGen
 const _G  = PBD.google.protobuf
 const _GC = PBD.google.protobuf.compiler
 
@@ -130,11 +130,11 @@ function handle_request(req)
     # JSPB / TEXT_FORMAT input remain skipped; binary and JSON we handle.
     if !(payload.name in (:protobuf_payload, :json_payload))
         return skipped_response(
-            "input format $(payload.name) not supported by ProtocGenJulia v1 (binary + JSON only)")
+            "input format $(payload.name) not supported by ProtocGen v1 (binary + JSON only)")
     end
     if !(req.requested_output_format in (WF_PROTOBUF, WF_JSON))
         return skipped_response(
-            "output format $(req.requested_output_format) not supported by ProtocGenJulia v1 (binary + JSON only)")
+            "output format $(req.requested_output_format) not supported by ProtocGen v1 (binary + JSON only)")
     end
 
     T = get(MESSAGE_TYPE, req.message_type, nothing)

@@ -8,10 +8,10 @@ include("setup.jl")
     # is covered by test_codegen.jl.
     request = GC.CodeGeneratorRequest()
 
-    req_bytes = ProtocGenJulia.encode(request)
+    req_bytes = ProtocGen.encode(request)
 
     out_io = IOBuffer()
-    response = ProtocGenJulia.run_plugin(IOBuffer(req_bytes), out_io)
+    response = ProtocGen.run_plugin(IOBuffer(req_bytes), out_io)
     @test response isa GC.CodeGeneratorResponse
     @test response.error === nothing
     @test isempty(response.file)
@@ -20,7 +20,7 @@ include("setup.jl")
     @test response.supported_features == UInt64(1)  # FEATURE_PROTO3_OPTIONAL
 
     # The bytes round-trip back to the same response.
-    response2 = ProtocGenJulia.decode(take!(out_io), GC.CodeGeneratorResponse)
+    response2 = ProtocGen.decode(take!(out_io), GC.CodeGeneratorResponse)
     @test response2.error === nothing
     @test isempty(response2.file)
     @test response2.supported_features == UInt64(1)
@@ -28,7 +28,7 @@ include("setup.jl")
     # Malformed input: the plugin reports the failure in `error` instead of
     # throwing — that's the protoc plugin contract.
     bad_io = IOBuffer()
-    junk_response = ProtocGenJulia.run_plugin(IOBuffer(UInt8[0xff, 0xff, 0xff]), bad_io)
+    junk_response = ProtocGen.run_plugin(IOBuffer(UInt8[0xff, 0xff, 0xff]), bad_io)
     @test junk_response.error !== nothing
     @test !isempty(junk_response.error)
 
@@ -46,7 +46,7 @@ end
     # stray writes to stdout (e.g. an accidental @info) corrupting the
     # protoc plugin protocol.
     request = GC.CodeGeneratorRequest()
-    req_bytes = ProtocGenJulia.encode(request)
+    req_bytes = ProtocGen.encode(request)
 
     in_pipe = Pipe();  Base.link_pipe!(in_pipe)
     write(in_pipe.in, req_bytes); close(in_pipe.in)
@@ -54,14 +54,14 @@ end
 
     rc = redirect_stdin(in_pipe) do
         redirect_stdout(out_pipe) do
-            ProtocGenJulia.PluginApp.main(String[])
+            ProtocGen.PluginApp.main(String[])
         end
     end
     close(out_pipe.in)
     @test rc == 0
 
     out_bytes = read(out_pipe)
-    response = ProtocGenJulia.decode(out_bytes, GC.CodeGeneratorResponse)
+    response = ProtocGen.decode(out_bytes, GC.CodeGeneratorResponse)
     @test response.error === nothing
     @test isempty(response.file)
     @test response.supported_features == UInt64(1)
@@ -69,7 +69,7 @@ end
     # Unexpected positional args → exit 2, no stdout output.
     out_pipe2 = Pipe(); Base.link_pipe!(out_pipe2)
     rc2 = redirect_stdout(out_pipe2) do
-        ProtocGenJulia.PluginApp.main(["--unexpected"])
+        ProtocGen.PluginApp.main(["--unexpected"])
     end
     close(out_pipe2.in)
     @test rc2 == 2
