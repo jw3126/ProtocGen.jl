@@ -27,7 +27,7 @@ include("setup.jl")
     # `reserved 1000 to 9999;` in the schema → reserved_fields metadata
     # carries the range. Single-number reservations would collapse to
     # bare Int; this one stays a UnitRange.
-    @test ProtoBufDescriptors.reserved_fields(M) ==
+    @test ProtocGenJulia.reserved_fields(M) ==
         (names = String[], numbers = Union{Int,UnitRange{Int}}[1000:9999])
 
     full_pb  = fixture("test_messages_proto2_full.pb")
@@ -143,7 +143,7 @@ end
     # features under test: cross-package import emission for WKT-typed
     # fields, abstract supertype + forwarding decode for the
     # `recursive_message` / `corecursive` cycle.
-    @test occursin("import ProtoBufDescriptors.google.protobuf as google_protobuf",
+    @test occursin("import ProtocGenJulia.google.protobuf as google_protobuf",
                    f.content)
     @test occursin("optional_timestamp::Union{Nothing,google_protobuf.Timestamp}",
                    f.content)
@@ -164,7 +164,7 @@ end
     # Display canonicalizes (`Symbol(MOO)` returns `:ALIAS_BAZ`).
     @test Symbol(AE.MOO) === :ALIAS_BAZ
 
-    @test ProtoBufDescriptors.reserved_fields(M) ==
+    @test ProtocGenJulia.reserved_fields(M) ==
         (names = String[], numbers = Union{Int,UnitRange{Int}}[501:510])
 
     full_pb  = fixture("test_messages_proto3_full.pb")

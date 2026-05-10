@@ -83,7 +83,7 @@ include("encode.jl")
 
 # `_encode` / `_decode` / `_decode!` are the wrapper-form codec entry
 # points. They are not exported — the public surface (`encode(io, msg)`,
-# `decode(io, T)`, etc.) lives in ProtoBufDescriptors and forwards into
+# `decode(io, T)`, etc.) lives in ProtocGenJulia and forwards into
 # them.
 
 end # module

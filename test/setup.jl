@@ -1,14 +1,14 @@
 # Shared boilerplate for test files. Each test_*.jl wraps a module body
 # whose first line is `include("setup.jl")`, so this file injects the same
-# names (Test, ProtoBufDescriptors, namespace aliases, fixture loader, and
+# names (Test, ProtocGenJulia, namespace aliases, fixture loader, and
 # codegen-via-plugin helpers) into every test module.
 
 using Test
-using ProtoBufDescriptors
+using ProtocGenJulia
 
 # Namespace aliases used everywhere we touch protoc output.
-const G  = ProtoBufDescriptors.google.protobuf
-const GC = ProtoBufDescriptors.google.protobuf.compiler
+const G  = ProtocGenJulia.google.protobuf
+const GC = ProtocGenJulia.google.protobuf.compiler
 
 # Test fixtures live in test/fixtures/pb/ as committed binary blobs;
 # fixtures/README.md documents the layout and the regen recipe
@@ -18,7 +18,7 @@ fixture(name) = read(joinpath(FIXTURES, name))
 
 # Decode a FileDescriptorSet straight out of a fixture name.
 function load_fdset(name::AbstractString)
-    return ProtoBufDescriptors.decode(fixture(name), G.FileDescriptorSet)
+    return ProtocGenJulia.decode(fixture(name), G.FileDescriptorSet)
 end
 
 """
@@ -35,9 +35,9 @@ function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
         file_to_generate = proto_paths,
         proto_file = fdset.file,
     )
-    req_bytes = ProtoBufDescriptors.encode(request)
+    req_bytes = ProtocGenJulia.encode(request)
     out_io = IOBuffer()
-    return ProtoBufDescriptors.run_plugin(IOBuffer(req_bytes), out_io)
+    return ProtocGenJulia.run_plugin(IOBuffer(req_bytes), out_io)
 end
 
 """
@@ -56,9 +56,9 @@ end
 # `invokelatest`-wrapped wire ops. Generated types are eval'd partway through
 # a test, so dispatch from our codec into them needs the latest world.
 function decode_latest(::Type{T}, bytes::AbstractVector{UInt8}) where {T}
-    return Base.invokelatest(ProtoBufDescriptors.decode, bytes, T)
+    return Base.invokelatest(ProtocGenJulia.decode, bytes, T)
 end
 
 function encode_latest(x)
-    return Base.invokelatest(ProtoBufDescriptors.encode, x)
+    return Base.invokelatest(ProtocGenJulia.encode, x)
 end

@@ -1,6 +1,6 @@
 using Aqua
 using JET
-using ProtoBufDescriptors
+using ProtocGenJulia
 using Test
 
 # Each `test_*.jl` is wrapped in its own module that begins with
@@ -9,8 +9,8 @@ using Test
 # wire ops; see test/setup.jl.
 
 @testset "smoke" begin
-    @test isdefined(ProtoBufDescriptors, :PACKAGE_VERSION)
-    @test ProtoBufDescriptors.PACKAGE_VERSION isa VersionNumber
+    @test isdefined(ProtocGenJulia, :PACKAGE_VERSION)
+    @test ProtocGenJulia.PACKAGE_VERSION isa VersionNumber
 end
 
 include("test_vbyte.jl")
@@ -28,5 +28,5 @@ include("test_json.jl")
 include("test_conformance_runner.jl")
 
 @testset "Aqua" begin
-    Aqua.test_all(ProtoBufDescriptors)
+    Aqua.test_all(ProtocGenJulia)
 end

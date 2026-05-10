@@ -1,4 +1,4 @@
-module ProtoBufDescriptors
+module ProtocGenJulia
 
 import EnumX
 import BufferedStreams

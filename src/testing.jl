@@ -66,11 +66,11 @@ end
 
 Return an absolute path to a working `conformance_test_runner` binary
 from Google's protobuf project. The binary is what
-`ProtoBufDescriptors`' own conformance test drives, but anyone wiring
+`ProtocGenJulia`' own conformance test drives, but anyone wiring
 their own protobuf-related tests can call this too.
 
 The runner is cached in a Scratch.jl scratchspace owned by
-`ProtoBufDescriptors` (`~/.julia/scratchspaces/<UUID>/conformance-runner-…/`).
+`ProtocGenJulia` (`~/.julia/scratchspaces/<UUID>/conformance-runner-…/`).
 First call clones protobuf at a pinned tag and builds the conformance
 target via `cmake` (~5–10 min). Subsequent calls return the cached
 path immediately. Pass `rebuild = true` to wipe and rebuild.

@@ -1,4 +1,4 @@
-The ProtoBufDescriptors.jl package is licensed under the MIT "Expat" License:
+The ProtocGenJulia.jl package is licensed under the MIT "Expat" License:
 
 > Copyright (c) 2026: Jan Weidner and contributors
 >

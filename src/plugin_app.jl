@@ -8,7 +8,7 @@ lockstep.
 """
 module PluginApp
 
-import ..ProtoBufDescriptors: run_plugin
+import ..ProtocGenJulia: run_plugin
 
 function (@main)(ARGS)
     if !isempty(ARGS)

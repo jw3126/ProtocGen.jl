@@ -1,4 +1,4 @@
-# ProtoBufDescriptors.jl — project context for Claude
+# ProtocGenJulia.jl — project context for Claude
 
 This file is read at the start of every Claude Code session in this repo. It captures
 the durable design decisions and the current state of work so a fresh session can
@@ -81,7 +81,7 @@ gate, gated on Linux/macOS).
 
 - `src/codec/` — wire codec, originally copied from ProtoBuf.jl. We now own
   it; bug fixes here are candidates for upstream contribution.
-- `src/ProtoBufDescriptors.jl` — re-exports the codec API, defines `OneOf`
+- `src/ProtocGenJulia.jl` — re-exports the codec API, defines `OneOf`
   and `AbstractProtoBufMessage`, declares the metadata-API stubs
   (`reserved_fields`, `extendable_field_numbers`, `oneof_field_types`,
   `field_numbers`, `default_values`, `json_field_names`), includes
@@ -148,7 +148,7 @@ These are easy traps to forget when reading or modifying codegen:
   qualifies cross-package refs as `<package_alias>.<TypeName>` (alias
   is package name with `.` → `_`, e.g. `google.protobuf` →
   `google_protobuf`). `WKT_PACKAGE_MAP` hardcodes
-  `google.protobuf` → `ProtoBufDescriptors.google.protobuf`; for
+  `google.protobuf` → `ProtocGenJulia.google.protobuf`; for
   user-defined packages, `Codegen._relative_import_path(from_pkg,
   to_pkg)` falls back to a leading-dot relative-import path.
 - **`_pb_includes.jl` driver**: emitted only when more than one
@@ -178,7 +178,7 @@ These are easy traps to forget when reading or modifying codegen:
 
 - **ProtoBuf.jl source of truth** (read-only reference):
   `/home/jan/.julia/dev/ProtoBuf`
-- **This repo**: `/home/jan/.julia/dev/ProtoBufDescriptors`
+- **This repo**: `/home/jan/.julia/dev/ProtocGenJulia`
 
 ## Attribution
 
@@ -192,7 +192,7 @@ ProtoBuf.jl is no longer involved at runtime or build time.
 On the first turn of a fresh session:
 
 1. Read this file (you are doing that now).
-2. Skim `src/ProtoBufDescriptors.jl` and `src/codegen.jl` to confirm
+2. Skim `src/ProtocGenJulia.jl` and `src/codegen.jl` to confirm
    current state matches what's described above.
 3. Confirm with the user before starting work on a new phase, unless
    explicitly in auto mode.

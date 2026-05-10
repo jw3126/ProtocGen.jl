@@ -2,7 +2,7 @@ module TestCodecPrimitives
 
 include("setup.jl")
 
-using ProtoBufDescriptors: Codecs
+using ProtocGenJulia: Codecs
 using .Codecs: ProtoDecoder, vbyte_encode, vbyte_decode,
     zigzag_encode, zigzag_decode, _encode, _decode
 

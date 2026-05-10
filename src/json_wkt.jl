@@ -405,7 +405,7 @@ function _encode_json_value(io::IO, a::_Any_)
     T = lookup_message_type(fqn)
     T === nothing && throw(ArgumentError(
         "Any: no message type registered for $(repr(fqn)); " *
-        "load the proto module that defines it (or call ProtoBufDescriptors.register_message_type)"))
+        "load the proto module that defines it (or call ProtocGenJulia.register_message_type)"))
     # Decode the embedded binary payload into the concrete type.
     msg = decode(a.value, T)
 

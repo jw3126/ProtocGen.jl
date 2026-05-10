@@ -10,7 +10,7 @@ include("setup.jl")
 #
 # Phase 7c (cross-package import emission) is what unblocks this: the
 # generated `unittest_well_known_types_pb.jl` carries
-# `import ProtoBufDescriptors.google.protobuf as google_protobuf` at the
+# `import ProtocGenJulia.google.protobuf as google_protobuf` at the
 # top, and every WKT-typed field renders as `google_protobuf.<Type>`.
 # That sidesteps the `Any`/`Type` clash with `Core` because the WKT
 # names are reached only through the alias.
@@ -24,7 +24,7 @@ include("setup.jl")
     @test f.name == "unittest_well_known_types_pb.jl"
 
     # Cross-package import + qualified WKT refs are present.
-    @test occursin("import ProtoBufDescriptors.google.protobuf as google_protobuf",
+    @test occursin("import ProtocGenJulia.google.protobuf as google_protobuf",
                    f.content)
     @test occursin("any_field::Union{Nothing,google_protobuf.Any}", f.content)
     @test occursin("type_field::Union{Nothing,google_protobuf.Type}", f.content)
@@ -35,7 +35,7 @@ include("setup.jl")
     # Eval into a fresh Module — the generated `import` brings the
     # WKT module in by alias; nothing has to be injected here.
     m = eval_generated(f.content, :GenUWKT)
-    WKT = ProtoBufDescriptors.google.protobuf
+    WKT = ProtocGenJulia.google.protobuf
 
     # Build a TestWellKnownTypes populating a representative subset.
     ts = Base.invokelatest(WKT.Timestamp, Int64(1_700_000_000), Int32(0))

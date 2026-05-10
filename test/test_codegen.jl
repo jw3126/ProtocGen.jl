@@ -21,7 +21,7 @@ include("setup.jl")
     outer = Base.invokelatest(sample_mod.Outer,
                               "hello", Int32(7), inner,
                               Int64[1, 2, 3, 4],
-                              ProtoBufDescriptors.OneOf(:ci, Int32(99)))
+                              ProtocGenJulia.OneOf(:ci, Int32(99)))
     decoded = decode_latest(sample_mod.Outer, encode_latest(outer))
     @test decoded.name == outer.name
     @test decoded.maybe == outer.maybe

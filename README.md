@@ -1,4 +1,4 @@
-# ProtoBufDescriptors.jl
+# ProtocGenJulia.jl
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
@@ -10,7 +10,7 @@ Install `protoc-gen-julia` binary:
 
 ```julia
 julia> using Pkg
-pkg> app add ProtoBufDescriptors
+pkg> app add ProtocGenJulia
 ```
 
 ## Usage
@@ -29,7 +29,7 @@ protoc installations ship the well-known-type protos on their default
 include path, so no extra `--proto_path` is needed.
 
 This generates `out/addressbook_pb.jl`. It depends on the
-`ProtoBufDescriptors.jl` package.
+`ProtocGenJulia.jl` package.
 
 ```julia
 include("out/addressbook_pb.jl")
