@@ -1,4 +1,4 @@
-# JSON special forms for the well-known types (Phase 12c).
+# JSON special forms for the well-known types.
 #
 # Each WKT type has its own canonical JSON representation that bypasses
 # the generic walker. Methods here override `_encode_json_value` /

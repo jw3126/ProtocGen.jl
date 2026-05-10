@@ -6,14 +6,13 @@
 # (`field_numbers`, `oneof_field_types`, `default_values`) plus the
 # codegen-emitted `json_field_names`.
 #
-# Phase 12a covered: scalars (including int64/uint64 → JSON string and
-# bytes → base64 string), float NaN/±Infinity → JSON string, nested
-# messages, repeated, enums as canonical name strings (parsed from
-# either string or integer), and proto3-style omit-defaults on encode.
-# Phase 12b layered on: oneof active-member parent flattening, maps
-# (with stringified keys per spec), and the `ignore_unknown_fields`
-# parse option (default off — strict). WKT special forms (Timestamp,
-# Duration, Any, …) land in Phase 12c.
+# Coverage: scalars (including int64/uint64 → JSON string and bytes →
+# base64 string), float NaN/±Infinity → JSON string, nested messages,
+# repeated, enums as canonical name strings (parsed from either string
+# or integer), oneof active-member parent flattening, maps (with
+# stringified keys per spec), the `ignore_unknown_fields` parse option
+# (default off — strict), proto3-style omit-defaults on encode, plus
+# WKT special forms (Timestamp, Duration, Any, …) in `json_wkt.jl`.
 
 import JSON
 
@@ -331,7 +330,7 @@ function _encode_json_value(io::IO, b::Vector{UInt8})
 end
 
 # Enums: emit the canonical declared name. With EnumX, `Symbol(v)`
-# returns the canonical-form name even for aliases (Phase 9
+# returns the canonical-form name even for aliases (per the
 # `allow_alias` design). Per spec: an enum value with no declared name
 # (i.e., a numeric value the wire/JSON delivered that isn't in this
 # enum's value set) round-trips as a JSON number, not a string.

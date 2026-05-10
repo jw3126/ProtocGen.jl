@@ -2,15 +2,15 @@
 #
 # Two layers:
 #
-#   1. Generic walker (Phase 12a/b) — exercised against non-WKT
-#      bootstrap types like `FieldDescriptorProto`, `UninterpretedOption`,
-#      and `SourceContext`. They cover scalars (incl. int64 / uint64 /
-#      bytes / float / enum), nested submessage, repeated, and map-style
-#      structural shapes without colliding with the WKT specials.
+#   1. Generic walker — exercised against non-WKT bootstrap types like
+#      `FieldDescriptorProto`, `UninterpretedOption`, and `SourceContext`.
+#      They cover scalars (incl. int64 / uint64 / bytes / float / enum),
+#      nested submessage, repeated, and map-style structural shapes
+#      without colliding with the WKT specials.
 #
-#   2. WKT special forms (Phase 12c) — Wrappers, Timestamp, Duration,
-#      FieldMask, Empty, Struct, Value, ListValue, NullValue all have
-#      their own canonical JSON. The `WKT:` testsets verify each.
+#   2. WKT special forms — Wrappers, Timestamp, Duration, FieldMask,
+#      Empty, Struct, Value, ListValue, NullValue all have their own
+#      canonical JSON. The `WKT:` testsets verify each.
 
 module TestJSON
 
@@ -35,7 +35,7 @@ end
 @testset "JSON" begin
 
     # -------------------------------------------------------------------------
-    # Generic walker (Phase 12a/b) over non-WKT bootstrap types.
+    # Generic walker over non-WKT bootstrap types.
     # -------------------------------------------------------------------------
 
     @testset "scalars: 32-bit int emitted as JSON number" begin
@@ -133,7 +133,7 @@ end
     @testset "presence is preserved on JSON encode even at default value" begin
         # FieldDescriptorProto.name :: Union{Nothing,String}. Setting it
         # to "" is presence-asserted (different from unset = nothing)
-        # and MUST emit on JSON per the protobuf spec. The Phase 12a
+        # and MUST emit on JSON per the protobuf spec. The
         # default-skip predicate would otherwise drop it; the fix in
         # `_encode_json_message` is to disable default-skip for fields
         # whose declared type is `Union{Nothing,X}`.
@@ -199,7 +199,7 @@ end
     end
 
     # -------------------------------------------------------------------------
-    # Phase 12c — WKT special forms.
+    # WKT special forms.
     # -------------------------------------------------------------------------
 
     @testset "WKT: wrappers emit/parse as bare scalar" begin

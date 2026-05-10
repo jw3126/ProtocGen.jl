@@ -2,7 +2,7 @@ module TestPresence
 
 include("setup.jl")
 
-@testset "Phase 5 — proto3 explicit `optional` carries presence" begin
+@testset "proto3 explicit `optional` carries presence" begin
     # The whole point of presence: `maybe: 0` (explicit) and `maybe` unset
     # must NOT decode to the same Julia value. The two protoc-encoded payloads
     # come from fixtures/txtpb/outer_maybe_{zero,unset}.txtpb.
@@ -35,7 +35,7 @@ include("setup.jl")
 
     # Build the same two values directly and confirm. Constructor signature
     # is Outer(name, maybe, nested, packed_ints, choice) — `ci`/`cs` collapse
-    # into the `choice` oneof field (Phase 6).
+    # into the `choice` oneof field.
     nothing_outer = Base.invokelatest(sample_mod.Outer,
                                        "u", nothing, nothing, Int64[], nothing)
     zero_outer    = Base.invokelatest(sample_mod.Outer,

@@ -2,7 +2,7 @@ module TestProto2
 
 include("setup.jl")
 
-@testset "Phase 6 — proto2 required + optional" begin
+@testset "proto2 required + optional" begin
     # Schema in fixtures/proto/p2.proto. `p2_full.pb` is from the textproto
     # `name: "the-name" / nested { v: 7 } / maybe: 0 / hint: "hi"`; the
     # explicit `maybe: 0` is the presence signal we care about. `p2_minimal.pb`

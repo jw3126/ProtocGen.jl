@@ -1,7 +1,7 @@
 #!/usr/bin/env julia
 # Regenerate every Julia binding under gen/google/protobuf/ from its
-# .proto source under gen/proto/. After Phase 8 the entire `gen/` tree
-# is produced by our own codegen — no ProtoBuf.jl on the build path.
+# .proto source under gen/proto/. The whole `gen/` tree is produced by
+# our own codegen — ProtocGen self-hosts.
 #
 # Usage (from repo root):
 #     julia gen/regen.jl
@@ -11,16 +11,16 @@
 #
 # What gets generated (single protoc invocation so the plugin's Universe
 # spans every file at once):
-#   Phase 8 — descriptor + plugin bootstrap:
-#     descriptor.proto         (proto2)
-#     compiler/plugin.proto    (proto2, imports descriptor.proto)
-#   Phase 7a — dependency-free WKTs:
-#     any, duration, empty, field_mask, source_context, timestamp, wrappers
-#   Phase 7b — cross-file imports through the codegen Universe:
-#     api    — depends on source_context, type
-#     type   — depends on any, source_context
-#   Phase 7b — recursion via abstract supertypes:
-#     struct — Value ↔ Struct ↔ ListValue cycle.
+#   - descriptor + plugin bootstrap:
+#       descriptor.proto         (proto2)
+#       compiler/plugin.proto    (proto2, imports descriptor.proto)
+#   - dependency-free WKTs:
+#       any, duration, empty, field_mask, source_context, timestamp, wrappers
+#   - cross-file imports through the codegen Universe:
+#       api    — depends on source_context, type
+#       type   — depends on any, source_context
+#   - recursion via abstract supertypes:
+#       struct — Value ↔ Struct ↔ ListValue cycle.
 
 const HERE       = @__DIR__
 const REPO       = dirname(HERE)
@@ -29,11 +29,10 @@ const OUT_DIR    = HERE  # protoc writes <julia_out>/google/protobuf/<name>_pb.j
 const PLUGIN     = joinpath(REPO, "bin", "protoc-gen-julia")
 
 const PROTOS = [
-    # Bootstrap (Phase 8 — self-generated, replaces the prior
-    # ProtoBuf.jl-emitted versions).
+    # Bootstrap.
     "google/protobuf/descriptor.proto",
     "google/protobuf/compiler/plugin.proto",
-    # WKTs (Phase 7).
+    # Well-known types.
     "google/protobuf/any.proto",
     "google/protobuf/duration.proto",
     "google/protobuf/empty.proto",

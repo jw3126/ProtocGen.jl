@@ -135,7 +135,7 @@ end
 # carries `import <julia_module> as <alias>` per package, where <alias> is
 # the package name with dots → underscores. The WKT entry is hardcoded;
 # real users with multi-package proto trees will eventually configure this
-# via a plugin parameter (Phase 7c+ / Phase 11).
+# via a plugin parameter.
 const WKT_PACKAGE_MAP = Dict{String,String}(
     "google.protobuf" => "ProtocGen.google.protobuf",
 )
@@ -512,7 +512,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default   = "Vector{$(scalar_jl)}()"
             skip      = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
-            # Phase 5/6: proto3 explicit `optional` and proto2 `optional`
+            # proto3 explicit `optional` and proto2 `optional`
             # carry presence. Surface that in Julia by typing the field as
             # `Union{Nothing,T}` defaulted to `nothing`. The decode path
             # overwrites `nothing` on tag, the encode path skips iff
@@ -1584,7 +1584,7 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.
-    # The same pattern routes JSON decode (Phase 12b) — `Struct.fields`
+    # The same pattern routes JSON decode — `Struct.fields`
     # is `OrderedDict{String,AbstractValue}` and the JSON walker has to
     # land on `Value` to reconstruct.
     if !isempty(cycle_participants)

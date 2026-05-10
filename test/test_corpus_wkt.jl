@@ -8,8 +8,8 @@ include("setup.jl")
 # can consume — the rest of the corpus needed at least one feature we
 # haven't implemented (extensions, groups, message_set, allow_alias).
 #
-# Phase 7c (cross-package import emission) is what unblocks this: the
-# generated `unittest_well_known_types_pb.jl` carries
+# Cross-package import emission unblocks this: the generated
+# `unittest_well_known_types_pb.jl` carries
 # `import ProtocGen.google.protobuf as google_protobuf` at the
 # top, and every WKT-typed field renders as `google_protobuf.<Type>`.
 # That sidesteps the `Any`/`Type` clash with `Core` because the WKT
