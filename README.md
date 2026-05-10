@@ -2,6 +2,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
+Passes the full proto2 and proto3 golden conformance test suite.
 
 ## Install
 
@@ -54,6 +55,11 @@ js = encode_json(person)
 #  "phones":[…],"lastUpdated":"2024-05-06T12:53:20Z"}
 @assert decode_json(Person, js) == person
 ```
+
+## Alternatives
+
+[ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl) is a good alternative.
+It is meant to be used as a julia package, not protoc plugin.
 
 ## Acknowledgement
 
