@@ -12,13 +12,13 @@ export Timestamp
 struct Timestamp <: PB.AbstractProtoBufMessage
     seconds::Int64
     nanos::Int32
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Timestamp(seconds, nanos, _unknown_fields=UInt8[])
         return new(seconds, nanos, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Timestamp})
-    return (;seconds = zero(Int64), nanos = zero(Int32), _unknown_fields = UInt8[])
+    return (;seconds = zero(Int64), nanos = zero(Int32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Timestamp})
     return (;seconds = 1, nanos = 2)
@@ -49,8 +49,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Timestamp)
     initpos = position(_e.io)
     _x.seconds != zero(Int64) && PB._encode(_e, 1, _x.seconds)
     _x.nanos != zero(Int32) && PB._encode(_e, 2, _x.nanos)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -58,7 +58,7 @@ function PB._encoded_size(_x::Timestamp)
     encoded_size = 0
     _x.seconds != zero(Int64) && (encoded_size += PB._encoded_size(_x.seconds, 1))
     _x.nanos != zero(Int32) && (encoded_size += PB._encoded_size(_x.nanos, 2))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

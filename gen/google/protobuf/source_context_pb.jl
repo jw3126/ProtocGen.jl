@@ -11,13 +11,13 @@ export SourceContext
 
 struct SourceContext <: PB.AbstractProtoBufMessage
     file_name::String
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function SourceContext(file_name, _unknown_fields=UInt8[])
         return new(file_name, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{SourceContext})
-    return (;file_name = "", _unknown_fields = UInt8[])
+    return (;file_name = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{SourceContext})
     return (;file_name = 1)
@@ -44,15 +44,15 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::SourceContext)
     initpos = position(_e.io)
     !isempty(_x.file_name) && PB._encode(_e, 1, _x.file_name)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::SourceContext)
     encoded_size = 0
     !isempty(_x.file_name) && (encoded_size += PB._encoded_size(_x.file_name, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

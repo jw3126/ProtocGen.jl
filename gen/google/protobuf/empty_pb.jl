@@ -10,13 +10,13 @@ using ProtoBufDescriptors.EnumX: @enumx
 export Empty
 
 struct Empty <: PB.AbstractProtoBufMessage
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Empty(_unknown_fields=UInt8[])
         return new(_unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Empty})
-    return (;_unknown_fields = UInt8[])
+    return (;var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Empty})
     return (;)
@@ -37,14 +37,14 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Empty)
     initpos = position(_e.io)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Empty)
     encoded_size = 0
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

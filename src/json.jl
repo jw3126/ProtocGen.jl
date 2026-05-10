@@ -200,10 +200,10 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
     print(io, '{')
     first = true
     for jl_name in fieldnames(T)
-        # `_unknown_fields` is a wire-format-only buffer for forward-compat
+        # `#unknown_fields` is a wire-format-only buffer for forward-compat
         # round-trips of unrecognized tags; the JSON form per spec drops
         # unknowns, so don't emit it here.
-        jl_name === :_unknown_fields && continue
+        jl_name === Symbol("#unknown_fields") && continue
         v = getfield(msg, jl_name)
         # `nothing` always means "field not set" (presence-bearing fields
         # default to `nothing`, plain proto3 scalars never get `nothing`).

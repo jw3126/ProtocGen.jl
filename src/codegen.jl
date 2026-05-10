@@ -717,12 +717,23 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
-    println(io, "    _unknown_fields::Vector{UInt8}")
-    push!(param_names, "_unknown_fields")
+    # `var\"#unknown_fields\"` instead of plain `_unknown_fields` so the
+    # buffer field can never collide with a user proto field called
+    # `_unknown_fields` — proto field names are restricted to
+    # `[a-zA-Z_][a-zA-Z0-9_]*`, so `#` is forever out of reach for protoc.
+    println(io, "    var\"#unknown_fields\"::Vector{UInt8}")
+    push!(param_names, "var\"#unknown_fields\"")
     inner_params = join(param_names[1:end-1], ", ")
     sep = isempty(inner_params) ? "" : ", "
+    # Constructor uses a plain local-variable name `_unknown_fields` for
+    # the default-arg parameter — locals don't need escaping, only the
+    # struct field does.
     println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
-    println(io, "        return new(", join(param_names, ", "), ")")
+    pos_args = String[]
+    for n in param_names
+        push!(pos_args, n == "var\"#unknown_fields\"" ? "_unknown_fields" : n)
+    end
+    println(io, "        return new(", join(pos_args, ", "), ")")
     println(io, "    end")
     println(io, "end")
 
@@ -735,7 +746,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for o in real_oneofs
         push!(pieces, "$(o.jl_fieldname) = nothing")
     end
-    push!(pieces, "_unknown_fields = UInt8[]")
+    push!(pieces, "var\"#unknown_fields\" = UInt8[]")
     println(io, "    return (;", join(pieces, ", "), ")")
     println(io, "end")
 
@@ -885,8 +896,8 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # byte-identical to protoc when known + unknown tags interleave, but
     # spec-correct (the protobuf wire format makes no field-order
     # promises) and enough for forward-compat round-trips.
-    println(io, "    if !isempty(_x._unknown_fields)")
-    println(io, "        write(_e.io, _x._unknown_fields)")
+    println(io, "    if !isempty(_x.var\"#unknown_fields\")")
+    println(io, "        write(_e.io, _x.var\"#unknown_fields\")")
     println(io, "    end")
     println(io, "    return position(_e.io) - initpos")
     println(io, "end")
@@ -896,7 +907,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for (_, _, emit_s) in encode_plan
         emit_s(io)
     end
-    println(io, "    encoded_size += length(_x._unknown_fields)")
+    println(io, "    encoded_size += length(_x.var\"#unknown_fields\")")
     println(io, "    return encoded_size")
     println(io, "end")
 

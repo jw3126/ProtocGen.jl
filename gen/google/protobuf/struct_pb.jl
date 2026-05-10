@@ -20,13 +20,13 @@ abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
 struct Struct <: AbstractStruct
     fields::OrderedDict{String,AbstractValue}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Struct(fields, _unknown_fields=UInt8[])
         return new(fields, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Struct})
-    return (;fields = OrderedDict{String,AbstractValue}(), _unknown_fields = UInt8[])
+    return (;fields = OrderedDict{String,AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Struct})
     return (;fields = 1)
@@ -53,27 +53,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Struct)
     initpos = position(_e.io)
     !isempty(_x.fields) && PB._encode(_e, 1, _x.fields)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Struct)
     encoded_size = 0
     !isempty(_x.fields) && (encoded_size += PB._encoded_size(_x.fields, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct Value <: AbstractValue
     kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Value(kind, _unknown_fields=UInt8[])
         return new(kind, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Value})
-    return (;kind = nothing, _unknown_fields = UInt8[])
+    return (;kind = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Value})
     return (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
@@ -146,8 +146,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Value)
             PB._encode(_e, 6, _o.value)
         end
     end
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -183,19 +183,19 @@ function PB._encoded_size(_x::Value)
             encoded_size += PB._encoded_size(_o.value, 6)
         end
     end
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct ListValue <: AbstractListValue
     values::Vector{AbstractValue}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function ListValue(values, _unknown_fields=UInt8[])
         return new(values, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{ListValue})
-    return (;values = Vector{AbstractValue}(), _unknown_fields = UInt8[])
+    return (;values = Vector{AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{ListValue})
     return (;values = 1)
@@ -222,15 +222,15 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::ListValue)
     initpos = position(_e.io)
     !isempty(_x.values) && PB._encode(_e, 1, _x.values)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::ListValue)
     encoded_size = 0
     !isempty(_x.values) && (encoded_size += PB._encoded_size(_x.values, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

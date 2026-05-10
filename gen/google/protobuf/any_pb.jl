@@ -12,13 +12,13 @@ export Any
 struct Any <: PB.AbstractProtoBufMessage
     type_url::String
     value::Vector{UInt8}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Any(type_url, value, _unknown_fields=UInt8[])
         return new(type_url, value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Any})
-    return (;type_url = "", value = UInt8[], _unknown_fields = UInt8[])
+    return (;type_url = "", value = UInt8[], var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Any})
     return (;type_url = 1, value = 2)
@@ -49,8 +49,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Any)
     initpos = position(_e.io)
     !isempty(_x.type_url) && PB._encode(_e, 1, _x.type_url)
     !isempty(_x.value) && PB._encode(_e, 2, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -58,7 +58,7 @@ function PB._encoded_size(_x::Any)
     encoded_size = 0
     !isempty(_x.type_url) && (encoded_size += PB._encoded_size(_x.type_url, 1))
     !isempty(_x.value) && (encoded_size += PB._encoded_size(_x.value, 2))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

@@ -14,13 +14,13 @@ export Syntax, Type, Field, Enum, EnumValue, Option
 struct Option <: PB.AbstractProtoBufMessage
     name::String
     value::Union{Nothing,Any}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Option(name, value, _unknown_fields=UInt8[])
         return new(name, value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Option})
-    return (;name = "", value = nothing, _unknown_fields = UInt8[])
+    return (;name = "", value = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Option})
     return (;name = 1, value = 2)
@@ -51,8 +51,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Option)
     initpos = position(_e.io)
     !isempty(_x.name) && PB._encode(_e, 1, _x.name)
     !isnothing(_x.value) && PB._encode(_e, 2, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -60,7 +60,7 @@ function PB._encoded_size(_x::Option)
     encoded_size = 0
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     !isnothing(_x.value) && (encoded_size += PB._encoded_size(_x.value, 2))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
@@ -79,13 +79,13 @@ struct Field <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     json_name::String
     default_value::String
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[])
         return new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Field})
-    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", _unknown_fields = UInt8[])
+    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Field})
     return (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
@@ -148,8 +148,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Field)
     !isempty(_x.options) && PB._encode(_e, 9, _x.options)
     !isempty(_x.json_name) && PB._encode(_e, 10, _x.json_name)
     !isempty(_x.default_value) && PB._encode(_e, 11, _x.default_value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -165,7 +165,7 @@ function PB._encoded_size(_x::Field)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 9))
     !isempty(_x.json_name) && (encoded_size += PB._encoded_size(_x.json_name, 10))
     !isempty(_x.default_value) && (encoded_size += PB._encoded_size(_x.default_value, 11))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
@@ -176,13 +176,13 @@ struct Type <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Type})
-    return (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+    return (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Type})
     return (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
@@ -229,8 +229,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Type)
     !isempty(_x.options) && PB._encode(_e, 4, _x.options)
     !isnothing(_x.source_context) && PB._encode(_e, 5, _x.source_context)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 6, _x.syntax)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -242,7 +242,7 @@ function PB._encoded_size(_x::Type)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 4))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 5))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 6))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
@@ -250,13 +250,13 @@ struct EnumValue <: PB.AbstractProtoBufMessage
     name::String
     number::Int32
     options::Vector{Option}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumValue(name, number, options, _unknown_fields=UInt8[])
         return new(name, number, options, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{EnumValue})
-    return (;name = "", number = zero(Int32), options = Vector{Option}(), _unknown_fields = UInt8[])
+    return (;name = "", number = zero(Int32), options = Vector{Option}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{EnumValue})
     return (;name = 1, number = 2, options = 3)
@@ -291,8 +291,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::EnumValue)
     !isempty(_x.name) && PB._encode(_e, 1, _x.name)
     _x.number != zero(Int32) && PB._encode(_e, 2, _x.number)
     !isempty(_x.options) && PB._encode(_e, 3, _x.options)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -301,7 +301,7 @@ function PB._encoded_size(_x::EnumValue)
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
     _x.number != zero(Int32) && (encoded_size += PB._encoded_size(_x.number, 2))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
@@ -311,13 +311,13 @@ struct Enum <: PB.AbstractProtoBufMessage
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, enumvalue, options, source_context, syntax, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Enum})
-    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, _unknown_fields = UInt8[])
+    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Enum})
     return (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
@@ -360,8 +360,8 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Enum)
     !isempty(_x.options) && PB._encode(_e, 3, _x.options)
     !isnothing(_x.source_context) && PB._encode(_e, 4, _x.source_context)
     _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 5, _x.syntax)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
@@ -372,7 +372,7 @@ function PB._encoded_size(_x::Enum)
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 4))
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 5))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 

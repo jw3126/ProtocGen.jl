@@ -11,13 +11,13 @@ export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value
 
 struct DoubleValue <: PB.AbstractProtoBufMessage
     value::Float64
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function DoubleValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{DoubleValue})
-    return (;value = zero(Float64), _unknown_fields = UInt8[])
+    return (;value = zero(Float64), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{DoubleValue})
     return (;value = 1)
@@ -44,27 +44,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::DoubleValue)
     initpos = position(_e.io)
     _x.value != zero(Float64) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::DoubleValue)
     encoded_size = 0
     _x.value != zero(Float64) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct FloatValue <: PB.AbstractProtoBufMessage
     value::Float32
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function FloatValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{FloatValue})
-    return (;value = zero(Float32), _unknown_fields = UInt8[])
+    return (;value = zero(Float32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{FloatValue})
     return (;value = 1)
@@ -91,27 +91,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::FloatValue)
     initpos = position(_e.io)
     _x.value != zero(Float32) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::FloatValue)
     encoded_size = 0
     _x.value != zero(Float32) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct Int64Value <: PB.AbstractProtoBufMessage
     value::Int64
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Int64Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Int64Value})
-    return (;value = zero(Int64), _unknown_fields = UInt8[])
+    return (;value = zero(Int64), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Int64Value})
     return (;value = 1)
@@ -138,27 +138,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int64Value)
     initpos = position(_e.io)
     _x.value != zero(Int64) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Int64Value)
     encoded_size = 0
     _x.value != zero(Int64) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct UInt64Value <: PB.AbstractProtoBufMessage
     value::UInt64
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function UInt64Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{UInt64Value})
-    return (;value = zero(UInt64), _unknown_fields = UInt8[])
+    return (;value = zero(UInt64), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{UInt64Value})
     return (;value = 1)
@@ -185,27 +185,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt64Value)
     initpos = position(_e.io)
     _x.value != zero(UInt64) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::UInt64Value)
     encoded_size = 0
     _x.value != zero(UInt64) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct Int32Value <: PB.AbstractProtoBufMessage
     value::Int32
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Int32Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{Int32Value})
-    return (;value = zero(Int32), _unknown_fields = UInt8[])
+    return (;value = zero(Int32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{Int32Value})
     return (;value = 1)
@@ -232,27 +232,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int32Value)
     initpos = position(_e.io)
     _x.value != zero(Int32) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::Int32Value)
     encoded_size = 0
     _x.value != zero(Int32) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct UInt32Value <: PB.AbstractProtoBufMessage
     value::UInt32
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function UInt32Value(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{UInt32Value})
-    return (;value = zero(UInt32), _unknown_fields = UInt8[])
+    return (;value = zero(UInt32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{UInt32Value})
     return (;value = 1)
@@ -279,27 +279,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt32Value)
     initpos = position(_e.io)
     _x.value != zero(UInt32) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::UInt32Value)
     encoded_size = 0
     _x.value != zero(UInt32) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct BoolValue <: PB.AbstractProtoBufMessage
     value::Bool
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function BoolValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{BoolValue})
-    return (;value = false, _unknown_fields = UInt8[])
+    return (;value = false, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{BoolValue})
     return (;value = 1)
@@ -326,27 +326,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::BoolValue)
     initpos = position(_e.io)
     _x.value != false && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::BoolValue)
     encoded_size = 0
     _x.value != false && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct StringValue <: PB.AbstractProtoBufMessage
     value::String
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function StringValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{StringValue})
-    return (;value = "", _unknown_fields = UInt8[])
+    return (;value = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{StringValue})
     return (;value = 1)
@@ -373,27 +373,27 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::StringValue)
     initpos = position(_e.io)
     !isempty(_x.value) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::StringValue)
     encoded_size = 0
     !isempty(_x.value) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
 struct BytesValue <: PB.AbstractProtoBufMessage
     value::Vector{UInt8}
-    _unknown_fields::Vector{UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function BytesValue(value, _unknown_fields=UInt8[])
         return new(value, _unknown_fields)
     end
 end
 function PB.default_values(::Core.Type{BytesValue})
-    return (;value = UInt8[], _unknown_fields = UInt8[])
+    return (;value = UInt8[], var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::Core.Type{BytesValue})
     return (;value = 1)
@@ -420,15 +420,15 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::BytesValue)
     initpos = position(_e.io)
     !isempty(_x.value) && PB._encode(_e, 1, _x.value)
-    if !isempty(_x._unknown_fields)
-        write(_e.io, _x._unknown_fields)
+    if !isempty(_x.var"#unknown_fields")
+        write(_e.io, _x.var"#unknown_fields")
     end
     return position(_e.io) - initpos
 end
 function PB._encoded_size(_x::BytesValue)
     encoded_size = 0
     !isempty(_x.value) && (encoded_size += PB._encoded_size(_x.value, 1))
-    encoded_size += length(_x._unknown_fields)
+    encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 
