@@ -2,7 +2,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the full proto2 and proto3 golden conformance test suite.
+Passes the required proto2 and proto3 conformance test suites using binary + JSON.
 
 ## Install
 
