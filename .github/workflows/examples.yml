@@ -1,0 +1,64 @@
+name: Examples
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+jobs:
+  app-install-and-run:
+    name: Install app + run addressbook example
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v1
+        with:
+          # Pkg.Apps stabilised in 1.12; older Julia silently ignores
+          # the [apps] table so there is nothing to install.
+          version: "1.12"
+          arch: x64
+      - uses: actions/cache@v5
+        env:
+          cache-name: cache-artifacts
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-examples-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-examples-${{ env.cache-name }}-
+            ${{ runner.os }}-examples-
+            ${{ runner.os }}-
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          protoc --version
+      - name: Install protoc-gen-julia via Pkg.Apps
+        run: julia --color=no -e 'using Pkg; Pkg.Apps.add(path = pwd())'
+      - name: Add Julia bin to PATH
+        run: echo "$HOME/.julia/bin" >> "$GITHUB_PATH"
+      - name: Confirm app is on PATH
+        run: |
+          which protoc-gen-julia
+          ls -l "$HOME/.julia/bin"
+      - name: Run example generator
+        run: bash examples/generate.sh
+      - name: Round-trip the generated bindings
+        # Re-use the package's own project so `import ProtocGenJulia`
+        # resolves to the source under test (the same one we just
+        # installed as an app). The example file is content-identical
+        # to whatever the binary just emitted.
+        run: |
+          julia --project=. --color=no -e '
+            include("examples/out/addressbook_pb.jl")
+            person = Person(
+                name = "Alice",
+                id = Int32(42),
+                email = "alice@example.com",
+                phones = [PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE)],
+                last_updated = google_protobuf.Timestamp(seconds = Int64(1_715_000_000)),
+            )
+            @assert decode(encode(person), Person) == person
+            @assert decode_json(Person, encode_json(person)) == person
+            println("example round-trip: OK")
+          '
