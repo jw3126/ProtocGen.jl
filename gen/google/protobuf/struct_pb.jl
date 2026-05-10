@@ -22,15 +22,12 @@ abstract type AbstractListValue <: PB.AbstractProtoBufMessage end
 abstract type AbstractStruct <: PB.AbstractProtoBufMessage end
 abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
-var"#base".@kwdef struct Struct <: AbstractStruct
-    fields::OrderedDict{var"#base".String,AbstractValue} = OrderedDict{var"#base".String,AbstractValue}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Struct <: AbstractStruct
+    fields::OrderedDict{var"#base".String,AbstractValue}
+    var"#unknown_fields"::Vector{UInt8}
     function Struct(fields, _unknown_fields=UInt8[])
         return new(fields, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Struct})
-    return (;fields = OrderedDict{var"#base".String,AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Struct})
     return (;fields = 1)
@@ -68,17 +65,17 @@ function PB._encoded_size(_x::Struct)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Struct typesalt=0x19348fa6f6d470f6
+@batteries Struct typesalt=0x19348fa6f6d470f6 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Struct})
+    return (;fields = OrderedDict{var"#base".String,AbstractValue}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct Value <: AbstractValue
-    kind::Union{Nothing,OneOf{<:Union{NullValue.T,var"#base".Float64,var"#base".String,var"#base".Bool,AbstractStruct,AbstractListValue}}} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Value <: AbstractValue
+    kind::Union{Nothing,OneOf{<:Union{NullValue.T,var"#base".Float64,var"#base".String,var"#base".Bool,AbstractStruct,AbstractListValue}}}
+    var"#unknown_fields"::Vector{UInt8}
     function Value(kind, _unknown_fields=UInt8[])
         return new(kind, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Value})
-    return (;kind = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Value})
     return (;null_value = 1, number_value = 2, string_value = 3, bool_value = 4, struct_value = 5, list_value = 6)
@@ -191,17 +188,17 @@ function PB._encoded_size(_x::Value)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Value typesalt=0x5f1344012992fa4c
+@batteries Value typesalt=0x5f1344012992fa4c kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Value})
+    return (;kind = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct ListValue <: AbstractListValue
-    values::Vector{AbstractValue} = Vector{AbstractValue}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct ListValue <: AbstractListValue
+    values::Vector{AbstractValue}
+    var"#unknown_fields"::Vector{UInt8}
     function ListValue(values, _unknown_fields=UInt8[])
         return new(values, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{ListValue})
-    return (;values = Vector{AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{ListValue})
     return (;values = 1)
@@ -239,7 +236,10 @@ function PB._encoded_size(_x::ListValue)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries ListValue typesalt=0x02d87cba8a2dec54
+@batteries ListValue typesalt=0x02d87cba8a2dec54 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{ListValue})
+    return (;values = Vector{AbstractValue}(), var"#unknown_fields" = UInt8[])
+end
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractListValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     return PB._decode(_d, ListValue, _endpos, _group)

@@ -12,16 +12,13 @@ const var"#base" = Base
 
 export Timestamp
 
-var"#base".@kwdef struct Timestamp <: PB.AbstractProtoBufMessage
-    seconds::var"#base".Int64 = zero(var"#base".Int64)
-    nanos::var"#base".Int32 = zero(var"#base".Int32)
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Timestamp <: PB.AbstractProtoBufMessage
+    seconds::var"#base".Int64
+    nanos::var"#base".Int32
+    var"#unknown_fields"::Vector{UInt8}
     function Timestamp(seconds, nanos, _unknown_fields=UInt8[])
         return new(seconds, nanos, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Timestamp})
-    return (;seconds = zero(var"#base".Int64), nanos = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Timestamp})
     return (;seconds = 1, nanos = 2)
@@ -64,7 +61,10 @@ function PB._encoded_size(_x::Timestamp)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Timestamp typesalt=0x74e6d36d8b15d505
+@batteries Timestamp typesalt=0x74e6d36d8b15d505 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Timestamp})
+    return (;seconds = zero(var"#base".Int64), nanos = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

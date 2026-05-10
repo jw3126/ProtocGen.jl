@@ -12,15 +12,12 @@ const var"#base" = Base
 
 export SourceContext
 
-var"#base".@kwdef struct SourceContext <: PB.AbstractProtoBufMessage
-    file_name::var"#base".String = ""
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct SourceContext <: PB.AbstractProtoBufMessage
+    file_name::var"#base".String
+    var"#unknown_fields"::Vector{UInt8}
     function SourceContext(file_name, _unknown_fields=UInt8[])
         return new(file_name, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{SourceContext})
-    return (;file_name = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{SourceContext})
     return (;file_name = 1)
@@ -58,7 +55,10 @@ function PB._encoded_size(_x::SourceContext)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries SourceContext typesalt=0x2ab8d30d0cd1846d
+@batteries SourceContext typesalt=0x2ab8d30d0cd1846d kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{SourceContext})
+    return (;file_name = "", var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

@@ -15,16 +15,13 @@ export Syntax, Type, Field, Enum, EnumValue, Option
 @enumx Syntax SYNTAX_PROTO2=0 SYNTAX_PROTO3=1
 @enumbatteries Syntax.T typesalt=0x4a764bdccfecd59c
 
-var"#base".@kwdef struct Option <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    value::Union{Nothing,Any} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Option <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    value::Union{Nothing,Any}
+    var"#unknown_fields"::Vector{UInt8}
     function Option(name, value, _unknown_fields=UInt8[])
         return new(name, value, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Option})
-    return (;name = "", value = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Option})
     return (;name = 1, value = 2)
@@ -67,7 +64,10 @@ function PB._encoded_size(_x::Option)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Option typesalt=0xd1114e5d5732a9a2
+@batteries Option typesalt=0xd1114e5d5732a9a2 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Option})
+    return (;name = "", value = nothing, var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"Field.Kind" TYPE_UNKNOWN=0 TYPE_DOUBLE=1 TYPE_FLOAT=2 TYPE_INT64=3 TYPE_UINT64=4 TYPE_INT32=5 TYPE_FIXED64=6 TYPE_FIXED32=7 TYPE_BOOL=8 TYPE_STRING=9 TYPE_GROUP=10 TYPE_MESSAGE=11 TYPE_BYTES=12 TYPE_UINT32=13 TYPE_ENUM=14 TYPE_SFIXED32=15 TYPE_SFIXED64=16 TYPE_SINT32=17 TYPE_SINT64=18
 @enumbatteries var"Field.Kind".T typesalt=0xa062978f68132043
@@ -75,24 +75,21 @@ end
 @enumx var"Field.Cardinality" CARDINALITY_UNKNOWN=0 CARDINALITY_OPTIONAL=1 CARDINALITY_REQUIRED=2 CARDINALITY_REPEATED=3
 @enumbatteries var"Field.Cardinality".T typesalt=0x23d20bf4ca20a55f
 
-var"#base".@kwdef struct Field <: PB.AbstractProtoBufMessage
-    kind::var"Field.Kind".T = var"Field.Kind".TYPE_UNKNOWN
-    cardinality::var"Field.Cardinality".T = var"Field.Cardinality".CARDINALITY_UNKNOWN
-    number::var"#base".Int32 = zero(var"#base".Int32)
-    name::var"#base".String = ""
-    type_url::var"#base".String = ""
-    oneof_index::var"#base".Int32 = zero(var"#base".Int32)
-    packed::var"#base".Bool = false
-    options::Vector{Option} = Vector{Option}()
-    json_name::var"#base".String = ""
-    default_value::var"#base".String = ""
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Field <: PB.AbstractProtoBufMessage
+    kind::var"Field.Kind".T
+    cardinality::var"Field.Cardinality".T
+    number::var"#base".Int32
+    name::var"#base".String
+    type_url::var"#base".String
+    oneof_index::var"#base".Int32
+    packed::var"#base".Bool
+    options::Vector{Option}
+    json_name::var"#base".String
+    default_value::var"#base".String
+    var"#unknown_fields"::Vector{UInt8}
     function Field(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields=UInt8[])
         return new(kind, cardinality, number, name, type_url, oneof_index, packed, options, json_name, default_value, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Field})
-    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(var"#base".Int32), name = "", type_url = "", oneof_index = zero(var"#base".Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Field})
     return (;kind = 1, cardinality = 2, number = 3, name = 4, type_url = 6, oneof_index = 7, packed = 8, options = 9, json_name = 10, default_value = 11)
@@ -175,22 +172,22 @@ function PB._encoded_size(_x::Field)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Field typesalt=0xc655c8bf39b77649
+@batteries Field typesalt=0xc655c8bf39b77649 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Field})
+    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(var"#base".Int32), name = "", type_url = "", oneof_index = zero(var"#base".Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct Type <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    fields::Vector{Field} = Vector{Field}()
-    oneofs::Vector{var"#base".String} = Vector{var"#base".String}()
-    options::Vector{Option} = Vector{Option}()
-    source_context::Union{Nothing,SourceContext} = nothing
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Type <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    fields::Vector{Field}
+    oneofs::Vector{var"#base".String}
+    options::Vector{Option}
+    source_context::Union{Nothing,SourceContext}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
     function Type(name, fields, oneofs, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, fields, oneofs, options, source_context, syntax, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Type})
-    return (;name = "", fields = Vector{Field}(), oneofs = Vector{var"#base".String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Type})
     return (;name = 1, fields = 2, oneofs = 3, options = 4, source_context = 5, syntax = 6)
@@ -253,19 +250,19 @@ function PB._encoded_size(_x::Type)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Type typesalt=0xdb0aa5f887dce70f
+@batteries Type typesalt=0xdb0aa5f887dce70f kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Type})
+    return (;name = "", fields = Vector{Field}(), oneofs = Vector{var"#base".String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct EnumValue <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    number::var"#base".Int32 = zero(var"#base".Int32)
-    options::Vector{Option} = Vector{Option}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct EnumValue <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    number::var"#base".Int32
+    options::Vector{Option}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumValue(name, number, options, _unknown_fields=UInt8[])
         return new(name, number, options, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{EnumValue})
-    return (;name = "", number = zero(var"#base".Int32), options = Vector{Option}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{EnumValue})
     return (;name = 1, number = 2, options = 3)
@@ -313,21 +310,21 @@ function PB._encoded_size(_x::EnumValue)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries EnumValue typesalt=0xc6816b2e038e7b7f
+@batteries EnumValue typesalt=0xc6816b2e038e7b7f kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValue})
+    return (;name = "", number = zero(var"#base".Int32), options = Vector{Option}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct Enum <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    enumvalue::Vector{EnumValue} = Vector{EnumValue}()
-    options::Vector{Option} = Vector{Option}()
-    source_context::Union{Nothing,SourceContext} = nothing
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Enum <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    enumvalue::Vector{EnumValue}
+    options::Vector{Option}
+    source_context::Union{Nothing,SourceContext}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
     function Enum(name, enumvalue, options, source_context, syntax, _unknown_fields=UInt8[])
         return new(name, enumvalue, options, source_context, syntax, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Enum})
-    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Enum})
     return (;name = 1, enumvalue = 2, options = 3, source_context = 4, syntax = 5)
@@ -385,7 +382,10 @@ function PB._encoded_size(_x::Enum)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Enum typesalt=0x22f8ef761818143e
+@batteries Enum typesalt=0x22f8ef761818143e kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Enum})
+    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

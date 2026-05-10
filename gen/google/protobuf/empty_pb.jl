@@ -12,11 +12,8 @@ const var"#base" = Base
 
 export Empty
 
-var"#base".@kwdef struct Empty <: PB.AbstractProtoBufMessage
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
-end
-function PB.default_values(::var"#core".Type{Empty})
-    return (;var"#unknown_fields" = UInt8[])
+struct Empty <: PB.AbstractProtoBufMessage
+    var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Empty})
     return (;)
@@ -47,7 +44,10 @@ function PB._encoded_size(_x::Empty)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Empty typesalt=0x0ddc1dc29fc40c04
+@batteries Empty typesalt=0x0ddc1dc29fc40c04 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Empty})
+    return (;var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

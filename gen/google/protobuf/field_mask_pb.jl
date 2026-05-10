@@ -12,15 +12,12 @@ const var"#base" = Base
 
 export FieldMask
 
-var"#base".@kwdef struct FieldMask <: PB.AbstractProtoBufMessage
-    paths::Vector{var"#base".String} = Vector{var"#base".String}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FieldMask <: PB.AbstractProtoBufMessage
+    paths::Vector{var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function FieldMask(paths, _unknown_fields=UInt8[])
         return new(paths, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FieldMask})
-    return (;paths = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FieldMask})
     return (;paths = 1)
@@ -58,7 +55,10 @@ function PB._encoded_size(_x::FieldMask)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FieldMask typesalt=0xe1df3b729904a745
+@batteries FieldMask typesalt=0xe1df3b729904a745 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FieldMask})
+    return (;paths = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

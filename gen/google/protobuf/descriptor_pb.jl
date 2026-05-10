@@ -12,16 +12,13 @@ const var"#base" = Base
 
 export FileDescriptorSet, FileDescriptorProto, DescriptorProto, ExtensionRangeOptions, FieldDescriptorProto, OneofDescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, ServiceDescriptorProto, MethodDescriptorProto, FileOptions, MessageOptions, FieldOptions, OneofOptions, EnumOptions, EnumValueOptions, ServiceOptions, MethodOptions, UninterpretedOption, SourceCodeInfo, GeneratedCodeInfo
 
-var"#base".@kwdef struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
-    name_part::var"#base".String = ""
-    is_extension::var"#base".Bool = false
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
+    name_part::var"#base".String
+    is_extension::var"#base".Bool
+    var"#unknown_fields"::Vector{UInt8}
     function var"UninterpretedOption.NamePart"(name_part, is_extension, _unknown_fields=UInt8[])
         return new(name_part, is_extension, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"UninterpretedOption.NamePart"})
-    return (;name_part = "", is_extension = false, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"UninterpretedOption.NamePart"})
     return (;name_part = 1, is_extension = 2)
@@ -70,23 +67,23 @@ function PB._encoded_size(_x::var"UninterpretedOption.NamePart")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"UninterpretedOption.NamePart" typesalt=0xab66b0e853253133
+@batteries var"UninterpretedOption.NamePart" typesalt=0xab66b0e853253133 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"UninterpretedOption.NamePart"})
+    return (;name_part = "", is_extension = false, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct UninterpretedOption <: PB.AbstractProtoBufMessage
-    name::Vector{var"UninterpretedOption.NamePart"} = Vector{var"UninterpretedOption.NamePart"}()
-    identifier_value::Union{Nothing,var"#base".String} = nothing
-    positive_int_value::Union{Nothing,var"#base".UInt64} = nothing
-    negative_int_value::Union{Nothing,var"#base".Int64} = nothing
-    double_value::Union{Nothing,var"#base".Float64} = nothing
-    string_value::Union{Nothing,var"#base".Vector{var"#base".UInt8}} = nothing
-    aggregate_value::Union{Nothing,var"#base".String} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct UninterpretedOption <: PB.AbstractProtoBufMessage
+    name::Vector{var"UninterpretedOption.NamePart"}
+    identifier_value::Union{Nothing,var"#base".String}
+    positive_int_value::Union{Nothing,var"#base".UInt64}
+    negative_int_value::Union{Nothing,var"#base".Int64}
+    double_value::Union{Nothing,var"#base".Float64}
+    string_value::Union{Nothing,var"#base".Vector{var"#base".UInt8}}
+    aggregate_value::Union{Nothing,var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function UninterpretedOption(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields=UInt8[])
         return new(name, identifier_value, positive_int_value, negative_int_value, double_value, string_value, aggregate_value, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{UninterpretedOption})
-    return (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{UninterpretedOption})
     return (;name = 2, identifier_value = 3, positive_int_value = 4, negative_int_value = 5, double_value = 6, string_value = 7, aggregate_value = 8)
@@ -154,7 +151,10 @@ function PB._encoded_size(_x::UninterpretedOption)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries UninterpretedOption typesalt=0x6a29b2bdfa24d3cd
+@batteries UninterpretedOption typesalt=0x6a29b2bdfa24d3cd kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{UninterpretedOption})
+    return (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"FieldOptions.CType" STRING=0 CORD=1 STRING_PIECE=2
 @enumbatteries var"FieldOptions.CType".T typesalt=0xd9f484511c1ca4ea
@@ -162,21 +162,18 @@ end
 @enumx var"FieldOptions.JSType" JS_NORMAL=0 JS_STRING=1 JS_NUMBER=2
 @enumbatteries var"FieldOptions.JSType".T typesalt=0x0b3527e04ab91112
 
-var"#base".@kwdef struct FieldOptions <: PB.AbstractProtoBufMessage
-    ctype::Union{Nothing,var"FieldOptions.CType".T} = nothing
-    packed::Union{Nothing,var"#base".Bool} = nothing
-    jstype::Union{Nothing,var"FieldOptions.JSType".T} = nothing
-    lazy::Union{Nothing,var"#base".Bool} = nothing
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    weak::Union{Nothing,var"#base".Bool} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FieldOptions <: PB.AbstractProtoBufMessage
+    ctype::Union{Nothing,var"FieldOptions.CType".T}
+    packed::Union{Nothing,var"#base".Bool}
+    jstype::Union{Nothing,var"FieldOptions.JSType".T}
+    lazy::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,var"#base".Bool}
+    weak::Union{Nothing,var"#base".Bool}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function FieldOptions(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields=UInt8[])
         return new(ctype, packed, jstype, lazy, deprecated, weak, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FieldOptions})
-    return (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FieldOptions})
     return (;ctype = 1, packed = 2, jstype = 6, lazy = 5, deprecated = 3, weak = 10, uninterpreted_option = 999)
@@ -247,7 +244,10 @@ function PB._encoded_size(_x::FieldOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FieldOptions typesalt=0x28f8887757c64371
+@batteries FieldOptions typesalt=0x28f8887757c64371 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FieldOptions})
+    return (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"FieldDescriptorProto.Type" TYPE_DOUBLE=1 TYPE_FLOAT=2 TYPE_INT64=3 TYPE_UINT64=4 TYPE_INT32=5 TYPE_FIXED64=6 TYPE_FIXED32=7 TYPE_BOOL=8 TYPE_STRING=9 TYPE_GROUP=10 TYPE_MESSAGE=11 TYPE_BYTES=12 TYPE_UINT32=13 TYPE_ENUM=14 TYPE_SFIXED32=15 TYPE_SFIXED64=16 TYPE_SINT32=17 TYPE_SINT64=18
 @enumbatteries var"FieldDescriptorProto.Type".T typesalt=0xa3b3794ec94803a4
@@ -255,25 +255,22 @@ end
 @enumx var"FieldDescriptorProto.Label" LABEL_OPTIONAL=1 LABEL_REQUIRED=2 LABEL_REPEATED=3
 @enumbatteries var"FieldDescriptorProto.Label".T typesalt=0xa25262cc56149f9a
 
-var"#base".@kwdef struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    number::Union{Nothing,var"#base".Int32} = nothing
-    label::Union{Nothing,var"FieldDescriptorProto.Label".T} = nothing
-    type::Union{Nothing,var"FieldDescriptorProto.Type".T} = nothing
-    type_name::Union{Nothing,var"#base".String} = nothing
-    extendee::Union{Nothing,var"#base".String} = nothing
-    default_value::Union{Nothing,var"#base".String} = nothing
-    oneof_index::Union{Nothing,var"#base".Int32} = nothing
-    json_name::Union{Nothing,var"#base".String} = nothing
-    options::Union{Nothing,FieldOptions} = nothing
-    proto3_optional::Union{Nothing,var"#base".Bool} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    number::Union{Nothing,var"#base".Int32}
+    label::Union{Nothing,var"FieldDescriptorProto.Label".T}
+    type::Union{Nothing,var"FieldDescriptorProto.Type".T}
+    type_name::Union{Nothing,var"#base".String}
+    extendee::Union{Nothing,var"#base".String}
+    default_value::Union{Nothing,var"#base".String}
+    oneof_index::Union{Nothing,var"#base".Int32}
+    json_name::Union{Nothing,var"#base".String}
+    options::Union{Nothing,FieldOptions}
+    proto3_optional::Union{Nothing,var"#base".Bool}
+    var"#unknown_fields"::Vector{UInt8}
     function FieldDescriptorProto(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields=UInt8[])
         return new(name, number, label, type, type_name, extendee, default_value, oneof_index, json_name, options, proto3_optional, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FieldDescriptorProto})
-    return (;name = nothing, number = nothing, label = nothing, type = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FieldDescriptorProto})
     return (;name = 1, number = 3, label = 4, type = 5, type_name = 6, extendee = 2, default_value = 7, oneof_index = 9, json_name = 10, options = 8, proto3_optional = 17)
@@ -361,22 +358,22 @@ function PB._encoded_size(_x::FieldDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FieldDescriptorProto typesalt=0x40086ae35fe3802a
+@batteries FieldDescriptorProto typesalt=0x40086ae35fe3802a kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FieldDescriptorProto})
+    return (;name = nothing, number = nothing, label = nothing, type = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"MethodOptions.IdempotencyLevel" IDEMPOTENCY_UNKNOWN=0 NO_SIDE_EFFECTS=1 IDEMPOTENT=2
 @enumbatteries var"MethodOptions.IdempotencyLevel".T typesalt=0x97d41564f23ffb2b
 
-var"#base".@kwdef struct MethodOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct MethodOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,var"#base".Bool}
+    idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function MethodOptions(deprecated, idempotency_level, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, idempotency_level, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{MethodOptions})
-    return (;deprecated = nothing, idempotency_level = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{MethodOptions})
     return (;deprecated = 33, idempotency_level = 34, uninterpreted_option = 999)
@@ -424,22 +421,22 @@ function PB._encoded_size(_x::MethodOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries MethodOptions typesalt=0x58da3cb4977c1470
+@batteries MethodOptions typesalt=0x58da3cb4977c1470 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{MethodOptions})
+    return (;deprecated = nothing, idempotency_level = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    input_type::Union{Nothing,var"#base".String} = nothing
-    output_type::Union{Nothing,var"#base".String} = nothing
-    options::Union{Nothing,MethodOptions} = nothing
-    client_streaming::Union{Nothing,var"#base".Bool} = nothing
-    server_streaming::Union{Nothing,var"#base".Bool} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    input_type::Union{Nothing,var"#base".String}
+    output_type::Union{Nothing,var"#base".String}
+    options::Union{Nothing,MethodOptions}
+    client_streaming::Union{Nothing,var"#base".Bool}
+    server_streaming::Union{Nothing,var"#base".Bool}
+    var"#unknown_fields"::Vector{UInt8}
     function MethodDescriptorProto(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields=UInt8[])
         return new(name, input_type, output_type, options, client_streaming, server_streaming, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{MethodDescriptorProto})
-    return (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{MethodDescriptorProto})
     return (;name = 1, input_type = 2, output_type = 3, options = 4, client_streaming = 5, server_streaming = 6)
@@ -502,18 +499,18 @@ function PB._encoded_size(_x::MethodDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries MethodDescriptorProto typesalt=0xe8de2cbeb8bce18f
+@batteries MethodDescriptorProto typesalt=0xe8de2cbeb8bce18f kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{MethodDescriptorProto})
+    return (;name = nothing, input_type = nothing, output_type = nothing, options = nothing, client_streaming = nothing, server_streaming = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct ServiceOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct ServiceOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,var"#base".Bool}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function ServiceOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{ServiceOptions})
-    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{ServiceOptions})
     return (;deprecated = 33, uninterpreted_option = 999)
@@ -556,19 +553,19 @@ function PB._encoded_size(_x::ServiceOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries ServiceOptions typesalt=0xedfd9dc94fe6ea94
+@batteries ServiceOptions typesalt=0xedfd9dc94fe6ea94 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{ServiceOptions})
+    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    method::Vector{MethodDescriptorProto} = Vector{MethodDescriptorProto}()
-    options::Union{Nothing,ServiceOptions} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    method::Vector{MethodDescriptorProto}
+    options::Union{Nothing,ServiceOptions}
+    var"#unknown_fields"::Vector{UInt8}
     function ServiceDescriptorProto(name, method, options, _unknown_fields=UInt8[])
         return new(name, method, options, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{ServiceDescriptorProto})
-    return (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{ServiceDescriptorProto})
     return (;name = 1, method = 2, options = 3)
@@ -616,17 +613,17 @@ function PB._encoded_size(_x::ServiceDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries ServiceDescriptorProto typesalt=0x9ed7e95cfe382d6b
+@batteries ServiceDescriptorProto typesalt=0x9ed7e95cfe382d6b kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{ServiceDescriptorProto})
+    return (;name = nothing, method = Vector{MethodDescriptorProto}(), options = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct ExtensionRangeOptions <: PB.AbstractProtoBufMessage
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function ExtensionRangeOptions(uninterpreted_option, _unknown_fields=UInt8[])
         return new(uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{ExtensionRangeOptions})
-    return (;uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{ExtensionRangeOptions})
     return (;uninterpreted_option = 999)
@@ -664,17 +661,17 @@ function PB._encoded_size(_x::ExtensionRangeOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries ExtensionRangeOptions typesalt=0x40cb75f337ae7cf5
+@batteries ExtensionRangeOptions typesalt=0x40cb75f337ae7cf5 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{ExtensionRangeOptions})
+    return (;uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct OneofOptions <: PB.AbstractProtoBufMessage
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct OneofOptions <: PB.AbstractProtoBufMessage
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function OneofOptions(uninterpreted_option, _unknown_fields=UInt8[])
         return new(uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{OneofOptions})
-    return (;uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{OneofOptions})
     return (;uninterpreted_option = 999)
@@ -712,18 +709,18 @@ function PB._encoded_size(_x::OneofOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries OneofOptions typesalt=0x870b33e488698946
+@batteries OneofOptions typesalt=0x870b33e488698946 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{OneofOptions})
+    return (;uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    options::Union{Nothing,OneofOptions} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    options::Union{Nothing,OneofOptions}
+    var"#unknown_fields"::Vector{UInt8}
     function OneofDescriptorProto(name, options, _unknown_fields=UInt8[])
         return new(name, options, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{OneofDescriptorProto})
-    return (;name = nothing, options = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{OneofDescriptorProto})
     return (;name = 1, options = 2)
@@ -766,18 +763,18 @@ function PB._encoded_size(_x::OneofDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries OneofDescriptorProto typesalt=0x449021f024c44e35
+@batteries OneofDescriptorProto typesalt=0x449021f024c44e35 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{OneofDescriptorProto})
+    return (;name = nothing, options = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct EnumValueOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct EnumValueOptions <: PB.AbstractProtoBufMessage
+    deprecated::Union{Nothing,var"#base".Bool}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumValueOptions(deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(deprecated, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{EnumValueOptions})
-    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{EnumValueOptions})
     return (;deprecated = 1, uninterpreted_option = 999)
@@ -820,19 +817,19 @@ function PB._encoded_size(_x::EnumValueOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries EnumValueOptions typesalt=0x080759ebc0155ffb
+@batteries EnumValueOptions typesalt=0x080759ebc0155ffb kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValueOptions})
+    return (;deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    number::Union{Nothing,var"#base".Int32} = nothing
-    options::Union{Nothing,EnumValueOptions} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    number::Union{Nothing,var"#base".Int32}
+    options::Union{Nothing,EnumValueOptions}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumValueDescriptorProto(name, number, options, _unknown_fields=UInt8[])
         return new(name, number, options, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{EnumValueDescriptorProto})
-    return (;name = nothing, number = nothing, options = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{EnumValueDescriptorProto})
     return (;name = 1, number = 2, options = 3)
@@ -880,19 +877,19 @@ function PB._encoded_size(_x::EnumValueDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries EnumValueDescriptorProto typesalt=0x3d1d04b0c35d7994
+@batteries EnumValueDescriptorProto typesalt=0x3d1d04b0c35d7994 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValueDescriptorProto})
+    return (;name = nothing, number = nothing, options = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct EnumOptions <: PB.AbstractProtoBufMessage
-    allow_alias::Union{Nothing,var"#base".Bool} = nothing
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct EnumOptions <: PB.AbstractProtoBufMessage
+    allow_alias::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,var"#base".Bool}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumOptions(allow_alias, deprecated, uninterpreted_option, _unknown_fields=UInt8[])
         return new(allow_alias, deprecated, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{EnumOptions})
-    return (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{EnumOptions})
     return (;allow_alias = 2, deprecated = 3, uninterpreted_option = 999)
@@ -943,18 +940,18 @@ function PB._encoded_size(_x::EnumOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries EnumOptions typesalt=0xf3db6edff7210970
+@batteries EnumOptions typesalt=0xf3db6edff7210970 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{EnumOptions})
+    return (;allow_alias = nothing, deprecated = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32} = nothing
-    var"#end"::Union{Nothing,var"#base".Int32} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,var"#base".Int32}
+    var"#end"::Union{Nothing,var"#base".Int32}
+    var"#unknown_fields"::Vector{UInt8}
     function var"EnumDescriptorProto.EnumReservedRange"(start, var"#end", _unknown_fields=UInt8[])
         return new(start, var"#end", _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"EnumDescriptorProto.EnumReservedRange"})
-    return (;start = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"EnumDescriptorProto.EnumReservedRange"})
     return (;start = 1, var"#end" = 2)
@@ -997,21 +994,21 @@ function PB._encoded_size(_x::var"EnumDescriptorProto.EnumReservedRange")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"EnumDescriptorProto.EnumReservedRange" typesalt=0xea524775914d7603
+@batteries var"EnumDescriptorProto.EnumReservedRange" typesalt=0xea524775914d7603 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"EnumDescriptorProto.EnumReservedRange"})
+    return (;start = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    value::Vector{EnumValueDescriptorProto} = Vector{EnumValueDescriptorProto}()
-    options::Union{Nothing,EnumOptions} = nothing
-    reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"} = Vector{var"EnumDescriptorProto.EnumReservedRange"}()
-    reserved_name::Vector{var"#base".String} = Vector{var"#base".String}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    value::Vector{EnumValueDescriptorProto}
+    options::Union{Nothing,EnumOptions}
+    reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
+    reserved_name::Vector{var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function EnumDescriptorProto(name, value, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
         return new(name, value, options, reserved_range, reserved_name, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{EnumDescriptorProto})
-    return (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{EnumDescriptorProto})
     return (;name = 1, value = 2, options = 3, reserved_range = 4, reserved_name = 5)
@@ -1069,21 +1066,21 @@ function PB._encoded_size(_x::EnumDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries EnumDescriptorProto typesalt=0x9e00878e76d2768f
+@batteries EnumDescriptorProto typesalt=0x9e00878e76d2768f kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{EnumDescriptorProto})
+    return (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct MessageOptions <: PB.AbstractProtoBufMessage
-    message_set_wire_format::Union{Nothing,var"#base".Bool} = nothing
-    no_standard_descriptor_accessor::Union{Nothing,var"#base".Bool} = nothing
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    map_entry::Union{Nothing,var"#base".Bool} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct MessageOptions <: PB.AbstractProtoBufMessage
+    message_set_wire_format::Union{Nothing,var"#base".Bool}
+    no_standard_descriptor_accessor::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,var"#base".Bool}
+    map_entry::Union{Nothing,var"#base".Bool}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function MessageOptions(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields=UInt8[])
         return new(message_set_wire_format, no_standard_descriptor_accessor, deprecated, map_entry, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{MessageOptions})
-    return (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{MessageOptions})
     return (;message_set_wire_format = 1, no_standard_descriptor_accessor = 2, deprecated = 3, map_entry = 7, uninterpreted_option = 999)
@@ -1144,19 +1141,19 @@ function PB._encoded_size(_x::MessageOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries MessageOptions typesalt=0x0297cd5cdb9a0618
+@batteries MessageOptions typesalt=0x0297cd5cdb9a0618 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{MessageOptions})
+    return (;message_set_wire_format = nothing, no_standard_descriptor_accessor = nothing, deprecated = nothing, map_entry = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32} = nothing
-    var"#end"::Union{Nothing,var"#base".Int32} = nothing
-    options::Union{Nothing,ExtensionRangeOptions} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,var"#base".Int32}
+    var"#end"::Union{Nothing,var"#base".Int32}
+    options::Union{Nothing,ExtensionRangeOptions}
+    var"#unknown_fields"::Vector{UInt8}
     function var"DescriptorProto.ExtensionRange"(start, var"#end", options, _unknown_fields=UInt8[])
         return new(start, var"#end", options, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"DescriptorProto.ExtensionRange"})
-    return (;start = nothing, var"#end" = nothing, options = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"DescriptorProto.ExtensionRange"})
     return (;start = 1, var"#end" = 2, options = 3)
@@ -1204,18 +1201,18 @@ function PB._encoded_size(_x::var"DescriptorProto.ExtensionRange")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"DescriptorProto.ExtensionRange" typesalt=0xef064ec83d958af4
+@batteries var"DescriptorProto.ExtensionRange" typesalt=0xef064ec83d958af4 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"DescriptorProto.ExtensionRange"})
+    return (;start = nothing, var"#end" = nothing, options = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32} = nothing
-    var"#end"::Union{Nothing,var"#base".Int32} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
+    start::Union{Nothing,var"#base".Int32}
+    var"#end"::Union{Nothing,var"#base".Int32}
+    var"#unknown_fields"::Vector{UInt8}
     function var"DescriptorProto.ReservedRange"(start, var"#end", _unknown_fields=UInt8[])
         return new(start, var"#end", _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"DescriptorProto.ReservedRange"})
-    return (;start = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"DescriptorProto.ReservedRange"})
     return (;start = 1, var"#end" = 2)
@@ -1258,26 +1255,26 @@ function PB._encoded_size(_x::var"DescriptorProto.ReservedRange")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"DescriptorProto.ReservedRange" typesalt=0xa4fb62cea04ba177
+@batteries var"DescriptorProto.ReservedRange" typesalt=0xa4fb62cea04ba177 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"DescriptorProto.ReservedRange"})
+    return (;start = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct DescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    field::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
-    extension::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
-    nested_type::Vector{DescriptorProto} = Vector{DescriptorProto}()
-    enum_type::Vector{EnumDescriptorProto} = Vector{EnumDescriptorProto}()
-    extension_range::Vector{var"DescriptorProto.ExtensionRange"} = Vector{var"DescriptorProto.ExtensionRange"}()
-    oneof_decl::Vector{OneofDescriptorProto} = Vector{OneofDescriptorProto}()
-    options::Union{Nothing,MessageOptions} = nothing
-    reserved_range::Vector{var"DescriptorProto.ReservedRange"} = Vector{var"DescriptorProto.ReservedRange"}()
-    reserved_name::Vector{var"#base".String} = Vector{var"#base".String}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct DescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    field::Vector{FieldDescriptorProto}
+    extension::Vector{FieldDescriptorProto}
+    nested_type::Vector{DescriptorProto}
+    enum_type::Vector{EnumDescriptorProto}
+    extension_range::Vector{var"DescriptorProto.ExtensionRange"}
+    oneof_decl::Vector{OneofDescriptorProto}
+    options::Union{Nothing,MessageOptions}
+    reserved_range::Vector{var"DescriptorProto.ReservedRange"}
+    reserved_name::Vector{var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function DescriptorProto(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields=UInt8[])
         return new(name, field, extension, nested_type, enum_type, extension_range, oneof_decl, options, reserved_range, reserved_name, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{DescriptorProto})
-    return (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{DescriptorProto})
     return (;name = 1, field = 2, extension = 6, nested_type = 3, enum_type = 4, extension_range = 5, oneof_decl = 8, options = 7, reserved_range = 9, reserved_name = 10)
@@ -1360,21 +1357,21 @@ function PB._encoded_size(_x::DescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries DescriptorProto typesalt=0x395b277867bb123c
+@batteries DescriptorProto typesalt=0x395b277867bb123c kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{DescriptorProto})
+    return (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
-    path::Vector{var"#base".Int32} = Vector{var"#base".Int32}()
-    span::Vector{var"#base".Int32} = Vector{var"#base".Int32}()
-    leading_comments::Union{Nothing,var"#base".String} = nothing
-    trailing_comments::Union{Nothing,var"#base".String} = nothing
-    leading_detached_comments::Vector{var"#base".String} = Vector{var"#base".String}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
+    path::Vector{var"#base".Int32}
+    span::Vector{var"#base".Int32}
+    leading_comments::Union{Nothing,var"#base".String}
+    trailing_comments::Union{Nothing,var"#base".String}
+    leading_detached_comments::Vector{var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function var"SourceCodeInfo.Location"(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields=UInt8[])
         return new(path, span, leading_comments, trailing_comments, leading_detached_comments, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"SourceCodeInfo.Location"})
-    return (;path = Vector{var"#base".Int32}(), span = Vector{var"#base".Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"SourceCodeInfo.Location"})
     return (;path = 1, span = 2, leading_comments = 3, trailing_comments = 4, leading_detached_comments = 6)
@@ -1432,17 +1429,17 @@ function PB._encoded_size(_x::var"SourceCodeInfo.Location")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"SourceCodeInfo.Location" typesalt=0x5fa1c7e0f6692208
+@batteries var"SourceCodeInfo.Location" typesalt=0x5fa1c7e0f6692208 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"SourceCodeInfo.Location"})
+    return (;path = Vector{var"#base".Int32}(), span = Vector{var"#base".Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct SourceCodeInfo <: PB.AbstractProtoBufMessage
-    location::Vector{var"SourceCodeInfo.Location"} = Vector{var"SourceCodeInfo.Location"}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct SourceCodeInfo <: PB.AbstractProtoBufMessage
+    location::Vector{var"SourceCodeInfo.Location"}
+    var"#unknown_fields"::Vector{UInt8}
     function SourceCodeInfo(location, _unknown_fields=UInt8[])
         return new(location, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{SourceCodeInfo})
-    return (;location = Vector{var"SourceCodeInfo.Location"}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{SourceCodeInfo})
     return (;location = 1)
@@ -1480,40 +1477,40 @@ function PB._encoded_size(_x::SourceCodeInfo)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries SourceCodeInfo typesalt=0x25d027c862361e3b
+@batteries SourceCodeInfo typesalt=0x25d027c862361e3b kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{SourceCodeInfo})
+    return (;location = Vector{var"SourceCodeInfo.Location"}(), var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"FileOptions.OptimizeMode" SPEED=1 CODE_SIZE=2 LITE_RUNTIME=3
 @enumbatteries var"FileOptions.OptimizeMode".T typesalt=0x6773b55409fca24d
 
-var"#base".@kwdef struct FileOptions <: PB.AbstractProtoBufMessage
-    java_package::Union{Nothing,var"#base".String} = nothing
-    java_outer_classname::Union{Nothing,var"#base".String} = nothing
-    java_multiple_files::Union{Nothing,var"#base".Bool} = nothing
-    java_generate_equals_and_hash::Union{Nothing,var"#base".Bool} = nothing
-    java_string_check_utf8::Union{Nothing,var"#base".Bool} = nothing
-    optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T} = nothing
-    go_package::Union{Nothing,var"#base".String} = nothing
-    cc_generic_services::Union{Nothing,var"#base".Bool} = nothing
-    java_generic_services::Union{Nothing,var"#base".Bool} = nothing
-    py_generic_services::Union{Nothing,var"#base".Bool} = nothing
-    php_generic_services::Union{Nothing,var"#base".Bool} = nothing
-    deprecated::Union{Nothing,var"#base".Bool} = nothing
-    cc_enable_arenas::Union{Nothing,var"#base".Bool} = nothing
-    objc_class_prefix::Union{Nothing,var"#base".String} = nothing
-    csharp_namespace::Union{Nothing,var"#base".String} = nothing
-    swift_prefix::Union{Nothing,var"#base".String} = nothing
-    php_class_prefix::Union{Nothing,var"#base".String} = nothing
-    php_namespace::Union{Nothing,var"#base".String} = nothing
-    php_metadata_namespace::Union{Nothing,var"#base".String} = nothing
-    ruby_package::Union{Nothing,var"#base".String} = nothing
-    uninterpreted_option::Vector{UninterpretedOption} = Vector{UninterpretedOption}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FileOptions <: PB.AbstractProtoBufMessage
+    java_package::Union{Nothing,var"#base".String}
+    java_outer_classname::Union{Nothing,var"#base".String}
+    java_multiple_files::Union{Nothing,var"#base".Bool}
+    java_generate_equals_and_hash::Union{Nothing,var"#base".Bool}
+    java_string_check_utf8::Union{Nothing,var"#base".Bool}
+    optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T}
+    go_package::Union{Nothing,var"#base".String}
+    cc_generic_services::Union{Nothing,var"#base".Bool}
+    java_generic_services::Union{Nothing,var"#base".Bool}
+    py_generic_services::Union{Nothing,var"#base".Bool}
+    php_generic_services::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,var"#base".Bool}
+    cc_enable_arenas::Union{Nothing,var"#base".Bool}
+    objc_class_prefix::Union{Nothing,var"#base".String}
+    csharp_namespace::Union{Nothing,var"#base".String}
+    swift_prefix::Union{Nothing,var"#base".String}
+    php_class_prefix::Union{Nothing,var"#base".String}
+    php_namespace::Union{Nothing,var"#base".String}
+    php_metadata_namespace::Union{Nothing,var"#base".String}
+    ruby_package::Union{Nothing,var"#base".String}
+    uninterpreted_option::Vector{UninterpretedOption}
+    var"#unknown_fields"::Vector{UInt8}
     function FileOptions(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields=UInt8[])
         return new(java_package, java_outer_classname, java_multiple_files, java_generate_equals_and_hash, java_string_check_utf8, optimize_for, go_package, cc_generic_services, java_generic_services, py_generic_services, php_generic_services, deprecated, cc_enable_arenas, objc_class_prefix, csharp_namespace, swift_prefix, php_class_prefix, php_namespace, php_metadata_namespace, ruby_package, uninterpreted_option, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FileOptions})
-    return (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = nothing, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FileOptions})
     return (;java_package = 1, java_outer_classname = 8, java_multiple_files = 10, java_generate_equals_and_hash = 20, java_string_check_utf8 = 27, optimize_for = 9, go_package = 11, cc_generic_services = 16, java_generic_services = 17, py_generic_services = 18, php_generic_services = 42, deprecated = 23, cc_enable_arenas = 31, objc_class_prefix = 36, csharp_namespace = 37, swift_prefix = 39, php_class_prefix = 40, php_namespace = 41, php_metadata_namespace = 44, ruby_package = 45, uninterpreted_option = 999)
@@ -1654,28 +1651,28 @@ function PB._encoded_size(_x::FileOptions)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FileOptions typesalt=0xaca5b62fee23d3f1
+@batteries FileOptions typesalt=0xaca5b62fee23d3f1 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FileOptions})
+    return (;java_package = nothing, java_outer_classname = nothing, java_multiple_files = nothing, java_generate_equals_and_hash = nothing, java_string_check_utf8 = nothing, optimize_for = nothing, go_package = nothing, cc_generic_services = nothing, java_generic_services = nothing, py_generic_services = nothing, php_generic_services = nothing, deprecated = nothing, cc_enable_arenas = nothing, objc_class_prefix = nothing, csharp_namespace = nothing, swift_prefix = nothing, php_class_prefix = nothing, php_namespace = nothing, php_metadata_namespace = nothing, ruby_package = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct FileDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    package::Union{Nothing,var"#base".String} = nothing
-    dependency::Vector{var"#base".String} = Vector{var"#base".String}()
-    public_dependency::Vector{var"#base".Int32} = Vector{var"#base".Int32}()
-    weak_dependency::Vector{var"#base".Int32} = Vector{var"#base".Int32}()
-    message_type::Vector{DescriptorProto} = Vector{DescriptorProto}()
-    enum_type::Vector{EnumDescriptorProto} = Vector{EnumDescriptorProto}()
-    service::Vector{ServiceDescriptorProto} = Vector{ServiceDescriptorProto}()
-    extension::Vector{FieldDescriptorProto} = Vector{FieldDescriptorProto}()
-    options::Union{Nothing,FileOptions} = nothing
-    source_code_info::Union{Nothing,SourceCodeInfo} = nothing
-    syntax::Union{Nothing,var"#base".String} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FileDescriptorProto <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    package::Union{Nothing,var"#base".String}
+    dependency::Vector{var"#base".String}
+    public_dependency::Vector{var"#base".Int32}
+    weak_dependency::Vector{var"#base".Int32}
+    message_type::Vector{DescriptorProto}
+    enum_type::Vector{EnumDescriptorProto}
+    service::Vector{ServiceDescriptorProto}
+    extension::Vector{FieldDescriptorProto}
+    options::Union{Nothing,FileOptions}
+    source_code_info::Union{Nothing,SourceCodeInfo}
+    syntax::Union{Nothing,var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function FileDescriptorProto(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields=UInt8[])
         return new(name, package, dependency, public_dependency, weak_dependency, message_type, enum_type, service, extension, options, source_code_info, syntax, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FileDescriptorProto})
-    return (;name = nothing, package = nothing, dependency = Vector{var"#base".String}(), public_dependency = Vector{var"#base".Int32}(), weak_dependency = Vector{var"#base".Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FileDescriptorProto})
     return (;name = 1, package = 2, dependency = 3, public_dependency = 10, weak_dependency = 11, message_type = 4, enum_type = 5, service = 6, extension = 7, options = 8, source_code_info = 9, syntax = 12)
@@ -1784,17 +1781,17 @@ function PB._encoded_size(_x::FileDescriptorProto)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FileDescriptorProto typesalt=0x4f6448a4b53820aa
+@batteries FileDescriptorProto typesalt=0x4f6448a4b53820aa kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FileDescriptorProto})
+    return (;name = nothing, package = nothing, dependency = Vector{var"#base".String}(), public_dependency = Vector{var"#base".Int32}(), weak_dependency = Vector{var"#base".Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct FileDescriptorSet <: PB.AbstractProtoBufMessage
-    file::Vector{FileDescriptorProto} = Vector{FileDescriptorProto}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct FileDescriptorSet <: PB.AbstractProtoBufMessage
+    file::Vector{FileDescriptorProto}
+    var"#unknown_fields"::Vector{UInt8}
     function FileDescriptorSet(file, _unknown_fields=UInt8[])
         return new(file, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{FileDescriptorSet})
-    return (;file = Vector{FileDescriptorProto}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{FileDescriptorSet})
     return (;file = 1)
@@ -1832,20 +1829,20 @@ function PB._encoded_size(_x::FileDescriptorSet)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries FileDescriptorSet typesalt=0xeff927f541221cdc
+@batteries FileDescriptorSet typesalt=0xeff927f541221cdc kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{FileDescriptorSet})
+    return (;file = Vector{FileDescriptorProto}(), var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
-    path::Vector{var"#base".Int32} = Vector{var"#base".Int32}()
-    source_file::Union{Nothing,var"#base".String} = nothing
-    var"#begin"::Union{Nothing,var"#base".Int32} = nothing
-    var"#end"::Union{Nothing,var"#base".Int32} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
+    path::Vector{var"#base".Int32}
+    source_file::Union{Nothing,var"#base".String}
+    var"#begin"::Union{Nothing,var"#base".Int32}
+    var"#end"::Union{Nothing,var"#base".Int32}
+    var"#unknown_fields"::Vector{UInt8}
     function var"GeneratedCodeInfo.Annotation"(path, source_file, var"#begin", var"#end", _unknown_fields=UInt8[])
         return new(path, source_file, var"#begin", var"#end", _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
-    return (;path = Vector{var"#base".Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
     return (;path = 1, source_file = 2, var"#begin" = 3, var"#end" = 4)
@@ -1898,17 +1895,17 @@ function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"GeneratedCodeInfo.Annotation" typesalt=0xeb7be3f082dbd320
+@batteries var"GeneratedCodeInfo.Annotation" typesalt=0xeb7be3f082dbd320 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
+    return (;path = Vector{var"#base".Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
-    annotation::Vector{var"GeneratedCodeInfo.Annotation"} = Vector{var"GeneratedCodeInfo.Annotation"}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
+    annotation::Vector{var"GeneratedCodeInfo.Annotation"}
+    var"#unknown_fields"::Vector{UInt8}
     function GeneratedCodeInfo(annotation, _unknown_fields=UInt8[])
         return new(annotation, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{GeneratedCodeInfo})
-    return (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{GeneratedCodeInfo})
     return (;annotation = 1)
@@ -1946,7 +1943,10 @@ function PB._encoded_size(_x::GeneratedCodeInfo)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries GeneratedCodeInfo typesalt=0xa41b8ab2cd29a421
+@batteries GeneratedCodeInfo typesalt=0xa41b8ab2cd29a421 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{GeneratedCodeInfo})
+    return (;annotation = Vector{var"GeneratedCodeInfo.Annotation"}(), var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

@@ -12,16 +12,13 @@ const var"#base" = Base
 
 export Any
 
-var"#base".@kwdef struct Any <: PB.AbstractProtoBufMessage
-    type_url::var"#base".String = ""
-    value::var"#base".Vector{var"#base".UInt8} = var"#base".UInt8[]
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Any <: PB.AbstractProtoBufMessage
+    type_url::var"#base".String
+    value::var"#base".Vector{var"#base".UInt8}
+    var"#unknown_fields"::Vector{UInt8}
     function Any(type_url, value, _unknown_fields=UInt8[])
         return new(type_url, value, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Any})
-    return (;type_url = "", value = var"#base".UInt8[], var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Any})
     return (;type_url = 1, value = 2)
@@ -64,7 +61,10 @@ function PB._encoded_size(_x::Any)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Any typesalt=0x215f47cf815db4a7
+@batteries Any typesalt=0x215f47cf815db4a7 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Any})
+    return (;type_url = "", value = var"#base".UInt8[], var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

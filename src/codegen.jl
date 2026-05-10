@@ -765,47 +765,41 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # their abstract supertype so other participants can type their
     # fields against the abstract.
     #
-    # `Base.@kwdef` synthesizes an outer kwarg constructor next to the
-    # struct, giving users `T(; field1=val, ...)` ergonomics. Plain
-    # positional construction (used by the generated decode body) still
-    # works through Julia's compiler-generated all-fields constructor.
+    # No inline `= default` per field — kwarg construction (with
+    # proto-defined defaults) is supplied by the @batteries
+    # `kwconstructor=true` decoration emitted below, paired with a
+    # `StructHelpers.default_keywords` overload. The struct definition
+    # itself stays a plain `struct T ... end`.
+    #
     # `var\"#unknown_fields\"` instead of plain `_unknown_fields` for the
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
-    println(io, "var\"#base\".@kwdef ", is_cycle_participant ?
+    println(io, is_cycle_participant ?
             "struct $(jl_name) <: $(_abstract_name(jl_name))" :
             "struct $(jl_name) <: PB.AbstractProtoBufMessage")
     param_names = String[]
     for f in plain_fields
-        # proto2 required submessages have `default_value = Ref{T}()`,
-        # which doesn't fit the concrete field type T. Emit those without
-        # a default — kwarg construction then requires the user to pass
-        # them explicitly, mirroring the protocol's "required" semantics.
-        if f.is_required && f.is_message
-            println(io, "    ", f.jl_fieldname, "::", f.jl_type)
-        else
-            println(io, "    ", f.jl_fieldname, "::", f.jl_type, " = ", f.default_value)
-        end
+        println(io, "    ", f.jl_fieldname, "::", f.jl_type)
         push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
-        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
+        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
-    println(io, "    var\"#unknown_fields\"::Vector{UInt8} = UInt8[]")
+    println(io, "    var\"#unknown_fields\"::Vector{UInt8}")
     push!(param_names, "var\"#unknown_fields\"")
-    # Inner constructor with `_unknown_fields=UInt8[]` default. Coexists
-    # with @kwdef's outer kwarg constructor and replaces Julia's auto-
-    # generated all-positional constructor; users get
+    # Inner positional constructor with `_unknown_fields=UInt8[]`
+    # default. Replaces Julia's auto-generated all-positional ctor so
+    # users can construct messages without explicitly passing the
+    # buffer:
     #     T(field1, ..., fieldN-1)              (buffer defaults to UInt8[])
     #     T(field1, ..., fieldN-1, buffer)      (explicit buffer)
-    #     T(; field1=val, ...)                  (kwarg form, all optional)
-    # The constructor is *inner* — emitting it as outer would split the
-    # binding partition on Julia 1.12 and break `Type{<:T}` dispatch.
+    # Inner *not* outer: an outer convenience ctor splits the type's
+    # binding partition on Julia 1.12 and breaks `Type{<:T}` dispatch.
     #
     # Skip the inner ctor for messages whose only field is the buffer
-    # (e.g. WKT `Empty`): there it collides with @kwdef's auto-positional
+    # (e.g. WKT `Empty`): there it collides with the auto-positional
     # `T(::Vector{UInt8})` since both take exactly the buffer arg.
     if length(param_names) > 1
         inner_params = join(param_names[1:end-1], ", ")
@@ -820,18 +814,10 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     end
     println(io, "end")
 
-    # Metadata.
-    println(io, "function PB.default_values(::var\"#core\".Type{", jl_name, "})")
-    pieces = String[]
-    for f in plain_fields
-        push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
-    end
-    for o in real_oneofs
-        push!(pieces, "$(o.jl_fieldname) = nothing")
-    end
-    push!(pieces, "var\"#unknown_fields\" = UInt8[]")
-    println(io, "    return (;", join(pieces, ", "), ")")
-    println(io, "end")
+    # Metadata. (`default_values` is no longer emitted per type — the
+    # default-stub in src/ProtocGen.jl forwards to
+    # `StructHelpers.default_keywords`, which is what the @batteries
+    # call below populates per type.)
 
     println(io, "function PB.field_numbers(::var\"#core\".Type{", jl_name, "})")
     pieces = String[]
@@ -994,15 +980,39 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "    return encoded_size")
     println(io, "end")
 
-    # Always emit `@batteries TypeName typesalt=0x… <user kwargs>`. A
-    # bare `@batteries T` with only a typesalt registers T as
-    # "batterized" without adding any methods, so the default emission
-    # is behaviorally identical to a plain Julia struct while honoring
-    # the project convention that every struct carry an @batteries
-    # call. The typesalt is derived deterministically from the proto
-    # FQN so re-generation does not shift it.
+    # `@batteries kwconstructor=true kwshow=true` does double duty:
+    #   - kwconstructor: gives users `T(; field1=…, …)` ergonomics; the
+    #     defaults for kwargs come from the `default_keywords` overload
+    #     below (StructHelpers ≥ 1.5).
+    #   - kwshow: prints `T(field1 = val, …)` and omits any field whose
+    #     value is `isequal` to its `default_keywords` entry, so the
+    #     buffer (and any unset proto-defaulted scalar) drops out.
+    # Typesalt is derived deterministically from the proto FQN so
+    # re-generation does not shift it.
+    base_batteries_kw = "kwconstructor=true kwshow=true"
     println(io, "@batteries ", jl_name, " ",
-            _join_kw(_format_typesalt_kw(proto_fqn), batteries_kw))
+            _join_kw(_join_kw(_format_typesalt_kw(proto_fqn), base_batteries_kw),
+                     batteries_kw))
+
+    # `default_keywords` supplies kwarg defaults for `kwconstructor` and
+    # the omit-if-default predicate for `kwshow`. proto2 required
+    # submessages have no sane default (their codegen placeholder is a
+    # `Ref{T}()`), so we omit them — kwarg construction then errors
+    # with `UndefKeywordError` if the user doesn't pass one.
+    println(io, "function PB.StructHelpers.default_keywords(::var\"#core\".Type{", jl_name, "})")
+    pieces = String[]
+    for f in plain_fields
+        if f.is_required && f.is_message
+            continue
+        end
+        push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
+    end
+    for o in real_oneofs
+        push!(pieces, "$(o.jl_fieldname) = nothing")
+    end
+    push!(pieces, "var\"#unknown_fields\" = UInt8[]")
+    println(io, "    return (;", join(pieces, ", "), ")")
+    println(io, "end")
 
     println(io)
 end

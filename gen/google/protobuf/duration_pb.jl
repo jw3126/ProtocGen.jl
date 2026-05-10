@@ -12,16 +12,13 @@ const var"#base" = Base
 
 export Duration
 
-var"#base".@kwdef struct Duration <: PB.AbstractProtoBufMessage
-    seconds::var"#base".Int64 = zero(var"#base".Int64)
-    nanos::var"#base".Int32 = zero(var"#base".Int32)
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Duration <: PB.AbstractProtoBufMessage
+    seconds::var"#base".Int64
+    nanos::var"#base".Int32
+    var"#unknown_fields"::Vector{UInt8}
     function Duration(seconds, nanos, _unknown_fields=UInt8[])
         return new(seconds, nanos, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Duration})
-    return (;seconds = zero(var"#base".Int64), nanos = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Duration})
     return (;seconds = 1, nanos = 2)
@@ -64,7 +61,10 @@ function PB._encoded_size(_x::Duration)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Duration typesalt=0x892d89897c209ba3
+@batteries Duration typesalt=0x892d89897c209ba3 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Duration})
+    return (;seconds = zero(var"#base".Int64), nanos = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

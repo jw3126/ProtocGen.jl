@@ -12,16 +12,13 @@ const var"#base" = Base
 
 export Api, Method, Mixin
 
-var"#base".@kwdef struct Mixin <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    root::var"#base".String = ""
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Mixin <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    root::var"#base".String
+    var"#unknown_fields"::Vector{UInt8}
     function Mixin(name, root, _unknown_fields=UInt8[])
         return new(name, root, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Mixin})
-    return (;name = "", root = "", var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Mixin})
     return (;name = 1, root = 2)
@@ -64,23 +61,23 @@ function PB._encoded_size(_x::Mixin)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Mixin typesalt=0xb3cf99f6fd208d2c
+@batteries Mixin typesalt=0xb3cf99f6fd208d2c kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Mixin})
+    return (;name = "", root = "", var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct Method <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    request_type_url::var"#base".String = ""
-    request_streaming::var"#base".Bool = false
-    response_type_url::var"#base".String = ""
-    response_streaming::var"#base".Bool = false
-    options::Vector{Option} = Vector{Option}()
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Method <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    request_type_url::var"#base".String
+    request_streaming::var"#base".Bool
+    response_type_url::var"#base".String
+    response_streaming::var"#base".Bool
+    options::Vector{Option}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
     function Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[])
         return new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Method})
-    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Method})
     return (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
@@ -148,23 +145,23 @@ function PB._encoded_size(_x::Method)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Method typesalt=0x0831ab03c8efa53e
+@batteries Method typesalt=0x0831ab03c8efa53e kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Method})
+    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct Api <: PB.AbstractProtoBufMessage
-    name::var"#base".String = ""
-    methods::Vector{Method} = Vector{Method}()
-    options::Vector{Option} = Vector{Option}()
-    version::var"#base".String = ""
-    source_context::Union{Nothing,SourceContext} = nothing
-    mixins::Vector{Mixin} = Vector{Mixin}()
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Api <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    methods::Vector{Method}
+    options::Vector{Option}
+    version::var"#base".String
+    source_context::Union{Nothing,SourceContext}
+    mixins::Vector{Mixin}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
     function Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[])
         return new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Api})
-    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Api})
     return (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
@@ -232,7 +229,10 @@ function PB._encoded_size(_x::Api)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Api typesalt=0x21735bcf816e7fad
+@batteries Api typesalt=0x21735bcf816e7fad kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Api})
+    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on

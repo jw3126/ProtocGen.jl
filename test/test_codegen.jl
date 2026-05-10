@@ -51,10 +51,11 @@ include("setup.jl")
     @test occursin("Inner(", s)
     @test occursin("a = ", s)
     @test !occursin("unknown_fields", s)
-    # When the buffer carries bytes, it's shown with its var"" name.
+    # When the buffer carries bytes, it's shown — `kwshow` prints the
+    # field's Symbol name verbatim (no `var""` wrapping).
     inner_with_unknown = Base.invokelatest(sample_mod.Inner, Int32(1), UInt8[0xff])
     s2 = sprint(show, inner_with_unknown)
-    @test occursin("var\"#unknown_fields\" = ", s2)
+    @test occursin("#unknown_fields = ", s2)
 end
 
 @testset "codegen corpus: every wire encoding" begin
@@ -180,7 +181,9 @@ end
     bad_cfg = Dict("batteries" => Dict("typesalt" => 0xdead))
     with_bad = ProtocGen.Codegen.codegen(file, universe; config = bad_cfg)
     @test !occursin("typesalt=0xdead", with_bad)
-    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16}\s*$"m, with_bad)
+    # The `kwconstructor=true kwshow=true` come from the always-emitted
+    # baseline; `bad_cfg`'s `typesalt` doesn't leak through.
+    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16} kwconstructor=true kwshow=true\s*$"m, with_bad)
 
     # `[enumbatteries]` populated → user kwargs joined onto every
     # `@enumbatteries <Name>.T …` line. corpus.proto carries `Color`.

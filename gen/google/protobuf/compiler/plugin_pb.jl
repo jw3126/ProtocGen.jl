@@ -14,18 +14,15 @@ import ProtocGen.google.protobuf as google_protobuf
 
 export Version, CodeGeneratorRequest, CodeGeneratorResponse
 
-var"#base".@kwdef struct Version <: PB.AbstractProtoBufMessage
-    major::Union{Nothing,var"#base".Int32} = nothing
-    minor::Union{Nothing,var"#base".Int32} = nothing
-    patch::Union{Nothing,var"#base".Int32} = nothing
-    suffix::Union{Nothing,var"#base".String} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct Version <: PB.AbstractProtoBufMessage
+    major::Union{Nothing,var"#base".Int32}
+    minor::Union{Nothing,var"#base".Int32}
+    patch::Union{Nothing,var"#base".Int32}
+    suffix::Union{Nothing,var"#base".String}
+    var"#unknown_fields"::Vector{UInt8}
     function Version(major, minor, patch, suffix, _unknown_fields=UInt8[])
         return new(major, minor, patch, suffix, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{Version})
-    return (;major = nothing, minor = nothing, patch = nothing, suffix = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{Version})
     return (;major = 1, minor = 2, patch = 3, suffix = 4)
@@ -78,21 +75,21 @@ function PB._encoded_size(_x::Version)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries Version typesalt=0x7217040640164560
+@batteries Version typesalt=0x7217040640164560 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Version})
+    return (;major = nothing, minor = nothing, patch = nothing, suffix = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
-    file_to_generate::Vector{var"#base".String} = Vector{var"#base".String}()
-    parameter::Union{Nothing,var"#base".String} = nothing
-    proto_file::Vector{google_protobuf.FileDescriptorProto} = Vector{google_protobuf.FileDescriptorProto}()
-    source_file_descriptors::Vector{google_protobuf.FileDescriptorProto} = Vector{google_protobuf.FileDescriptorProto}()
-    compiler_version::Union{Nothing,Version} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
+    file_to_generate::Vector{var"#base".String}
+    parameter::Union{Nothing,var"#base".String}
+    proto_file::Vector{google_protobuf.FileDescriptorProto}
+    source_file_descriptors::Vector{google_protobuf.FileDescriptorProto}
+    compiler_version::Union{Nothing,Version}
+    var"#unknown_fields"::Vector{UInt8}
     function CodeGeneratorRequest(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields=UInt8[])
         return new(file_to_generate, parameter, proto_file, source_file_descriptors, compiler_version, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{CodeGeneratorRequest})
-    return (;file_to_generate = Vector{var"#base".String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{CodeGeneratorRequest})
     return (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
@@ -150,23 +147,23 @@ function PB._encoded_size(_x::CodeGeneratorRequest)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries CodeGeneratorRequest typesalt=0xf7f3ef064e2e96c3
+@batteries CodeGeneratorRequest typesalt=0xf7f3ef064e2e96c3 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{CodeGeneratorRequest})
+    return (;file_to_generate = Vector{var"#base".String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, var"#unknown_fields" = UInt8[])
+end
 
 @enumx var"CodeGeneratorResponse.Feature" FEATURE_NONE=0 FEATURE_PROTO3_OPTIONAL=1 FEATURE_SUPPORTS_EDITIONS=2
 @enumbatteries var"CodeGeneratorResponse.Feature".T typesalt=0x0f8ab756e8575a15
 
-var"#base".@kwdef struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String} = nothing
-    insertion_point::Union{Nothing,var"#base".String} = nothing
-    content::Union{Nothing,var"#base".String} = nothing
-    generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo} = nothing
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
+    name::Union{Nothing,var"#base".String}
+    insertion_point::Union{Nothing,var"#base".String}
+    content::Union{Nothing,var"#base".String}
+    generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo}
+    var"#unknown_fields"::Vector{UInt8}
     function var"CodeGeneratorResponse.File"(name, insertion_point, content, generated_code_info, _unknown_fields=UInt8[])
         return new(name, insertion_point, content, generated_code_info, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{var"CodeGeneratorResponse.File"})
-    return (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing, var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{var"CodeGeneratorResponse.File"})
     return (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
@@ -219,21 +216,21 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries var"CodeGeneratorResponse.File" typesalt=0x2b998e53eb248b6b
+@batteries var"CodeGeneratorResponse.File" typesalt=0x2b998e53eb248b6b kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{var"CodeGeneratorResponse.File"})
+    return (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing, var"#unknown_fields" = UInt8[])
+end
 
-var"#base".@kwdef struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
-    error::Union{Nothing,var"#base".String} = nothing
-    supported_features::Union{Nothing,var"#base".UInt64} = nothing
-    minimum_edition::Union{Nothing,var"#base".Int32} = nothing
-    maximum_edition::Union{Nothing,var"#base".Int32} = nothing
-    file::Vector{var"CodeGeneratorResponse.File"} = Vector{var"CodeGeneratorResponse.File"}()
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
+struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
+    error::Union{Nothing,var"#base".String}
+    supported_features::Union{Nothing,var"#base".UInt64}
+    minimum_edition::Union{Nothing,var"#base".Int32}
+    maximum_edition::Union{Nothing,var"#base".Int32}
+    file::Vector{var"CodeGeneratorResponse.File"}
+    var"#unknown_fields"::Vector{UInt8}
     function CodeGeneratorResponse(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields=UInt8[])
         return new(error, supported_features, minimum_edition, maximum_edition, file, _unknown_fields)
     end
-end
-function PB.default_values(::var"#core".Type{CodeGeneratorResponse})
-    return (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}(), var"#unknown_fields" = UInt8[])
 end
 function PB.field_numbers(::var"#core".Type{CodeGeneratorResponse})
     return (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)
@@ -291,7 +288,10 @@ function PB._encoded_size(_x::CodeGeneratorResponse)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
-@batteries CodeGeneratorResponse typesalt=0x5f389b7fadee87b1
+@batteries CodeGeneratorResponse typesalt=0x5f389b7fadee87b1 kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{CodeGeneratorResponse})
+    return (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}(), var"#unknown_fields" = UInt8[])
+end
 
 
 #! format: on
