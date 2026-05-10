@@ -135,41 +135,56 @@ end
     @test encode_latest(bag) == sample_pb
 end
 
-@testset "codegen: --julia_opt=config=…  threads @batteries" begin
+@testset "codegen: @batteries + @enumbatteries always emitted" begin
     fdset = load_fdset("sample.pb")
     universe = ProtocGen.Codegen.gather_universe(fdset.file)
     file = first(fdset.file)
 
-    # Default — no config — must not emit any @batteries / @enumbatteries
-    # lines or the StructHelpers import. Guards the user-facing default
-    # against accidental drift.
+    # Default emission: every generated message carries an `@batteries`
+    # line with an auto-generated typesalt, every enum carries
+    # `@enumbatteries`. The StructHelpers re-export is always imported
+    # since these macros need to resolve in the include site's scope.
     baseline = ProtocGen.Codegen.codegen(file, universe)
-    @test !occursin("@batteries", baseline)
-    @test !occursin("@enumbatteries", baseline)
-    @test !occursin("StructHelpers", baseline)
+    @test occursin("using ProtocGen.StructHelpers: @batteries, @enumbatteries", baseline)
+    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16}", baseline)
+    @test occursin(r"@batteries Outer typesalt=0x[0-9a-f]{16}", baseline)
 
-    # `[batteries]` populated → one `@batteries` line per generated
-    # message, plus the StructHelpers re-export import. sample.proto
-    # carries Inner and Outer, so we expect both.
+    # The typesalt must be stable across regenerations — re-running
+    # codegen on the same input produces an identical line.
+    baseline2 = ProtocGen.Codegen.codegen(file, universe)
+    @test baseline == baseline2
+
+    # Two distinct types must get two distinct typesalts (FNV-1a of
+    # different proto FQNs).
+    inner_match = match(r"@batteries Inner typesalt=(0x[0-9a-f]+)", baseline)
+    outer_match = match(r"@batteries Outer typesalt=(0x[0-9a-f]+)", baseline)
+    @test inner_match !== nothing && outer_match !== nothing
+    @test inner_match.captures[1] != outer_match.captures[1]
+
+    # `[batteries]` populated → user kwargs joined onto the line after
+    # the auto-generated typesalt.
     cfg = Dict("batteries" => Dict("kwshow" => true, "hash" => false))
     with_msgs = ProtocGen.Codegen.codegen(file, universe; config = cfg)
-    @test occursin("using ProtocGen.StructHelpers: @batteries, @enumbatteries", with_msgs)
-    @test occursin("@batteries Inner", with_msgs)
-    @test occursin("@batteries Outer", with_msgs)
-    # Both kwargs land on the line, in either order (Dict iteration).
+    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16} ", with_msgs)
     @test occursin("hash=false", with_msgs)
     @test occursin("kwshow=true", with_msgs)
 
-    # `[enumbatteries]` populated → `@enumbatteries <Name>.T …` per enum.
-    # corpus.proto carries the `Color` enum.
+    # User-supplied `typesalt` in config is silently ignored — the
+    # auto-generated per-type salt always wins, since a single global
+    # value would collide across types.
+    bad_cfg = Dict("batteries" => Dict("typesalt" => 0xdead))
+    with_bad = ProtocGen.Codegen.codegen(file, universe; config = bad_cfg)
+    @test !occursin("typesalt=0xdead", with_bad)
+    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16}\s*$"m, with_bad)
+
+    # `[enumbatteries]` populated → user kwargs joined onto every
+    # `@enumbatteries <Name>.T …` line. corpus.proto carries `Color`.
     corpus_fdset = load_fdset("corpus.pb")
     corpus_universe = ProtocGen.Codegen.gather_universe(corpus_fdset.file)
     corpus_file = first(corpus_fdset.file)
     enum_cfg = Dict("enumbatteries" => Dict("kwshow" => true))
     with_enums = ProtocGen.Codegen.codegen(corpus_file, corpus_universe; config = enum_cfg)
-    @test occursin("@enumbatteries Color.T kwshow=true", with_enums)
-    # No `[batteries]` table → no `@batteries` for messages.
-    @test !occursin("@batteries Wide", with_enums)
+    @test occursin(r"@enumbatteries Color\.T typesalt=0x[0-9a-f]{16} kwshow=true", with_enums)
 end
 
 end  # module TestCodegen

@@ -11,6 +11,10 @@ using ..ProtocGen.google.protobuf: FieldDescriptorProto, DescriptorProto,
 # the bool / number / string variants TOML can produce; nested tables
 # would round-trip as `Dict(...)` literals (currently no @batteries
 # option needs that, but the helper is type-agnostic).
+#
+# `typesalt` is filtered out: codegen always auto-generates a per-type
+# salt derived from the proto FQN, so a single global value from the
+# config table would collide across types.
 # ----------------------------------------------------------------------------
 function _config_kw_table(config::AbstractDict, table::AbstractString)
     haskey(config, table) || return ""
@@ -19,9 +23,39 @@ function _config_kw_table(config::AbstractDict, table::AbstractString)
     isempty(inner) && return ""
     parts = String[]
     for (k, v) in pairs(inner)
+        String(k) == "typesalt" && continue
         push!(parts, "$(k)=$(repr(v))")
     end
     return join(parts, " ")
+end
+
+# ----------------------------------------------------------------------------
+# Stable 64-bit FNV-1a hash of a string. Used to derive a deterministic
+# `typesalt` for `@batteries` from a proto FQN. Stability matters: per
+# the project convention, regenerating must not change the typesalt of
+# an existing type — Julia's `hash` is not guaranteed stable across
+# versions, but FNV-1a is a fixed bit-twiddle so the same FQN always
+# maps to the same UInt64 regardless of host Julia.
+# ----------------------------------------------------------------------------
+const _FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325
+const _FNV_PRIME_64        = 0x00000100000001b3
+
+function _typesalt_from_fqn(fqn::AbstractString)
+    h = _FNV_OFFSET_BASIS_64
+    for byte in codeunits(fqn)
+        h = (h ⊻ UInt64(byte)) * _FNV_PRIME_64
+    end
+    return h
+end
+
+function _format_typesalt_kw(fqn::AbstractString)
+    h = _typesalt_from_fqn(fqn)
+    return string("typesalt=0x", string(h, base = 16, pad = 16))
+end
+
+function _join_kw(prefix::AbstractString, extra::AbstractString)
+    isempty(extra) && return prefix
+    return string(prefix, " ", extra)
 end
 
 # ----------------------------------------------------------------------------
@@ -678,7 +712,8 @@ end
 function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames,
                        parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
                        batteries_kw::String = "",
-                       enumbatteries_kw::String = "")
+                       enumbatteries_kw::String = "",
+                       emit_batteries::Bool = true)
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -690,13 +725,17 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # those are surfaced as `OrderedDict{K,V}` on the parent field, never as a
     # standalone Julia struct.
     for e in msg.enum_type
-        _emit_enum(io, e, jl_name_plain; enumbatteries_kw = enumbatteries_kw)
+        _emit_enum(io, e, jl_name_plain;
+                   parent_proto = proto_fqn,
+                   enumbatteries_kw = enumbatteries_kw,
+                   emit_batteries = emit_batteries)
     end
     for nested in msg.nested_type
         _is_map_entry(nested) && continue
         _emit_message(io, nested, jl_name_plain, names, proto_fqn;
                       batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw)
+                      enumbatteries_kw = enumbatteries_kw,
+                      emit_batteries = emit_batteries)
     end
 
     synthetic = _synthetic_oneof_indices(msg)
@@ -947,11 +986,20 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "    return encoded_size")
     println(io, "end")
 
-    # Optional StructHelpers `@batteries` decoration. Forwarded from the
-    # plugin's `--julia_opt=config=...` TOML; empty string means the
-    # user didn't opt in for messages, so we skip the line entirely.
-    if !isempty(batteries_kw)
-        println(io, "@batteries ", jl_name, " ", batteries_kw)
+    # Always emit `@batteries TypeName typesalt=0x… <user kwargs>`. A
+    # bare `@batteries T` with only a typesalt registers T as
+    # "batterized" without adding any methods, so the default emission
+    # is behaviorally identical to a plain Julia struct while honoring
+    # the project convention that every struct carry an @batteries
+    # call. The typesalt is derived deterministically from the proto
+    # FQN so re-generation does not shift it.
+    #
+    # `emit_batteries` is false when this file declares a top-level
+    # `Type` or `Any` message — see the long comment in `codegen()` for
+    # the StructHelpers macro-shadowing details.
+    if emit_batteries
+        println(io, "@batteries ", jl_name, " ",
+                _join_kw(_format_typesalt_kw(proto_fqn), batteries_kw))
     end
 
     println(io)
@@ -1129,10 +1177,14 @@ function _emit_encoded_size_field(io::IO, f::FieldModel)
 end
 
 function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
-                    enumbatteries_kw::String = "")
+                    parent_proto::String = "",
+                    enumbatteries_kw::String = "",
+                    emit_batteries::Bool = true)
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
+    proto_fqn = string(parent_proto, ".", name)
+    salt_kw = _format_typesalt_kw(proto_fqn)
 
     allow_alias = e.options !== nothing && e.options.allow_alias === true
     if !allow_alias
@@ -1141,8 +1193,9 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
-        if !isempty(enumbatteries_kw)
-            println(io, "@enumbatteries ", jl_name, ".T ", enumbatteries_kw)
+        if emit_batteries
+            println(io, "@enumbatteries ", jl_name, ".T ",
+                    _join_kw(salt_kw, enumbatteries_kw))
         end
         println(io)
         return
@@ -1177,8 +1230,9 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
     for (alias, canonical) in aliases
         println(io, "Core.eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
     end
-    if !isempty(enumbatteries_kw)
-        println(io, "@enumbatteries ", jl_name, ".T ", enumbatteries_kw)
+    if emit_batteries
+        println(io, "@enumbatteries ", jl_name, ".T ",
+                _join_kw(salt_kw, enumbatteries_kw))
     end
     println(io)
 end
@@ -1409,15 +1463,47 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     proto_name = something(file.name, "<unknown>")
     syntax = something(file.syntax, "proto2")
 
-    # Per-type customization toggles. The user-supplied `config` dict
-    # may carry a `[batteries]` and/or `[enumbatteries]` table whose
-    # entries are forwarded as keyword arguments to `@batteries` /
-    # `@enumbatteries` invocations on every generated message / enum.
-    # Any other top-level config key is currently ignored.
+    # Per-type customization. `@batteries` / `@enumbatteries` are
+    # emitted on every generated message / enum unconditionally — bare
+    # `@batteries T typesalt=…` registers T as batterized without
+    # adding any methods, so the default emission stays behaviorally
+    # identical to plain Julia structs while honoring the project
+    # convention. User-supplied `[batteries]` / `[enumbatteries]`
+    # tables in `config` forward as keyword arguments to those calls
+    # (e.g. `kwshow=true`, `hash=false`).
+    #
+    # Exception: `StructHelpers.@batteries`'s macro expansion
+    # references the bare symbol `Type` (meaning `Core.Type`) when
+    # building its method definitions. If the surrounding module
+    # defines a struct *named* `Type` or `Any`, that name shadows the
+    # Core binding for every macro call in the module, and *every*
+    # `@batteries` call expands to invalid `OurType{<:T}` forms — not
+    # just the ones on the shadowing types. The descriptor bootstrap
+    # exhibits both clashes (`google.protobuf.Type` and
+    # `google.protobuf.Any`); skip the entire @batteries / @enumbatteries
+    # emission for any file that declares a top-level message with
+    # one of those names. The fix belongs in StructHelpers itself
+    # (substitute `Core.Type` for the bare `Type` literal).
+    # Scan the *whole* proto package across the universe. Each
+    # `<package>` becomes one Julia submodule: any file in that package
+    # declaring a top-level `Type` or `Any` poisons every `@batteries`
+    # call in every other file too, since macro expansion happens
+    # inside the (single) Julia module that holds the package.
+    package_shadows_core = let
+        shadowed = false
+        for fqn in keys(universe.jl_names)
+            pkg = get(universe.package_of, fqn, "")
+            pkg == names.package || continue
+            simple = last(split(fqn, '.'; keepempty = false))
+            if simple == "Type" || simple == "Any"
+                shadowed = true; break
+            end
+        end
+        shadowed
+    end
+    emit_batteries   = !package_shadows_core
     batteries_kw     = _config_kw_table(config, "batteries")
     enumbatteries_kw = _config_kw_table(config, "enumbatteries")
-    has_batteries     = !isempty(batteries_kw)
-    has_enumbatteries = !isempty(enumbatteries_kw)
 
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
@@ -1430,9 +1516,9 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     # work without the caller importing ProtocGen themselves.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io, "using ProtocGen.EnumX: @enumx")
-    if has_batteries || has_enumbatteries
-        # @batteries / @enumbatteries reach the user's namespace via the
-        # ProtocGen → StructHelpers re-export, so users only need to
+    if emit_batteries
+        # `@batteries` / `@enumbatteries` reach the user's namespace via
+        # the ProtocGen → StructHelpers re-export, so users only need to
         # depend on ProtocGen.
         println(io, "using ProtocGen.StructHelpers: @batteries, @enumbatteries")
     end
@@ -1480,8 +1566,12 @@ function codegen(file::FileDescriptorProto, universe::Universe;
         println(io)
     end
 
+    file_parent_proto = isempty(names.package) ? "" : ".$(names.package)"
     for e in file.enum_type
-        _emit_enum(io, e, ""; enumbatteries_kw = enumbatteries_kw)
+        _emit_enum(io, e, "";
+                   parent_proto = file_parent_proto,
+                   enumbatteries_kw = enumbatteries_kw,
+                   emit_batteries = emit_batteries)
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
     # Build a cycle-aware `LocalNames` view. _resolve_typename consults
@@ -1516,7 +1606,8 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     for msg in sorted_msgs
         _emit_message(io, msg, "", cycle_names;
                       batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw)
+                      enumbatteries_kw = enumbatteries_kw,
+                      emit_batteries = emit_batteries)
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.

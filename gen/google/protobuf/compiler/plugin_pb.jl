@@ -6,6 +6,7 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
 
 import ProtocGen.google.protobuf as google_protobuf
 
@@ -75,6 +76,7 @@ function PB._encoded_size(_x::Version)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries Version typesalt=0x7217040640164560
 
 Base.@kwdef struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
     file_to_generate::Vector{String} = Vector{String}()
@@ -146,8 +148,10 @@ function PB._encoded_size(_x::CodeGeneratorRequest)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries CodeGeneratorRequest typesalt=0xf7f3ef064e2e96c3
 
 @enumx var"CodeGeneratorResponse.Feature" FEATURE_NONE=0 FEATURE_PROTO3_OPTIONAL=1 FEATURE_SUPPORTS_EDITIONS=2
+@enumbatteries var"CodeGeneratorResponse.Feature".T typesalt=0x0f8ab756e8575a15
 
 Base.@kwdef struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
     name::Union{Nothing,String} = nothing
@@ -213,6 +217,7 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries var"CodeGeneratorResponse.File" typesalt=0x2b998e53eb248b6b
 
 Base.@kwdef struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
     error::Union{Nothing,String} = nothing
@@ -284,6 +289,7 @@ function PB._encoded_size(_x::CodeGeneratorResponse)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries CodeGeneratorResponse typesalt=0x5f389b7fadee87b1
 
 
 #! format: on
