@@ -14,46 +14,54 @@ pkg> app add ProtoBufDescriptors
 
 ## Usage
 
+`addressbook.proto` imports `google/protobuf/timestamp.proto`, so
+protoc needs the well-known-types vendored under
+`ProtoBufDescriptors/gen/proto` on its proto-path:
+
 ```sh
 cd examples
 mkdir out
 
 protoc \
     --julia_out=out \
+    --proto_path=. \
+    --proto_path=/path/to/ProtoBufDescriptors/gen/proto \
     addressbook.proto
 ```
 
-This will generate `out/addressbook_pb.jl`. It will depend on the `ProtoBufDescriptors.jl` package.
+This generates `out/addressbook_pb.jl`. It depends on the
+`ProtoBufDescriptors.jl` package.
 
 ```julia
+import ProtoBufDescriptors as PB
 include("out/addressbook_pb.jl")
 
 person = Person(
-    "Alice",
-    Int32(42),
-    "alice@example.com",
-    [
+    name = "Alice",
+    id = Int32(42),
+    email = "alice@example.com",
+    phones = [
         PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE),
         PhoneNumber("+1-555-0101", PhoneType.PHONE_TYPE_WORK),
     ],
+    last_updated = PB.google.protobuf.Timestamp(seconds = Int64(1_715_000_000)),
 )
 
 # Binary wire format
 bytes = encode(person)
 @assert decode(bytes, Person) == person
 
-# Canonical protobuf JSON mapping
+# Canonical protobuf JSON mapping (Timestamp renders as RFC 3339)
 js = encode_json(person)
-# {"name":"Alice","id":42,"email":"alice@example.com","phones":[{"number":"+1-555-0100","type":"PHONE_TYPE_MOBILE"},…]}
+# {"name":"Alice","id":42,"email":"alice@example.com",
+#  "phones":[…],"lastUpdated":"2024-05-06T12:53:20Z"}
 @assert decode_json(Person, js) == person
 ```
 
 `encode` / `decode` / `encode_json` / `decode_json` come in through the
-generated file's `using` line, so user code never has to import
-`ProtoBufDescriptors` itself.
-
-WKT references resolve to `ProtoBufDescriptors.google.protobuf`
-automatically — no extra wiring.
+generated file's `using` line; user code only needs `import
+ProtoBufDescriptors as PB` to reach the well-known-type modules at
+`PB.google.protobuf.<Type>`.
 
 ## Acknowledgement
 
