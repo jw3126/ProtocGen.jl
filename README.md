@@ -55,11 +55,6 @@ js = encode_json(person)
 @assert decode_json(Person, js) == person
 ```
 
-The generated file pulls in everything user code needs: `encode` /
-`decode` / `encode_json` / `decode_json`, plus an alias for each
-imported proto package (here `google_protobuf` for
-`google.protobuf`, since proto-package dots become Julia underscores).
-
 ## Acknowledgement
 
 The wire codec under `src/codec/` is copied with light modifications
