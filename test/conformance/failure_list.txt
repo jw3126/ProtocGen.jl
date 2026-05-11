@@ -1,4 +1,4 @@
-# Known conformance failures for ProtoBufDescriptors v1, against the Google
+# Known conformance failures for ProtocGen, against the Google
 # protobuf conformance_test_runner from protobuf v25.9.
 #
 # Consumed by `conformance_test_runner --failure_list`. Each uncommented

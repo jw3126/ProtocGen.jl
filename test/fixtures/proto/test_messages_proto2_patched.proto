@@ -6,7 +6,7 @@
 //   protobuf/test_messages_proto2.proto)
 //
 // Removed (relative to upstream) — features deferred / out of scope for
-// ProtoBufDescriptors v1:
+// ProtocGen:
 //   - extensions / extend blocks
 //       lines 188-189: `extensions 120 to 200;`
 //       lines 270-272: top-level `extend TestAllTypesProto2 { ... extension_int32 = 120 }`
