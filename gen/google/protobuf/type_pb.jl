@@ -12,8 +12,9 @@ const var"#base" = Base
 
 export Syntax, Type, Field, Enum, EnumValue, Option
 
-@enumx Syntax SYNTAX_PROTO2=0 SYNTAX_PROTO3=1
+@enumx Syntax PROTO2=0 PROTO3=1
 @enumbatteries Syntax.T typesalt=0x4a764bdccfecd59c
+PB._enum_proto_prefix(::var"#core".Type{Syntax.T}) = "SYNTAX_"
 
 struct Option <: PB.AbstractProtoBufMessage
     name::var"#base".String
@@ -69,8 +70,9 @@ end
 @enumx var"Field.Kind" TYPE_UNKNOWN=0 TYPE_DOUBLE=1 TYPE_FLOAT=2 TYPE_INT64=3 TYPE_UINT64=4 TYPE_INT32=5 TYPE_FIXED64=6 TYPE_FIXED32=7 TYPE_BOOL=8 TYPE_STRING=9 TYPE_GROUP=10 TYPE_MESSAGE=11 TYPE_BYTES=12 TYPE_UINT32=13 TYPE_ENUM=14 TYPE_SFIXED32=15 TYPE_SFIXED64=16 TYPE_SINT32=17 TYPE_SINT64=18
 @enumbatteries var"Field.Kind".T typesalt=0xa062978f68132043
 
-@enumx var"Field.Cardinality" CARDINALITY_UNKNOWN=0 CARDINALITY_OPTIONAL=1 CARDINALITY_REQUIRED=2 CARDINALITY_REPEATED=3
+@enumx var"Field.Cardinality" UNKNOWN=0 OPTIONAL=1 REQUIRED=2 REPEATED=3
 @enumbatteries var"Field.Cardinality".T typesalt=0x23d20bf4ca20a55f
+PB._enum_proto_prefix(::var"#core".Type{var"Field.Cardinality".T}) = "CARDINALITY_"
 
 struct Field <: PB.AbstractProtoBufMessage
     kind::var"Field.Kind".T
@@ -95,7 +97,7 @@ PB.register_message_type("google.protobuf.Field", Field)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Field}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     kind = var"Field.Kind".TYPE_UNKNOWN
-    cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN
+    cardinality = var"Field.Cardinality".UNKNOWN
     number = zero(var"#base".Int32)
     name = ""
     type_url = ""
@@ -137,7 +139,7 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Field)
     initpos = position(_e.io)
     _x.kind != var"Field.Kind".TYPE_UNKNOWN && PB._encode(_e, 1, _x.kind)
-    _x.cardinality != var"Field.Cardinality".CARDINALITY_UNKNOWN && PB._encode(_e, 2, _x.cardinality)
+    _x.cardinality != var"Field.Cardinality".UNKNOWN && PB._encode(_e, 2, _x.cardinality)
     _x.number != zero(var"#base".Int32) && PB._encode(_e, 3, _x.number)
     !isempty(_x.name) && PB._encode(_e, 4, _x.name)
     !isempty(_x.type_url) && PB._encode(_e, 6, _x.type_url)
@@ -154,7 +156,7 @@ end
 function PB._encoded_size(_x::Field)
     encoded_size = 0
     _x.kind != var"Field.Kind".TYPE_UNKNOWN && (encoded_size += PB._encoded_size(_x.kind, 1))
-    _x.cardinality != var"Field.Cardinality".CARDINALITY_UNKNOWN && (encoded_size += PB._encoded_size(_x.cardinality, 2))
+    _x.cardinality != var"Field.Cardinality".UNKNOWN && (encoded_size += PB._encoded_size(_x.cardinality, 2))
     _x.number != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.number, 3))
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 4))
     !isempty(_x.type_url) && (encoded_size += PB._encoded_size(_x.type_url, 6))
@@ -168,7 +170,7 @@ function PB._encoded_size(_x::Field)
 end
 @batteries Field typesalt=0xc655c8bf39b77649 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Field})
-    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".CARDINALITY_UNKNOWN, number = zero(var"#base".Int32), name = "", type_url = "", oneof_index = zero(var"#base".Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
+    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".UNKNOWN, number = zero(var"#base".Int32), name = "", type_url = "", oneof_index = zero(var"#base".Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
 end
 
 struct Type <: PB.AbstractProtoBufMessage
@@ -194,7 +196,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Type}, _end
     oneofs = PB.BufferedVector{var"#base".String}()
     options = PB.BufferedVector{Option}()
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
-    syntax = Syntax.SYNTAX_PROTO2
+    syntax = Syntax.PROTO2
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -224,7 +226,7 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Type)
     !isempty(_x.oneofs) && PB._encode(_e, 3, _x.oneofs)
     !isempty(_x.options) && PB._encode(_e, 4, _x.options)
     !isnothing(_x.source_context) && PB._encode(_e, 5, _x.source_context)
-    _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 6, _x.syntax)
+    _x.syntax != Syntax.PROTO2 && PB._encode(_e, 6, _x.syntax)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -237,13 +239,13 @@ function PB._encoded_size(_x::Type)
     !isempty(_x.oneofs) && (encoded_size += PB._encoded_size(_x.oneofs, 3))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 4))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 5))
-    _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 6))
+    _x.syntax != Syntax.PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 6))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Type typesalt=0xdb0aa5f887dce70f kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Type})
-    return (;name = "", fields = Vector{Field}(), oneofs = Vector{var"#base".String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+    return (;name = "", fields = Vector{Field}(), oneofs = Vector{var"#base".String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 struct EnumValue <: PB.AbstractProtoBufMessage
@@ -324,7 +326,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Enum}, _end
     enumvalue = PB.BufferedVector{EnumValue}()
     options = PB.BufferedVector{Option}()
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
-    syntax = Syntax.SYNTAX_PROTO2
+    syntax = Syntax.PROTO2
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -351,7 +353,7 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Enum)
     !isempty(_x.enumvalue) && PB._encode(_e, 2, _x.enumvalue)
     !isempty(_x.options) && PB._encode(_e, 3, _x.options)
     !isnothing(_x.source_context) && PB._encode(_e, 4, _x.source_context)
-    _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 5, _x.syntax)
+    _x.syntax != Syntax.PROTO2 && PB._encode(_e, 5, _x.syntax)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -363,13 +365,13 @@ function PB._encoded_size(_x::Enum)
     !isempty(_x.enumvalue) && (encoded_size += PB._encoded_size(_x.enumvalue, 2))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 4))
-    _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 5))
+    _x.syntax != Syntax.PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 5))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Enum typesalt=0x22f8ef761818143e kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Enum})
-    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+    return (;name = "", enumvalue = Vector{EnumValue}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 

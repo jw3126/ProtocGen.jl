@@ -46,9 +46,11 @@ include("setup.jl")
     @test fields_by_name["nested"].type_name == ".sample.Inner"
     @test fields_by_name["packed_ints"].proto3_optional !== true
 
-    # FieldDescriptorProto.type — confirm value matches the TYPE_INT32
-    # enum the proto uses for `int32 a = 1` in Inner.
-    @test inner.field[1].type == G.var"FieldDescriptorProto.Type".TYPE_INT32
+    # FieldDescriptorProto.type — confirm value matches the INT32 enum
+    # member (proto-side `TYPE_INT32`) the proto uses for `int32 a = 1`
+    # in Inner. Codegen strips the enum-type prefix for in-Julia ergonomics
+    # while preserving the wire-form name via `_enum_proto_prefix`.
+    @test inner.field[1].type == G.var"FieldDescriptorProto.Type".INT32
 
     # Encode round-trip: re-decode of the re-encoded blob must observe the
     # same field values. (Bytes need not be identical: ProtoBuf.jl emits

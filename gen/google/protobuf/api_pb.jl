@@ -88,7 +88,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Method}, _e
     response_type_url = ""
     response_streaming = false
     options = PB.BufferedVector{Option}()
-    syntax = Syntax.SYNTAX_PROTO2
+    syntax = Syntax.PROTO2
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -121,7 +121,7 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Method)
     !isempty(_x.response_type_url) && PB._encode(_e, 4, _x.response_type_url)
     _x.response_streaming != false && PB._encode(_e, 5, _x.response_streaming)
     !isempty(_x.options) && PB._encode(_e, 6, _x.options)
-    _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 7, _x.syntax)
+    _x.syntax != Syntax.PROTO2 && PB._encode(_e, 7, _x.syntax)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -135,13 +135,13 @@ function PB._encoded_size(_x::Method)
     !isempty(_x.response_type_url) && (encoded_size += PB._encoded_size(_x.response_type_url, 4))
     _x.response_streaming != false && (encoded_size += PB._encoded_size(_x.response_streaming, 5))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 6))
-    _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
+    _x.syntax != Syntax.PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Method typesalt=0x0831ab03c8efa53e kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Method})
-    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 struct Api <: PB.AbstractProtoBufMessage
@@ -169,7 +169,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Api}, _endp
     version = ""
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
     mixins = PB.BufferedVector{Mixin}()
-    syntax = Syntax.SYNTAX_PROTO2
+    syntax = Syntax.PROTO2
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -202,7 +202,7 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Api)
     !isempty(_x.version) && PB._encode(_e, 4, _x.version)
     !isnothing(_x.source_context) && PB._encode(_e, 5, _x.source_context)
     !isempty(_x.mixins) && PB._encode(_e, 6, _x.mixins)
-    _x.syntax != Syntax.SYNTAX_PROTO2 && PB._encode(_e, 7, _x.syntax)
+    _x.syntax != Syntax.PROTO2 && PB._encode(_e, 7, _x.syntax)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -216,13 +216,13 @@ function PB._encoded_size(_x::Api)
     !isempty(_x.version) && (encoded_size += PB._encoded_size(_x.version, 4))
     !isnothing(_x.source_context) && (encoded_size += PB._encoded_size(_x.source_context, 5))
     !isempty(_x.mixins) && (encoded_size += PB._encoded_size(_x.mixins, 6))
-    _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
+    _x.syntax != Syntax.PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Api typesalt=0x21735bcf816e7fad kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Api})
-    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 

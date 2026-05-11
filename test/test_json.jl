@@ -230,11 +230,16 @@ end
 
     @testset "enums emit canonical name; decode accepts string or int" begin
         E = _G.var"FieldDescriptorProto.Type"
-        v = E.TYPE_STRING
+        # Codegen stripped the `TYPE_` prefix from the Julia identifier
+        # (E.STRING), but the JSON wire form keeps the canonical proto name
+        # via the `_enum_proto_prefix` round-trip.
+        v = E.STRING
         io = IOBuffer()
         ProtocGen._encode_json_value(io, v)
         @test String(take!(io)) == "\"TYPE_STRING\""
         @test ProtocGen._decode_json_value(typeof(v), "TYPE_STRING") === v
+        # Bare stripped form is also accepted (ergonomic slack).
+        @test ProtocGen._decode_json_value(typeof(v), "STRING") === v
         @test ProtocGen._decode_json_value(typeof(v), 9) === v
     end
 

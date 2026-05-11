@@ -50,6 +50,17 @@ function lookup_message_type(fqn::AbstractString)
     return get(_MESSAGE_REGISTRY, String(fqn), nothing)
 end
 
+# Per-enum metadata: the proto wire-side prefix that codegen stripped from
+# each value's Julia identifier (e.g. `"FEATURE_TYPE_"` for an enum whose
+# values were `FEATURE_TYPE_FOO`/`FEATURE_TYPE_BAR`, leaving the Julia names
+# `FOO` / `BAR`). Codegen emits an overload per stripped enum; the abstract
+# default returns "" so verbatim-named enums and hand-written subtypes work
+# unchanged. Read by the JSON walker to (re)attach the prefix at the wire
+# boundary.
+function _enum_proto_prefix(::Type{<:Base.Enum})
+    return ""
+end
+
 # -----------------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------------
@@ -268,6 +279,11 @@ end
 # `allow_alias` design). Per spec: an enum value with no declared name
 # (i.e., a numeric value the wire/JSON delivered that isn't in this
 # enum's value set) round-trips as a JSON number, not a string.
+#
+# The Julia identifier may have had a `<UPPER_SNAKE>_` prefix stripped by
+# codegen; reattach it via `_enum_proto_prefix(typeof(v))` so the JSON wire
+# form stays canonical (`"FEATURE_TYPE_FOO"`, not `"FOO"`). For verbatim
+# enums the prefix is "" and this collapses to the prior behavior.
 function _encode_json_value(io::IO, v::Base.Enum)
     name = try
         Symbol(v)
@@ -277,7 +293,7 @@ function _encode_json_value(io::IO, v::Base.Enum)
     if name === nothing
         print(io, Integer(v))
     else
-        print(io, '"', String(name), '"')
+        print(io, '"', _enum_proto_prefix(typeof(v)), String(name), '"')
     end
     return nothing
 end
@@ -572,9 +588,16 @@ function _decode_json_value(::Type{Vector{UInt8}}, v::AbstractString; kw...)
     return Base64.base64decode(v)
 end
 
-# Enums: accept canonical name (string) or numeric value.
+# Enums: accept canonical name (string) or numeric value. The wire name
+# carries the proto-side prefix (e.g. `"FEATURE_TYPE_FOO"`); strip it via
+# `_enum_proto_prefix` to recover the Julia identifier (`FOO`). Verbatim
+# enums set the prefix to "" and this is a no-op. As ergonomic slack we
+# also accept the bare stripped form (`"FOO"`) — harmless and useful when
+# users hand-write JSON literals matching the Julia identifier.
 function _decode_json_value(::Type{E}, v::AbstractString; kw...) where {E<:Base.Enum}
-    return getfield(parentmodule(E), Symbol(v))::E
+    prefix = _enum_proto_prefix(E)
+    name = startswith(v, prefix) ? SubString(v, lastindex(prefix) + 1) : v
+    return getfield(parentmodule(E), Symbol(name))::E
 end
 # Numeric form. Per spec, *any* integer is accepted; values outside the
 # enum's declared set round-trip as numbers (no symbolic name). Use

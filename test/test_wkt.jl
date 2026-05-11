@@ -98,7 +98,7 @@ end
         field = pb_make(
             WKT.Field,
             WKT.var"Field.Kind".TYPE_STRING,
-            WKT.var"Field.Cardinality".CARDINALITY_OPTIONAL,
+            WKT.var"Field.Cardinality".OPTIONAL,
             Int32(1),
             "name",
             "",
@@ -115,7 +115,7 @@ end
             String[],
             [opt],
             sc,
-            WKT.Syntax.SYNTAX_PROTO3,
+            WKT.Syntax.PROTO3,
         )
         decoded, _ = rt(t)
         @test decoded.name == "MyType"
@@ -126,7 +126,7 @@ end
         @test decoded.source_context.file_name == "foo.proto"
         @test length(decoded.options) == 1
         @test decoded.options[1].name == "deprecated"
-        @test decoded.syntax == WKT.Syntax.SYNTAX_PROTO3
+        @test decoded.syntax == WKT.Syntax.PROTO3
     end
 
     @testset "Api / Method / Mixin (cross-file refs)" begin
@@ -138,7 +138,7 @@ end
             "google.example.Response",   # response_type_url
             false,                       # response_streaming
             WKT.Option[],
-            WKT.Syntax.SYNTAX_PROTO3,
+            WKT.Syntax.PROTO3,
         )
         a = pb_make(
             WKT.Api,
@@ -148,7 +148,7 @@ end
             "v1",
             nothing,                     # source_context
             WKT.Mixin[],
-            WKT.Syntax.SYNTAX_PROTO3,
+            WKT.Syntax.PROTO3,
         )
         decoded, _ = rt(a)
         @test decoded.name == "google.example.Service"
