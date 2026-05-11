@@ -80,7 +80,7 @@ function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...)
     return _StringValue(String(v), UInt8[])
 end
 function _decode_json_value(::Type{_BytesValue}, v::AbstractString; kw...)
-    return _BytesValue(_base64_decode(v), UInt8[])
+    return _BytesValue(Base64.base64decode(v), UInt8[])
 end
 function _decode_json_value(::Type{_DoubleValue}, v::Real; kw...)
     return _DoubleValue(Float64(v), UInt8[])
