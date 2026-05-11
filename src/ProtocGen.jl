@@ -128,9 +128,6 @@ include("testing.jl")
 export encode, decode, encode_json, decode_json
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields,
-    extendable_field_numbers,
-    oneof_field_types,
-    field_numbers,
-    json_field_names
+    extendable_field_numbers, oneof_field_types, field_numbers, json_field_names
 
 end # module
