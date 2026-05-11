@@ -1,0 +1,44 @@
+name: Bootstrap
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  bootstrap-idempotent:
+    name: Regen produces no diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1"
+      - uses: actions/cache@v5
+        env:
+          cache-name: cache-bootstrap-deps
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-bootstrap-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-bootstrap-${{ env.cache-name }}-
+            ${{ runner.os }}-bootstrap-
+            ${{ runner.os }}-
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+          protoc --version
+      - uses: julia-actions/julia-buildpkg@v1
+      - name: Regenerate gen/
+        # Re-runs the same plugin pipeline that produced the committed
+        # bindings. ProtocGen self-hosts: this exercises the codegen end
+        # to end against the WKT proto sources under gen/proto/.
+        run: julia --project=. --color=no gen/regen.jl
+      - name: Check that regen produced no diff
+        run: |
+          if ! git diff --exit-code gen/; then
+            echo "::error::gen/ is out of sync with codegen. Run \`julia gen/regen.jl\` and commit the result."
+            exit 1
+          fi
