@@ -73,7 +73,7 @@ jobs:
                 name = "Alice",
                 id = Int32(42),
                 email = "alice@example.com",
-                phones = [PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE)],
+                phones = [PhoneNumber(number = "+1-555-0100", type = PhoneType.PHONE_TYPE_MOBILE)],
                 last_updated = google_protobuf.Timestamp(seconds = Int64(1_715_000_000)),
             )
             @assert decode(encode(person), Person) == person
