@@ -10,41 +10,53 @@
 # makes tests independent of `protoc` at run time while still being
 # regenerable from declarative inputs.
 
-const HERE       = @__DIR__
-const PROTO      = joinpath(HERE, "proto")
-const TXTPB      = joinpath(HERE, "txtpb")
-const PB         = joinpath(HERE, "pb")
+const HERE = @__DIR__
+const PROTO = joinpath(HERE, "proto")
+const TXTPB = joinpath(HERE, "txtpb")
+const PB = joinpath(HERE, "pb")
 # Test fixtures that import WKTs (e.g. `unittest_well_known_types.proto`)
 # need protoc to find `google/protobuf/*.proto` somewhere — point it at
 # our vendored copies under `gen/proto`. Always passing both paths is
 # harmless for fixtures that don't import.
-const WKT_PROTO  = joinpath(HERE, "..", "..", "gen", "proto")
+const WKT_PROTO = joinpath(HERE, "..", "..", "gen", "proto")
 
 # (output_pb, source_proto, message, textproto_input).
 # Each entry produces one binary by piping `txtpb` through
 # `protoc --encode=<message>`.
 const PAYLOADS = [
-    ("sample_outer.pb",       "sample.proto",  "sample.Outer",  "sample_outer.txtpb"),
-    ("outer_maybe_zero.pb",   "sample.proto",  "sample.Outer",  "outer_maybe_zero.txtpb"),
-    ("outer_maybe_unset.pb",  "sample.proto",  "sample.Outer",  "outer_maybe_unset.txtpb"),
-    ("corpus_sample.pb",      "corpus.proto",  "corpus.Wide",   "corpus_sample.txtpb"),
-    ("maps_sample.pb",        "maps.proto",    "maps.Bag",      "maps_sample.txtpb"),
-    ("p2_full.pb",            "p2.proto",      "p2.Wrap",       "p2_full.txtpb"),
-    ("p2_minimal.pb",         "p2.proto",      "p2.Wrap",       "p2_minimal.txtpb"),
-    ("rep_sample.pb",         "rep.proto",     "rep.M",         "rep_sample.txtpb"),
-    ("maps_fx_sample.pb",     "maps_fx.proto", "mfx.Bag",       "maps_fx_sample.txtpb"),
-    ("test_messages_proto2_full.pb",  "test_messages_proto2_patched.proto",
+    ("sample_outer.pb", "sample.proto", "sample.Outer", "sample_outer.txtpb"),
+    ("outer_maybe_zero.pb", "sample.proto", "sample.Outer", "outer_maybe_zero.txtpb"),
+    ("outer_maybe_unset.pb", "sample.proto", "sample.Outer", "outer_maybe_unset.txtpb"),
+    ("corpus_sample.pb", "corpus.proto", "corpus.Wide", "corpus_sample.txtpb"),
+    ("maps_sample.pb", "maps.proto", "maps.Bag", "maps_sample.txtpb"),
+    ("p2_full.pb", "p2.proto", "p2.Wrap", "p2_full.txtpb"),
+    ("p2_minimal.pb", "p2.proto", "p2.Wrap", "p2_minimal.txtpb"),
+    ("rep_sample.pb", "rep.proto", "rep.M", "rep_sample.txtpb"),
+    ("maps_fx_sample.pb", "maps_fx.proto", "mfx.Bag", "maps_fx_sample.txtpb"),
+    (
+        "test_messages_proto2_full.pb",
+        "test_messages_proto2_patched.proto",
         "protobuf_test_messages.proto2.TestAllTypesProto2",
-        "test_messages_proto2_full.txtpb"),
-    ("test_messages_proto2_empty.pb", "test_messages_proto2_patched.proto",
+        "test_messages_proto2_full.txtpb",
+    ),
+    (
+        "test_messages_proto2_empty.pb",
+        "test_messages_proto2_patched.proto",
         "protobuf_test_messages.proto2.TestAllTypesProto2",
-        "test_messages_proto2_empty.txtpb"),
-    ("test_messages_proto3_full.pb",  "test_messages_proto3.proto",
+        "test_messages_proto2_empty.txtpb",
+    ),
+    (
+        "test_messages_proto3_full.pb",
+        "test_messages_proto3.proto",
         "protobuf_test_messages.proto3.TestAllTypesProto3",
-        "test_messages_proto3_full.txtpb"),
-    ("test_messages_proto3_empty.pb", "test_messages_proto3.proto",
+        "test_messages_proto3_full.txtpb",
+    ),
+    (
+        "test_messages_proto3_empty.pb",
+        "test_messages_proto3.proto",
         "protobuf_test_messages.proto3.TestAllTypesProto3",
-        "test_messages_proto3_empty.txtpb"),
+        "test_messages_proto3_empty.txtpb",
+    ),
 ]
 
 # .proto files whose FileDescriptorSet we capture (as the codegen input
@@ -77,15 +89,20 @@ function main()
     # types (the WKT bindings, etc.) without a separate fetch.
     for proto in DESCRIPTOR_SETS
         out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
-        run(`$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --descriptor_set_out=$out $proto`)
+        run(
+            `$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --descriptor_set_out=$out $proto`,
+        )
         println("wrote $(relpath(out, HERE))")
     end
 
     for (out_name, proto, msg, txtpb_name) in PAYLOADS
         out = joinpath(PB, out_name)
         in_path = joinpath(TXTPB, txtpb_name)
-        cmd = pipeline(`$protoc --encode=$msg --proto_path=$PROTO --proto_path=$WKT_PROTO $proto`,
-                       stdin = in_path, stdout = out)
+        cmd = pipeline(
+            `$protoc --encode=$msg --proto_path=$PROTO --proto_path=$WKT_PROTO $proto`;
+            stdin = in_path,
+            stdout = out,
+        )
         run(cmd)
         println("wrote $(relpath(out, HERE))")
     end

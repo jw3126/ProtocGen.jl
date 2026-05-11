@@ -65,8 +65,8 @@ end
     # `Val{Tuple{KAnnot,VAnnot}}` where each annotation is the bare symbol
     # `:fixed` / `:zigzag` (or `Nothing`), not the `Val{:fixed}` form used by
     # non-map scalar fields. See codec/decode.jl:58–98 and encode.jl:150–187.
-    @test occursin("Val{Tuple{:fixed,:zigzag}}",  f.content)  # map<sfixed32, sint64>
-    @test occursin("Val{Tuple{Nothing,:fixed}}",  f.content)  # map<string,   fixed64>
+    @test occursin("Val{Tuple{:fixed,:zigzag}}", f.content)  # map<sfixed32, sint64>
+    @test occursin("Val{Tuple{Nothing,:fixed}}", f.content)  # map<string,   fixed64>
     @test occursin("Val{Tuple{:zigzag,Nothing}}", f.content)  # map<sint32,   string>
 
     maps_mod = eval_generated(f.content, :GeneratedMapsFx)

@@ -12,12 +12,12 @@
 # Usage (from repo root):
 #     julia test/conformance/regen.jl
 
-const HERE   = @__DIR__
-const ROOT   = abspath(joinpath(HERE, "..", ".."))
+const HERE = @__DIR__
+const ROOT = abspath(joinpath(HERE, "..", ".."))
 const CONF_PROTO = joinpath(HERE, "proto")
-const FIX_PROTO  = joinpath(ROOT, "test", "fixtures", "proto")
-const WKT_PROTO  = joinpath(ROOT, "gen", "proto")
-const OUT        = joinpath(HERE, "conformance_descriptors.pb")
+const FIX_PROTO = joinpath(ROOT, "test", "fixtures", "proto")
+const WKT_PROTO = joinpath(ROOT, "gen", "proto")
+const OUT = joinpath(HERE, "conformance_descriptors.pb")
 
 function find_protoc()
     p = Sys.which("protoc")

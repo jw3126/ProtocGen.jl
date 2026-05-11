@@ -16,18 +16,23 @@ include("setup.jl")
     # a message named e.g. `Bool` cannot shadow the codegen's scalar
     # type annotations.
     @test occursin("packed_ints::Vector{var\"#base\".Int64}", f.content)
-    @test occursin("choice::Union{Nothing,OneOf{<:Union{var\"#base\".Int32,var\"#base\".String}}}", f.content)
+    @test occursin(
+        "choice::Union{Nothing,OneOf{<:Union{var\"#base\".Int32,var\"#base\".String}}}",
+        f.content,
+    )
 
     # Eval the generated module and verify a round-trip.
     sample_mod = eval_generated(f.content, :GeneratedSample)
 
     inner = pb_make(sample_mod.Inner; a = Int32(42))
-    outer = pb_make(sample_mod.Outer;
-                              name = "hello",
-                              maybe = Int32(7),
-                              nested = inner,
-                              packed_ints = Int64[1, 2, 3, 4],
-                              choice = ProtocGen.OneOf(:ci, Int32(99)))
+    outer = pb_make(
+        sample_mod.Outer;
+        name = "hello",
+        maybe = Int32(7),
+        nested = inner,
+        packed_ints = Int64[1, 2, 3, 4],
+        choice = ProtocGen.OneOf(:ci, Int32(99)),
+    )
     decoded = decode_latest(sample_mod.Outer, encode_latest(outer))
     @test decoded.name == outer.name
     @test decoded.maybe == outer.maybe
@@ -44,7 +49,9 @@ include("setup.jl")
     @test from_protoc.name == "from-protoc"
     @test from_protoc.maybe == 99
     @test from_protoc.nested !== nothing && from_protoc.nested.a == 7
-    @test from_protoc.choice !== nothing && from_protoc.choice.name === :ci && from_protoc.choice.value == 13
+    @test from_protoc.choice !== nothing &&
+          from_protoc.choice.name === :ci &&
+          from_protoc.choice.value == 13
     @test from_protoc.packed_ints == [10, 20, 30]
 
     # `Base.show` renders messages in @kwdef-style. The unknown-fields
@@ -55,9 +62,8 @@ include("setup.jl")
     @test !occursin("unknown_fields", s)
     # When the buffer carries bytes, it's shown — `kwshow` prints the
     # field's Symbol name verbatim (no `var""` wrapping).
-    inner_with_unknown = pb_make(sample_mod.Inner;
-                                           a = Int32(1),
-                                           var"#unknown_fields" = UInt8[0xff])
+    inner_with_unknown =
+        pb_make(sample_mod.Inner; a = Int32(1), var"#unknown_fields" = UInt8[0xff])
     s2 = sprint(show, inner_with_unknown)
     @test occursin("#unknown_fields = ", s2)
 end
@@ -78,21 +84,21 @@ end
     # Decode the protoc-encoded payload and check every field.
     corpus_sample_pb = fixture("corpus_sample.pb")
     w = decode_latest(corpus_mod.Wide, corpus_sample_pb)
-    @test w.i32  == Int32(-1)
-    @test w.i64  == Int64(1234567890123)
-    @test w.u32  == UInt32(4000000000)
-    @test w.u64  == UInt64(18000000000000000000)
-    @test w.s32  == Int32(-100)
-    @test w.s64  == Int64(-100000000000)
-    @test w.f32  == UInt32(0xCAFEBABE)
-    @test w.f64  == UInt64(0xDEADBEEFCAFEBABE)
+    @test w.i32 == Int32(-1)
+    @test w.i64 == Int64(1234567890123)
+    @test w.u32 == UInt32(4000000000)
+    @test w.u64 == UInt64(18000000000000000000)
+    @test w.s32 == Int32(-100)
+    @test w.s64 == Int64(-100000000000)
+    @test w.f32 == UInt32(0xCAFEBABE)
+    @test w.f64 == UInt64(0xDEADBEEFCAFEBABE)
     @test w.sf32 == typemin(Int32)
     @test w.sf64 == typemin(Int64) + 1
-    @test isapprox(w.f, 3.14f0; atol = 1f-6)
+    @test isapprox(w.f, 3.14f0; atol = 1.0f-6)
     @test isapprox(w.d, 2.71828; atol = 1e-9)
-    @test w.bb   == true
-    @test w.ss   == "héllo"
-    @test w.by   == UInt8[0xff, 0x00, 0xab]
+    @test w.bb == true
+    @test w.ss == "héllo"
+    @test w.by == UInt8[0xff, 0x00, 0xab]
     @test w.color == corpus_mod.Color.BLUE
     @test w.nested !== nothing
     @test w.nested.a == 7
@@ -125,10 +131,10 @@ end
     # Scalar refs go through the `var"#base"` alias for shadow-immunity.
     @test occursin("counts::OrderedDict{var\"#base\".String,var\"#base\".Int32}", f.content)
     @test occursin("labels::OrderedDict{var\"#base\".Int32,var\"#base\".String}", f.content)
-    @test occursin("items::OrderedDict{var\"#base\".String,Item}",                f.content)
+    @test occursin("items::OrderedDict{var\"#base\".String,Item}", f.content)
     @test !occursin("CountsEntry", f.content)
     @test !occursin("LabelsEntry", f.content)
-    @test !occursin("ItemsEntry",  f.content)
+    @test !occursin("ItemsEntry", f.content)
 
     maps_mod = eval_generated(f.content, :GeneratedMaps)
 
@@ -187,7 +193,10 @@ end
     @test !occursin("typesalt=0xdead", with_bad)
     # The `kwconstructor=true kwshow=true` come from the always-emitted
     # baseline; `bad_cfg`'s `typesalt` doesn't leak through.
-    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16} kwconstructor=true kwshow=true\s*$"m, with_bad)
+    @test occursin(
+        r"@batteries Inner typesalt=0x[0-9a-f]{16} kwconstructor=true kwshow=true\s*$"m,
+        with_bad,
+    )
 
     # `[enumbatteries]` populated → user kwargs joined onto every
     # `@enumbatteries <Name>.T …` line. corpus.proto carries `Color`.
@@ -196,7 +205,10 @@ end
     corpus_file = first(corpus_fdset.file)
     enum_cfg = Dict("enumbatteries" => Dict("kwshow" => true))
     with_enums = ProtocGen.Codegen.codegen(corpus_file, corpus_universe; config = enum_cfg)
-    @test occursin(r"@enumbatteries Color\.T typesalt=0x[0-9a-f]{16} kwshow=true", with_enums)
+    @test occursin(
+        r"@enumbatteries Color\.T typesalt=0x[0-9a-f]{16} kwshow=true",
+        with_enums,
+    )
 end
 
 @testset "codegen: @batteries works on Core/Base-shadowing types" begin
@@ -221,25 +233,24 @@ end
         T = Base.invokelatest(getproperty, m, name)
         @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, T)
     end
-    EnumT = Base.invokelatest(getproperty,
-                              Base.invokelatest(getproperty, m, :Integer),
-                              :T)
+    EnumT = Base.invokelatest(getproperty, Base.invokelatest(getproperty, m, :Integer), :T)
     @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, EnumT)
 
     # Holder ties them together — round-trip through binary format
     # exercises the generated decode/encode plus the @batteries-
     # decorated structs. Use kwarg construction so the buffer fills in
     # from `default_keywords`.
-    msg = pb_make(m.Holder;
-        c  = pb_make(m.Core; v = Int32(1)),
-        b  = pb_make(m.Base; label = "label"),
-        t  = pb_make(m.Type; name = "type-name"),
-        a  = pb_make(m.Any;  url = "url"),
+    msg = pb_make(
+        m.Holder;
+        c = pb_make(m.Core; v = Int32(1)),
+        b = pb_make(m.Base; label = "label"),
+        t = pb_make(m.Type; name = "type-name"),
+        a = pb_make(m.Any; url = "url"),
         bl = pb_make(m.Bool; flag = true),
-        i  = Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
+        i = Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
     )
     bytes = encode_latest(msg)
-    back  = decode_latest(m.Holder, bytes)
+    back = decode_latest(m.Holder, bytes)
     @test back == msg
 end
 

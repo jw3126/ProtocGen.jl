@@ -16,20 +16,18 @@ include("setup.jl")
 # names are reached only through the alias.
 
 @testset "corpus: unittest_well_known_types (verbatim)" begin
-    response = run_codegen("unittest_well_known_types.pb",
-                           ["unittest_well_known_types.proto"])
+    response =
+        run_codegen("unittest_well_known_types.pb", ["unittest_well_known_types.proto"])
     @test response.error === nothing
     @test length(response.file) == 1
     f = response.file[1]
     @test f.name == "unittest_well_known_types_pb.jl"
 
     # Cross-package import + qualified WKT refs are present.
-    @test occursin("import ProtocGen.google.protobuf as google_protobuf",
-                   f.content)
+    @test occursin("import ProtocGen.google.protobuf as google_protobuf", f.content)
     @test occursin("any_field::Union{Nothing,google_protobuf.Any}", f.content)
     @test occursin("type_field::Union{Nothing,google_protobuf.Type}", f.content)
-    @test occursin("timestamp_field::Union{Nothing,google_protobuf.Timestamp}",
-                   f.content)
+    @test occursin("timestamp_field::Union{Nothing,google_protobuf.Timestamp}", f.content)
     @test occursin("struct_field::Union{Nothing,google_protobuf.Struct}", f.content)
 
     # Eval into a fresh Module — the generated `import` brings the
@@ -45,16 +43,38 @@ include("setup.jl")
     i32w = pb_make(WKT.Int32Value, Int32(42))
     sw = pb_make(WKT.StringValue, "hello")
     bw = pb_make(WKT.BoolValue, true)
-    any_inst = pb_make(WKT.Any,
-        "type.googleapis.com/google.protobuf.Empty", UInt8[])
-    type_inst = pb_make(WKT.Type,
-        "Foo", WKT.Field[], String[], WKT.Option[],
-        nothing, WKT.Syntax.SYNTAX_PROTO3)
+    any_inst = pb_make(WKT.Any, "type.googleapis.com/google.protobuf.Empty", UInt8[])
+    type_inst = pb_make(
+        WKT.Type,
+        "Foo",
+        WKT.Field[],
+        String[],
+        WKT.Option[],
+        nothing,
+        WKT.Syntax.SYNTAX_PROTO3,
+    )
 
-    t = pb_make(m.TestWellKnownTypes,
-        any_inst, nothing, dur, nothing, fm, sc,
-        nothing, ts, type_inst, nothing, nothing, nothing, nothing,
-        i32w, nothing, bw, sw, nothing, nothing,
+    t = pb_make(
+        m.TestWellKnownTypes,
+        any_inst,
+        nothing,
+        dur,
+        nothing,
+        fm,
+        sc,
+        nothing,
+        ts,
+        type_inst,
+        nothing,
+        nothing,
+        nothing,
+        nothing,
+        i32w,
+        nothing,
+        bw,
+        sw,
+        nothing,
+        nothing,
     )
 
     decoded = decode_latest(m.TestWellKnownTypes, encode_latest(t))

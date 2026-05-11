@@ -79,9 +79,11 @@ end
         # Any holds an opaque message in `value::Bytes`, identified by a
         # type URL. The package doesn't unmarshal — that's a v1
         # limitation. Just round-trip the wrapper.
-        a = pb_make(WKT.Any,
+        a = pb_make(
+            WKT.Any,
             "type.googleapis.com/google.protobuf.Timestamp",
-            UInt8[0x08, 0xC0, 0x84, 0x3D])  # seconds=1_000_000 in varint
+            UInt8[0x08, 0xC0, 0x84, 0x3D],
+        )  # seconds=1_000_000 in varint
         decoded, _ = rt(a)
         @test decoded.type_url == a.type_url
         @test decoded.value == a.value
@@ -93,14 +95,28 @@ end
         # because they live in the same Julia submodule.
         opt = pb_make(WKT.Option, "deprecated", nothing)
         sc = pb_make(WKT.SourceContext, "foo.proto")
-        field = pb_make(WKT.Field,
+        field = pb_make(
+            WKT.Field,
             WKT.var"Field.Kind".TYPE_STRING,
             WKT.var"Field.Cardinality".CARDINALITY_OPTIONAL,
-            Int32(1), "name", "", Int32(0), false,
-            WKT.Option[], "name", "")
-        t = pb_make(WKT.Type,
-            "MyType", [field], String[], [opt], sc,
-            WKT.Syntax.SYNTAX_PROTO3)
+            Int32(1),
+            "name",
+            "",
+            Int32(0),
+            false,
+            WKT.Option[],
+            "name",
+            "",
+        )
+        t = pb_make(
+            WKT.Type,
+            "MyType",
+            [field],
+            String[],
+            [opt],
+            sc,
+            WKT.Syntax.SYNTAX_PROTO3,
+        )
         decoded, _ = rt(t)
         @test decoded.name == "MyType"
         @test length(decoded.fields) == 1
@@ -114,22 +130,26 @@ end
     end
 
     @testset "Api / Method / Mixin (cross-file refs)" begin
-        m = pb_make(WKT.Method,
+        m = pb_make(
+            WKT.Method,
             "DoIt",
             "google.example.Request",   # request_type_url
             false,                       # request_streaming
             "google.example.Response",   # response_type_url
             false,                       # response_streaming
             WKT.Option[],
-            WKT.Syntax.SYNTAX_PROTO3)
-        a = pb_make(WKT.Api,
+            WKT.Syntax.SYNTAX_PROTO3,
+        )
+        a = pb_make(
+            WKT.Api,
             "google.example.Service",
             [m],
             WKT.Option[],
             "v1",
             nothing,                     # source_context
             WKT.Mixin[],
-            WKT.Syntax.SYNTAX_PROTO3)
+            WKT.Syntax.SYNTAX_PROTO3,
+        )
         decoded, _ = rt(a)
         @test decoded.name == "google.example.Service"
         @test length(decoded.methods) == 1
@@ -145,8 +165,8 @@ end
         # `AbstractValue` / `AbstractListValue` and forwarding decode
         # methods. Round-trip exercises every variant of Value.kind:
         # null, number, string, bool, struct, list.
-        v_num  = pb_make(WKT.Value, OneOf(:number_value, 3.14))
-        v_str  = pb_make(WKT.Value, OneOf(:string_value, "hello"))
+        v_num = pb_make(WKT.Value, OneOf(:number_value, 3.14))
+        v_str = pb_make(WKT.Value, OneOf(:string_value, "hello"))
         v_bool = pb_make(WKT.Value, OneOf(:bool_value, true))
         v_null = pb_make(WKT.Value, OneOf(:null_value, WKT.NullValue.NULL_VALUE))
 
@@ -154,10 +174,10 @@ end
         v_list = pb_make(WKT.Value, OneOf(:list_value, lv))
 
         fields = OrderedDict{String,WKT.AbstractValue}(
-            "n"    => v_num,
-            "s"    => v_str,
-            "b"    => v_bool,
-            "z"    => v_null,
+            "n" => v_num,
+            "s" => v_str,
+            "b" => v_bool,
+            "z" => v_null,
             "list" => v_list,
         )
         s = pb_make(WKT.Struct, fields)

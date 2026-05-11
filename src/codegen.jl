@@ -1,8 +1,12 @@
 module Codegen
 
 using ..ProtocGen: ProtocGen
-using ..ProtocGen.google.protobuf: FieldDescriptorProto, DescriptorProto,
-    EnumDescriptorProto, FileDescriptorProto, var"FieldDescriptorProto.Label",
+using ..ProtocGen.google.protobuf:
+    FieldDescriptorProto,
+    DescriptorProto,
+    EnumDescriptorProto,
+    FileDescriptorProto,
+    var"FieldDescriptorProto.Label",
     var"FieldDescriptorProto.Type"
 
 # ----------------------------------------------------------------------------
@@ -38,7 +42,7 @@ end
 # maps to the same UInt64 regardless of host Julia.
 # ----------------------------------------------------------------------------
 const _FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325
-const _FNV_PRIME_64        = 0x00000100000001b3
+const _FNV_PRIME_64 = 0x00000100000001b3
 
 function _typesalt_from_fqn(fqn::AbstractString)
     h = _FNV_OFFSET_BASIS_64
@@ -50,7 +54,7 @@ end
 
 function _format_typesalt_kw(fqn::AbstractString)
     h = _typesalt_from_fqn(fqn)
-    return string("typesalt=0x", string(h, base = 16, pad = 16))
+    return string("typesalt=0x", string(h; base = 16, pad = 16))
 end
 
 function _join_kw(prefix::AbstractString, extra::AbstractString)
@@ -75,21 +79,36 @@ function _scalar_jl_type_and_wire(t)
     # a protobuf field name, so the alias is guaranteed not to clash
     # with user code.
     B = "var\"#base\""
-    if t === T.TYPE_DOUBLE   ; return ("$(B).Float64",       "")
-    elseif t === T.TYPE_FLOAT    ; return ("$(B).Float32",       "")
-    elseif t === T.TYPE_INT64    ; return ("$(B).Int64",         "")
-    elseif t === T.TYPE_UINT64   ; return ("$(B).UInt64",        "")
-    elseif t === T.TYPE_INT32    ; return ("$(B).Int32",         "")
-    elseif t === T.TYPE_FIXED64  ; return ("$(B).UInt64",        "Val{:fixed}")
-    elseif t === T.TYPE_FIXED32  ; return ("$(B).UInt32",        "Val{:fixed}")
-    elseif t === T.TYPE_BOOL     ; return ("$(B).Bool",          "")
-    elseif t === T.TYPE_STRING   ; return ("$(B).String",        "")
-    elseif t === T.TYPE_BYTES    ; return ("$(B).Vector{$(B).UInt8}", "")
-    elseif t === T.TYPE_UINT32   ; return ("$(B).UInt32",        "")
-    elseif t === T.TYPE_SFIXED32 ; return ("$(B).Int32",         "Val{:fixed}")
-    elseif t === T.TYPE_SFIXED64 ; return ("$(B).Int64",         "Val{:fixed}")
-    elseif t === T.TYPE_SINT32   ; return ("$(B).Int32",         "Val{:zigzag}")
-    elseif t === T.TYPE_SINT64   ; return ("$(B).Int64",         "Val{:zigzag}")
+    if t === T.TYPE_DOUBLE
+        return ("$(B).Float64", "")
+    elseif t === T.TYPE_FLOAT
+        return ("$(B).Float32", "")
+    elseif t === T.TYPE_INT64
+        return ("$(B).Int64", "")
+    elseif t === T.TYPE_UINT64
+        return ("$(B).UInt64", "")
+    elseif t === T.TYPE_INT32
+        return ("$(B).Int32", "")
+    elseif t === T.TYPE_FIXED64
+        return ("$(B).UInt64", "Val{:fixed}")
+    elseif t === T.TYPE_FIXED32
+        return ("$(B).UInt32", "Val{:fixed}")
+    elseif t === T.TYPE_BOOL
+        return ("$(B).Bool", "")
+    elseif t === T.TYPE_STRING
+        return ("$(B).String", "")
+    elseif t === T.TYPE_BYTES
+        return ("$(B).Vector{$(B).UInt8}", "")
+    elseif t === T.TYPE_UINT32
+        return ("$(B).UInt32", "")
+    elseif t === T.TYPE_SFIXED32
+        return ("$(B).Int32", "Val{:fixed}")
+    elseif t === T.TYPE_SFIXED64
+        return ("$(B).Int64", "Val{:fixed}")
+    elseif t === T.TYPE_SINT32
+        return ("$(B).Int32", "Val{:zigzag}")
+    elseif t === T.TYPE_SINT64
+        return ("$(B).Int64", "Val{:zigzag}")
     end
     error("scalar mapping not defined for $t")
 end
@@ -136,11 +155,12 @@ end
 # the package name with dots → underscores. The WKT entry is hardcoded;
 # real users with multi-package proto trees will eventually configure this
 # via a plugin parameter.
-const WKT_PACKAGE_MAP = Dict{String,String}(
-    "google.protobuf" => "ProtocGen.google.protobuf",
-)
+const WKT_PACKAGE_MAP =
+    Dict{String,String}("google.protobuf" => "ProtocGen.google.protobuf")
 
-_package_alias(pkg::String) = replace(pkg, "." => "_")
+function _package_alias(pkg::String)
+    replace(pkg, "." => "_")
+end
 
 # Compute the Julia *relative* import path from the source proto package
 # `from_pkg` to the target proto package `to_pkg`, given that each proto
@@ -163,14 +183,15 @@ _package_alias(pkg::String) = replace(pkg, "." => "_")
 # — codegen filters out self-references before computing imports.
 function _relative_import_path(from_pkg::AbstractString, to_pkg::AbstractString)
     from_parts = isempty(from_pkg) ? String[] : split(String(from_pkg), '.')
-    to_parts   = isempty(to_pkg)   ? String[] : split(String(to_pkg),   '.')
+    to_parts = isempty(to_pkg) ? String[] : split(String(to_pkg), '.')
     common = 0
-    while common < length(from_parts) && common < length(to_parts) &&
-          from_parts[common + 1] == to_parts[common + 1]
+    while common < length(from_parts) &&
+              common < length(to_parts) &&
+              from_parts[common+1] == to_parts[common+1]
         common += 1
     end
     dots = (length(from_parts) - common) + 1
-    rest = join(@view(to_parts[common + 1:end]), '.')
+    rest = join(@view(to_parts[common+1:end]), '.')
     return repeat('.', dots) * rest
 end
 
@@ -206,7 +227,9 @@ function _add_file_to_universe!(u::Universe, file::FileDescriptorProto)
 
     function visit_message(msg::DescriptorProto, parent_proto::String, parent_jl::String)
         proto_name = string(parent_proto, ".", something(msg.name, ""))
-        jl_name = isempty(parent_jl) ? something(msg.name, "") : string(parent_jl, ".", something(msg.name, ""))
+        jl_name =
+            isempty(parent_jl) ? something(msg.name, "") :
+            string(parent_jl, ".", something(msg.name, ""))
         push!(u.messages, proto_name)
         u.jl_names[proto_name] = jl_name
         u.package_of[proto_name] = package
@@ -336,7 +359,7 @@ Base.@kwdef struct FieldModel
     is_required::Bool = false   # proto2 `required`
     is_packed::Bool = false     # repeated scalar/enum encoded packed (LENGTH_DELIMITED)
     emit_unpacked_loop::Bool = false  # encode emits per-element loop (proto2 default
-                                #   for repeated scalar/enum, or [packed = false])
+    #   for repeated scalar/enum, or [packed = false])
     jl_type::String             # the type used in the struct field declaration
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
     wire_annotation::String = "" # "" / "Val{:fixed}" / "Val{:zigzag}"
@@ -365,10 +388,37 @@ function _jl_fieldname(name::String)
     # FieldDescriptorProto.type) and tolerating it bare keeps the
     # generated API readable. Anything in the list below is mangled to
     # `var"#name"`.
-    KEYWORDS = ("begin","while","if","for","try","return","break","continue",
-                "function","macro","quote","let","local","global","const",
-                "do","struct","module","baremodule","using","import","export",
-                "end","else","elseif","catch","finally","true","false")
+    KEYWORDS = (
+        "begin",
+        "while",
+        "if",
+        "for",
+        "try",
+        "return",
+        "break",
+        "continue",
+        "function",
+        "macro",
+        "quote",
+        "let",
+        "local",
+        "global",
+        "const",
+        "do",
+        "struct",
+        "module",
+        "baremodule",
+        "using",
+        "import",
+        "export",
+        "end",
+        "else",
+        "elseif",
+        "catch",
+        "finally",
+        "true",
+        "false",
+    )
     return name in KEYWORDS ? "var\"#$(name)\"" : name
 end
 
@@ -401,10 +451,10 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         if is_repeated && haskey(names.map_entries, ref_name)
             entry = names.map_entries[ref_name]
             kv = _map_entry_kv(entry, names)
-            jl_type  = "OrderedDict{$(kv.key_type),$(kv.val_type)}"
+            jl_type = "OrderedDict{$(kv.key_type),$(kv.val_type)}"
             init_val = "OrderedDict{$(kv.key_type),$(kv.val_type)}()"
-            default  = "OrderedDict{$(kv.key_type),$(kv.val_type)}()"
-            skip     = "!isempty(_x.$(jl_fieldname))"
+            default = "OrderedDict{$(kv.key_type),$(kv.val_type)}()"
+            skip = "!isempty(_x.$(jl_fieldname))"
             wire = if kv.key_wire == "Nothing" && kv.val_wire == "Nothing"
                 # Both default — codec uses the unannotated `decode!(d, ::Dict)`
                 # / `encode(e, i, ::Dict)` dispatch.
@@ -429,23 +479,23 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         end
         elem = _resolve_typename(ref_name, names)
         if is_repeated
-            jl_type   = "Vector{$(elem)}"
-            init_val  = "PB.BufferedVector{$(elem)}()"
-            default   = "Vector{$(elem)}()"
-            skip      = "!isempty(_x.$(jl_fieldname))"
+            jl_type = "Vector{$(elem)}"
+            init_val = "PB.BufferedVector{$(elem)}()"
+            default = "Vector{$(elem)}()"
+            skip = "!isempty(_x.$(jl_fieldname))"
         elseif is_required
             # proto2 required submessage. Field is non-nullable; the decode
             # body initializes a Ref{T}() (uninitialized) and validates that
             # it was actually set.
-            jl_type  = elem
+            jl_type = elem
             init_val = "Ref{$(elem)}()"
-            default  = "Ref{$(elem)}()"
-            skip     = "true"
+            default = "Ref{$(elem)}()"
+            skip = "true"
         else
-            jl_type   = "Union{Nothing,$(elem)}"
-            init_val  = "Ref{Union{Nothing,$(elem)}}(nothing)"
-            default   = "nothing"
-            skip      = "!isnothing(_x.$(jl_fieldname))"
+            jl_type = "Union{Nothing,$(elem)}"
+            init_val = "Ref{Union{Nothing,$(elem)}}(nothing)"
+            default = "nothing"
+            skip = "!isnothing(_x.$(jl_fieldname))"
         end
         return FieldModel(;
             proto_name,
@@ -465,27 +515,27 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         elem = _resolve_typename(something(field.type_name, ""), names)
         elem_t = "$(elem).T"
         if is_repeated
-            jl_type  = "Vector{$(elem_t)}"
+            jl_type = "Vector{$(elem_t)}"
             init_val = "PB.BufferedVector{$(elem_t)}()"
-            default  = "Vector{$(elem_t)}()"
-            skip     = "!isempty(_x.$(jl_fieldname))"
+            default = "Vector{$(elem_t)}()"
+            skip = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
             # proto2 `optional` and proto3 explicit `optional` enums carry
             # presence — same treatment as scalars. Without this, an
             # `optional Foo enum_field = 1` set to `Foo.FIRST` (numeric 0)
             # is dropped by the equal-to-default skip on encode, and the
             # field is indistinguishable from unset.
-            jl_type  = "Union{Nothing,$(elem_t)}"
+            jl_type = "Union{Nothing,$(elem_t)}"
             init_val = "nothing"
-            default  = "nothing"
-            skip     = "!isnothing(_x.$(jl_fieldname))"
+            default = "nothing"
+            skip = "!isnothing(_x.$(jl_fieldname))"
         else
             # No presence on a bare proto3 enum — defaults to the first enum
             # value (numeric 0). proto2 required enums encode unconditionally.
-            jl_type  = elem_t
+            jl_type = elem_t
             init_val = "$(elem).$(_first_enum_member(field, names))"
-            default  = init_val
-            skip     = is_required ? "true" : "_x.$(jl_fieldname) != $(default)"
+            default = init_val
+            skip = is_required ? "true" : "_x.$(jl_fieldname) != $(default)"
         end
         is_packed = is_repeated && _is_packed_repeated(field, names.syntax)
         return FieldModel(;
@@ -507,10 +557,10 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     else
         scalar_jl, wire = _scalar_jl_type_and_wire(ftype)
         if is_repeated
-            jl_type   = "Vector{$(scalar_jl)}"
-            init_val  = "PB.BufferedVector{$(scalar_jl)}()"
-            default   = "Vector{$(scalar_jl)}()"
-            skip      = "!isempty(_x.$(jl_fieldname))"
+            jl_type = "Vector{$(scalar_jl)}"
+            init_val = "PB.BufferedVector{$(scalar_jl)}()"
+            default = "Vector{$(scalar_jl)}()"
+            skip = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
             # proto3 explicit `optional` and proto2 `optional`
             # carry presence. Surface that in Julia by typing the field as
@@ -519,14 +569,14 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             # `nothing`. As a result an explicit-optional scalar set to zero
             # round-trips correctly — the value travels on the wire and unset
             # ≠ default-zero.
-            jl_type  = "Union{Nothing,$(scalar_jl)}"
+            jl_type = "Union{Nothing,$(scalar_jl)}"
             init_val = "nothing"
-            default  = "nothing"
-            skip     = "!isnothing(_x.$(jl_fieldname))"
+            default = "nothing"
+            skip = "!isnothing(_x.$(jl_fieldname))"
         else
-            jl_type   = scalar_jl
-            init_val  = _scalar_zero(scalar_jl)
-            default   = init_val
+            jl_type = scalar_jl
+            init_val = _scalar_zero(scalar_jl)
+            default = init_val
             if is_required
                 skip = "true"
             elseif endswith(scalar_jl, ".String")
@@ -545,7 +595,10 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         # iterate them. So `emit_unpacked_loop` stays false for those
         # element types — the codec call handles the loop internally.
         is_packed_eligible =
-            is_repeated && !(endswith(scalar_jl, ".String") || endswith(scalar_jl, ".Vector{var\"#base\".UInt8}"))
+            is_repeated && !(
+                endswith(scalar_jl, ".String") ||
+                endswith(scalar_jl, ".Vector{var\"#base\".UInt8}")
+            )
         is_packed = is_packed_eligible && _is_packed_repeated(field, names.syntax)
         return FieldModel(;
             proto_name,
@@ -606,8 +659,10 @@ end
 function _map_wire_annot(field::FieldDescriptorProto)
     T = var"FieldDescriptorProto.Type"
     ftype = field.type
-    if ftype === T.TYPE_FIXED32  || ftype === T.TYPE_FIXED64 ||
-       ftype === T.TYPE_SFIXED32 || ftype === T.TYPE_SFIXED64
+    if ftype === T.TYPE_FIXED32 ||
+       ftype === T.TYPE_FIXED64 ||
+       ftype === T.TYPE_SFIXED32 ||
+       ftype === T.TYPE_SFIXED64
         return ":fixed"
     elseif ftype === T.TYPE_SINT32 || ftype === T.TYPE_SINT64
         return ":zigzag"
@@ -626,8 +681,10 @@ function _map_entry_kv(entry::DescriptorProto, names::LocalNames)
             val_field = f
         end
     end
-    key_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing key field 1")
-    val_field === nothing && error("codegen: map_entry $(something(entry.name, "")) missing value field 2")
+    key_field === nothing &&
+        error("codegen: map_entry $(something(entry.name, "")) missing key field 1")
+    val_field === nothing &&
+        error("codegen: map_entry $(something(entry.name, "")) missing value field 2")
     return (
         key_type = _resolve_field_jl_type(key_field, names),
         val_type = _resolve_field_jl_type(val_field, names),
@@ -641,9 +698,7 @@ end
 function _first_enum_member(field::FieldDescriptorProto, names::LocalNames)
     fqn = something(field.type_name, "")
     edef = get(names.enum_defs, fqn, nothing)
-    edef === nothing && error(
-        "codegen: enum $(fqn) not found in any input file",
-    )
+    edef === nothing && error("codegen: enum $(fqn) not found in any input file")
     for v in edef.value
         if Int(something(v.number, Int32(0))) == 0
             return something(v.name, "")
@@ -707,11 +762,14 @@ function _build_oneofs(msg::DescriptorProto, names::LocalNames, synthetic::Set{I
         idx0 in synthetic && continue
         haskey(members_by_idx, idx0) || continue
         oname = something(decl.name, "")
-        push!(oneofs, OneofModel(;
-            proto_name = oname,
-            jl_fieldname = _jl_fieldname(oname),
-            members = members_by_idx[idx0],
-        ))
+        push!(
+            oneofs,
+            OneofModel(;
+                proto_name = oname,
+                jl_fieldname = _jl_fieldname(oname),
+                members = members_by_idx[idx0],
+            ),
+        )
     end
     return oneofs
 end
@@ -720,10 +778,15 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
-function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames,
-                       parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
-                       batteries_kw::String = "",
-                       enumbatteries_kw::String = "")
+function _emit_message(
+    io::IO,
+    msg::DescriptorProto,
+    parent_jl::String,
+    names::LocalNames,
+    parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
+    batteries_kw::String = "",
+    enumbatteries_kw::String = "",
+)
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -735,15 +798,25 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # those are surfaced as `OrderedDict{K,V}` on the parent field, never as a
     # standalone Julia struct.
     for e in msg.enum_type
-        _emit_enum(io, e, jl_name_plain;
-                   parent_proto = proto_fqn,
-                   enumbatteries_kw = enumbatteries_kw)
+        _emit_enum(
+            io,
+            e,
+            jl_name_plain;
+            parent_proto = proto_fqn,
+            enumbatteries_kw = enumbatteries_kw,
+        )
     end
     for nested in msg.nested_type
         _is_map_entry(nested) && continue
-        _emit_message(io, nested, jl_name_plain, names, proto_fqn;
-                      batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw)
+        _emit_message(
+            io,
+            nested,
+            jl_name_plain,
+            names,
+            proto_fqn;
+            batteries_kw = batteries_kw,
+            enumbatteries_kw = enumbatteries_kw,
+        )
     end
 
     synthetic = _synthetic_oneof_indices(msg)
@@ -775,9 +848,11 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
-    println(io, is_cycle_participant ?
-            "struct $(jl_name) <: $(_abstract_name(jl_name))" :
-            "struct $(jl_name) <: PB.AbstractProtoBufMessage")
+    println(
+        io,
+        is_cycle_participant ? "struct $(jl_name) <: $(_abstract_name(jl_name))" :
+        "struct $(jl_name) <: PB.AbstractProtoBufMessage",
+    )
     param_names = String[]
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
@@ -853,7 +928,12 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io)
 
     # decode.
-    println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:", jl_name, "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)")
+    println(
+        io,
+        "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:",
+        jl_name,
+        "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)",
+    )
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, " = ", f.init_value)
         if f.is_required
@@ -886,10 +966,16 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     end
     if first_branch
         # No known fields at all — every tag is unknown.
-        println(io, "        PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)")
+        println(
+            io,
+            "        PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)",
+        )
     else
         println(io, "        else")
-        println(io, "            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)")
+        println(
+            io,
+            "            PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)",
+        )
         println(io, "        end")
     end
     println(io, "    end")
@@ -900,9 +986,14 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for f in plain_fields
         if f.is_required
             qname = repr(f.proto_name)
-            println(io, "    _saw_", f.jl_fieldname,
-                    " || throw(PB.DecodeError(\"required field \" * ", qname,
-                    " * \" missing\"))")
+            println(
+                io,
+                "    _saw_",
+                f.jl_fieldname,
+                " || throw(PB.DecodeError(\"required field \" * ",
+                qname,
+                " * \" missing\"))",
+            )
         end
     end
 
@@ -929,14 +1020,24 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # the old chained if/elseif.
     encode_plan = Tuple{Int,Function,Function}[]  # (number, encode!, sized!)
     for f in plain_fields
-        push!(encode_plan, (f.number,
-            io_ -> _emit_encode_field(io_, f),
-            io_ -> _emit_encoded_size_field(io_, f)))
+        push!(
+            encode_plan,
+            (
+                f.number,
+                io_ -> _emit_encode_field(io_, f),
+                io_ -> _emit_encoded_size_field(io_, f),
+            ),
+        )
     end
     for o in real_oneofs, m in o.members
-        push!(encode_plan, (m.number,
-            io_ -> _emit_encode_oneof_member(io_, o, m),
-            io_ -> _emit_encoded_size_oneof_member(io_, o, m)))
+        push!(
+            encode_plan,
+            (
+                m.number,
+                io_ -> _emit_encode_oneof_member(io_, o, m),
+                io_ -> _emit_encoded_size_oneof_member(io_, o, m),
+            ),
+        )
     end
     sort!(encode_plan; by = first)
 
@@ -974,16 +1075,25 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # Typesalt is derived deterministically from the proto FQN so
     # re-generation does not shift it.
     base_batteries_kw = "kwconstructor=true kwshow=true"
-    println(io, "@batteries ", jl_name, " ",
-            _join_kw(_join_kw(_format_typesalt_kw(proto_fqn), base_batteries_kw),
-                     batteries_kw))
+    println(
+        io,
+        "@batteries ",
+        jl_name,
+        " ",
+        _join_kw(_join_kw(_format_typesalt_kw(proto_fqn), base_batteries_kw), batteries_kw),
+    )
 
     # `default_keywords` supplies kwarg defaults for `kwconstructor` and
     # the omit-if-default predicate for `kwshow`. proto2 required
     # submessages have no sane default (their codegen placeholder is a
     # `Ref{T}()`), so we omit them — kwarg construction then errors
     # with `UndefKeywordError` if the user doesn't pass one.
-    println(io, "function PB.StructHelpers.default_keywords(::var\"#core\".Type{", jl_name, "})")
+    println(
+        io,
+        "function PB.StructHelpers.default_keywords(::var\"#core\".Type{",
+        jl_name,
+        "})",
+    )
     pieces = String[]
     for f in plain_fields
         if f.is_required && f.is_message
@@ -1017,25 +1127,80 @@ function _emit_decode_oneof_member(io::IO, o::OneofModel, m::FieldModel)
         # `nothing`. The Union{Nothing,T} `decode!` overload then
         # merges the new wire instance into the seeded value.
         elem = m.elem_jl_type
-        println(io, "            _v = Ref{Union{Nothing,$(elem)}}(",
-                "(!isnothing(", o.jl_fieldname, ") && ", o.jl_fieldname, ".name === :",
-                m.jl_fieldname, ") ? ", o.jl_fieldname, ".value::", elem, " : nothing)")
+        println(
+            io,
+            "            _v = Ref{Union{Nothing,$(elem)}}(",
+            "(!isnothing(",
+            o.jl_fieldname,
+            ") && ",
+            o.jl_fieldname,
+            ".name === :",
+            m.jl_fieldname,
+            ") ? ",
+            o.jl_fieldname,
+            ".value::",
+            elem,
+            " : nothing)",
+        )
         println(io, "            PB._decode!(_d, _v)")
-        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", _v[]::", elem, ")")
+        println(
+            io,
+            "            ",
+            o.jl_fieldname,
+            " = OneOf(:",
+            m.jl_fieldname,
+            ", _v[]::",
+            elem,
+            ")",
+        )
     elseif m.is_enum
-        println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, "))")
+        println(
+            io,
+            "            ",
+            o.jl_fieldname,
+            " = OneOf(:",
+            m.jl_fieldname,
+            ", PB._decode(_d, ",
+            m.elem_jl_type,
+            "))",
+        )
     else
         if !isempty(m.wire_annotation)
-            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, ", ", m.wire_annotation, "))")
+            println(
+                io,
+                "            ",
+                o.jl_fieldname,
+                " = OneOf(:",
+                m.jl_fieldname,
+                ", PB._decode(_d, ",
+                m.elem_jl_type,
+                ", ",
+                m.wire_annotation,
+                "))",
+            )
         else
-            println(io, "            ", o.jl_fieldname, " = OneOf(:", m.jl_fieldname, ", PB._decode(_d, ", m.elem_jl_type, "))")
+            println(
+                io,
+                "            ",
+                o.jl_fieldname,
+                " = OneOf(:",
+                m.jl_fieldname,
+                ", PB._decode(_d, ",
+                m.elem_jl_type,
+                "))",
+            )
         end
     end
 end
 
 # Wraps a one-line emission body in the `if !isnothing(_o) && _o.name ===
 # :member` guard that fires only when this member of the oneof is active.
-function _emit_oneof_member_guarded(io::IO, o::OneofModel, m::FieldModel, body::AbstractString)
+function _emit_oneof_member_guarded(
+    io::IO,
+    o::OneofModel,
+    m::FieldModel,
+    body::AbstractString,
+)
     println(io, "    let _o = _x.", o.jl_fieldname)
     println(io, "        if !isnothing(_o) && _o.name === :", m.jl_fieldname)
     println(io, "            ", body)
@@ -1050,7 +1215,12 @@ end
 
 function _emit_encoded_size_oneof_member(io::IO, o::OneofModel, m::FieldModel)
     args = isempty(m.wire_annotation) ? "" : ", $(m.wire_annotation)"
-    _emit_oneof_member_guarded(io, o, m, "encoded_size += PB._encoded_size(_o.value, $(m.number)$(args))")
+    _emit_oneof_member_guarded(
+        io,
+        o,
+        m,
+        "encoded_size += PB._encoded_size(_o.value, $(m.number)$(args))",
+    )
 end
 
 function _emit_decode_field(io::IO, f::FieldModel)
@@ -1061,7 +1231,14 @@ function _emit_decode_field(io::IO, f::FieldModel)
         if isempty(f.wire_annotation)
             println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
         else
-            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
+            println(
+                io,
+                "            PB._decode!(_d, ",
+                f.jl_fieldname,
+                ", ",
+                f.wire_annotation,
+                ")",
+            )
         end
     elseif f.is_message
         if f.is_repeated
@@ -1073,27 +1250,57 @@ function _emit_decode_field(io::IO, f::FieldModel)
         if f.is_repeated
             println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ")")
         else
-            println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ")")
+            println(
+                io,
+                "            ",
+                f.jl_fieldname,
+                " = PB._decode(_d, ",
+                f.elem_jl_type,
+                ")",
+            )
         end
     else
         if f.is_repeated
             if endswith(f.elem_jl_type, ".String") ||
-                    endswith(f.elem_jl_type, ".Vector{var\"#base\".UInt8}")
+               endswith(f.elem_jl_type, ".Vector{var\"#base\".UInt8}")
                 # Strings and bytes have no-wire-type BufferedVector decoders
                 # (decode.jl:107, 120). Bool/Float32/Float64 do *not* — they
                 # need the wire-type so the codec can switch between packed
                 # (LENGTH_DELIMITED) and unpacked (decode.jl:174).
                 println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
             elseif !isempty(f.wire_annotation)
-                println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ", ", f.wire_annotation, ")")
+                println(
+                    io,
+                    "            PB._decode!(_d, wire_type, ",
+                    f.jl_fieldname,
+                    ", ",
+                    f.wire_annotation,
+                    ")",
+                )
             else
                 println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ")")
             end
         else
             if !isempty(f.wire_annotation)
-                println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ", ", f.wire_annotation, ")")
+                println(
+                    io,
+                    "            ",
+                    f.jl_fieldname,
+                    " = PB._decode(_d, ",
+                    f.elem_jl_type,
+                    ", ",
+                    f.wire_annotation,
+                    ")",
+                )
             else
-                println(io, "            ", f.jl_fieldname, " = PB._decode(_d, ", f.elem_jl_type, ")")
+                println(
+                    io,
+                    "            ",
+                    f.jl_fieldname,
+                    " = PB._decode(_d, ",
+                    f.elem_jl_type,
+                    ")",
+                )
             end
         end
     end
@@ -1131,12 +1338,12 @@ function _emit_reserved_fields(io::IO, jl_name::String, msg::DescriptorProto)
         e = Int(something(getfield(r, Symbol("#end")), Int32(0)))
         push!(range_pieces, e - s == 1 ? string(s) : string(s, ":", e - 1))
     end
-    range_str = isempty(range_pieces) ?
-        "Union{Int,UnitRange{Int}}[]" :
+    range_str =
+        isempty(range_pieces) ? "Union{Int,UnitRange{Int}}[]" :
         string("Union{Int,UnitRange{Int}}[", join(range_pieces, ", "), "]")
 
-    name_str = isempty(names) ?
-        "String[]" :
+    name_str =
+        isempty(names) ? "String[]" :
         string("[", join(("\"$(n)\"" for n in names), ", "), "]")
 
     println(io, "function PB.reserved_fields(::var\"#core\".Type{", jl_name, "})")
@@ -1156,7 +1363,17 @@ function _emit_encode_field(io::IO, f::FieldModel)
         println(io, "        end")
         println(io, "    end")
     else
-        println(io, "    ", f.encode_skip, " && PB._encode(_e, ", f.number, ", _x.", f.jl_fieldname, args, ")")
+        println(
+            io,
+            "    ",
+            f.encode_skip,
+            " && PB._encode(_e, ",
+            f.number,
+            ", _x.",
+            f.jl_fieldname,
+            args,
+            ")",
+        )
     end
 end
 
@@ -1165,17 +1382,37 @@ function _emit_encoded_size_field(io::IO, f::FieldModel)
     if f.emit_unpacked_loop
         println(io, "    if !isempty(_x.", f.jl_fieldname, ")")
         println(io, "        for _v in _x.", f.jl_fieldname)
-        println(io, "            encoded_size += PB._encoded_size(_v, ", f.number, args, ")")
+        println(
+            io,
+            "            encoded_size += PB._encoded_size(_v, ",
+            f.number,
+            args,
+            ")",
+        )
         println(io, "        end")
         println(io, "    end")
     else
-        println(io, "    ", f.encode_skip, " && (encoded_size += PB._encoded_size(_x.", f.jl_fieldname, ", ", f.number, args, "))")
+        println(
+            io,
+            "    ",
+            f.encode_skip,
+            " && (encoded_size += PB._encoded_size(_x.",
+            f.jl_fieldname,
+            ", ",
+            f.number,
+            args,
+            "))",
+        )
     end
 end
 
-function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
-                    parent_proto::String = "",
-                    enumbatteries_kw::String = "")
+function _emit_enum(
+    io::IO,
+    e::EnumDescriptorProto,
+    parent_jl::String;
+    parent_proto::String = "",
+    enumbatteries_kw::String = "",
+)
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -1184,13 +1421,18 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
 
     allow_alias = e.options !== nothing && e.options.allow_alias === true
     if !allow_alias
-        members = join((string(something(v.name, ""), "=", Int(something(v.number, Int32(0)))) for v in e.value), " ")
+        members = join(
+            (
+                string(something(v.name, ""), "=", Int(something(v.number, Int32(0))))
+                for v in e.value
+            ),
+            " ",
+        )
         println(io, "@enumx ", jl_name, " ", members)
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
-        println(io, "@enumbatteries ", jl_name, ".T ",
-                _join_kw(salt_kw, enumbatteries_kw))
+        println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
         println(io)
         return
     end
@@ -1222,10 +1464,18 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
     # builds the enum module as a `baremodule`, which doesn't import
     # `Base.eval`.
     for (alias, canonical) in aliases
-        println(io, "var\"#core\".eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
+        println(
+            io,
+            "var\"#core\".eval(",
+            jl_name,
+            ", :(const ",
+            alias,
+            " = ",
+            canonical,
+            "))",
+        )
     end
-    println(io, "@enumbatteries ", jl_name, ".T ",
-            _join_kw(salt_kw, enumbatteries_kw))
+    println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
     println(io)
 end
 
@@ -1333,12 +1583,14 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
     # Cycle detection drops a self-edge iff it's a *direct-only*
     # self-reference (safe in Julia: `struct Foo; r::Union{Nothing,Foo}; end`
     # compiles fine).
-    direct_deps = Dict(fqn => filter(d -> d in keys(by_fqn),
-                                     _direct_message_deps(by_fqn[fqn], names))
-                       for fqn in order)
-    nested_deps = Dict(fqn => filter(d -> d in keys(by_fqn),
-                                     _nested_message_deps(by_fqn[fqn], names))
-                       for fqn in order)
+    direct_deps = Dict(
+        fqn => filter(d -> d in keys(by_fqn), _direct_message_deps(by_fqn[fqn], names))
+        for fqn in order
+    )
+    nested_deps = Dict(
+        fqn => filter(d -> d in keys(by_fqn), _nested_message_deps(by_fqn[fqn], names))
+        for fqn in order
+    )
     all_deps = Dict(fqn => union(direct_deps[fqn], nested_deps[fqn]) for fqn in order)
 
     function cycle_edges(node)
@@ -1396,7 +1648,10 @@ function _topo_sort(file::FileDescriptorProto, names::LocalNames)
                 # Skip edges that lead back into the cycle from inside it.
                 (node in cycle_participants && d in cycle_participants) && continue
                 # Direct-only self-loops are safe (Julia handles them).
-                d == node && (d in direct_deps[node]) && !(d in nested_deps[node]) && continue
+                d == node &&
+                    (d in direct_deps[node]) &&
+                    !(d in nested_deps[node]) &&
+                    continue
                 d in visiting && continue
                 dfs2(d)
             end
@@ -1446,10 +1701,15 @@ function _collect_cross_packages(file::FileDescriptorProto, names::LocalNames)
     return pkgs
 end
 
-codegen(file::FileDescriptorProto) = codegen(file, gather_universe([file]))
+function codegen(file::FileDescriptorProto)
+    codegen(file, gather_universe([file]))
+end
 
-function codegen(file::FileDescriptorProto, universe::Universe;
-                 config::AbstractDict = Dict{String,Any}())
+function codegen(
+    file::FileDescriptorProto,
+    universe::Universe;
+    config::AbstractDict = Dict{String,Any}(),
+)
     names = _make_local_names(universe, file)
     io = IOBuffer()
     proto_name = something(file.name, "<unknown>")
@@ -1463,7 +1723,7 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     # convention. User-supplied `[batteries]` / `[enumbatteries]`
     # tables in `config` forward as keyword arguments to those calls
     # (e.g. `kwshow=true`, `hash=false`).
-    batteries_kw     = _config_kw_table(config, "batteries")
+    batteries_kw = _config_kw_table(config, "batteries")
     enumbatteries_kw = _config_kw_table(config, "enumbatteries")
 
     println(io, "# Generated by ProtocGen. Do not edit.")
@@ -1537,9 +1797,13 @@ function codegen(file::FileDescriptorProto, universe::Universe;
 
     file_parent_proto = isempty(names.package) ? "" : ".$(names.package)"
     for e in file.enum_type
-        _emit_enum(io, e, "";
-                   parent_proto = file_parent_proto,
-                   enumbatteries_kw = enumbatteries_kw)
+        _emit_enum(
+            io,
+            e,
+            "";
+            parent_proto = file_parent_proto,
+            enumbatteries_kw = enumbatteries_kw,
+        )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
     # Build a cycle-aware `LocalNames` view. _resolve_typename consults
@@ -1572,9 +1836,14 @@ function codegen(file::FileDescriptorProto, universe::Universe;
         println(io)
     end
     for msg in sorted_msgs
-        _emit_message(io, msg, "", cycle_names;
-                      batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw)
+        _emit_message(
+            io,
+            msg,
+            "",
+            cycle_names;
+            batteries_kw = batteries_kw,
+            enumbatteries_kw = enumbatteries_kw,
+        )
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.
@@ -1586,14 +1855,24 @@ function codegen(file::FileDescriptorProto, universe::Universe;
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
-            println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:", abs_jl, "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)")
+            println(
+                io,
+                "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:",
+                abs_jl,
+                "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)",
+            )
             println(io, "    return PB._decode(_d, ", jl, ", _endpos, _group)")
             println(io, "end")
             # NOTE: invariant `Type{X}` (no `<:`) so the forwarding fires
             # only for the abstract supertype itself; the concrete struct
             # falls through to the generic walker via the
             # `T <: AbstractProtoBufMessage` method on `_decode_json_message`.
-            println(io, "function PB._decode_json_message(::var\"#core\".Type{", abs_jl, "}, json::AbstractDict; kw...)")
+            println(
+                io,
+                "function PB._decode_json_message(::var\"#core\".Type{",
+                abs_jl,
+                "}, json::AbstractDict; kw...)",
+            )
             println(io, "    return PB._decode_json_message(", jl, ", json; kw...)")
             println(io, "end")
         end
@@ -1620,8 +1899,10 @@ end
 # users need to set up — no per-package mapping required.
 # ----------------------------------------------------------------------------
 
-function codegen_driver(file_to_generate::Vector{String},
-                        by_name::Dict{String,FileDescriptorProto})
+function codegen_driver(
+    file_to_generate::Vector{String},
+    by_name::Dict{String,FileDescriptorProto},
+)
     # Topo sort the to-generate set by `dependency` so includes load in
     # dependency order. WKT and other already-loaded deps are filtered out.
     in_set = Set(file_to_generate)
@@ -1687,8 +1968,7 @@ function codegen_driver(file_to_generate::Vector{String},
         # the current `task_local_storage()[:SOURCE_PATH]` for relative
         # path resolution — so wrap with `joinpath(_PB_DIR, …)` to make
         # the include path resolve against this driver file's directory.
-        println(io, "Core.include(", mod_expr,
-                ", joinpath(_PB_DIR, ", repr(out_name), "))")
+        println(io, "Core.include(", mod_expr, ", joinpath(_PB_DIR, ", repr(out_name), "))")
     end
 
     println(io)
@@ -1701,7 +1981,9 @@ end
 struct _SkeletonNode
     children::Dict{String,_SkeletonNode}
 end
-_SkeletonNode() = _SkeletonNode(Dict{String,_SkeletonNode}())
+function _SkeletonNode()
+    _SkeletonNode(Dict{String,_SkeletonNode}())
+end
 
 function _build_skeleton_tree(pkg_set::Set{String})
     root = _SkeletonNode()
@@ -1715,13 +1997,17 @@ function _build_skeleton_tree(pkg_set::Set{String})
 end
 
 function _emit_empty_skeleton(io::IO, node::_SkeletonNode, name::String, depth::Int)
-    indent = "    " ^ depth
+    indent = "    "^depth
     if !isempty(name)
         println(io, indent, "module ", name)
     end
     for child_name in sort!(collect(keys(node.children)))
-        _emit_empty_skeleton(io, node.children[child_name], child_name,
-                             isempty(name) ? depth : depth + 1)
+        _emit_empty_skeleton(
+            io,
+            node.children[child_name],
+            child_name,
+            isempty(name) ? depth : depth + 1,
+        )
     end
     if !isempty(name)
         println(io, indent, "end # module ", name)

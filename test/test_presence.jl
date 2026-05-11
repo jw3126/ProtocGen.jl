@@ -6,7 +6,7 @@ include("setup.jl")
     # The whole point of presence: `maybe: 0` (explicit) and `maybe` unset
     # must NOT decode to the same Julia value. The two protoc-encoded payloads
     # come from fixtures/txtpb/outer_maybe_{zero,unset}.txtpb.
-    bytes_maybe_zero  = fixture("outer_maybe_zero.pb")
+    bytes_maybe_zero = fixture("outer_maybe_zero.pb")
     bytes_maybe_unset = fixture("outer_maybe_unset.pb")
 
     response = run_codegen("sample.pb", ["sample.proto"])
@@ -36,9 +36,9 @@ include("setup.jl")
     # Build the same two values directly via kwarg construction. `ci`/`cs`
     # collapse into the `choice` oneof field.
     nothing_outer = pb_make(sample_mod.Outer; name = "u")
-    zero_outer    = pb_make(sample_mod.Outer; name = "z", maybe = Int32(0))
+    zero_outer = pb_make(sample_mod.Outer; name = "z", maybe = Int32(0))
     @test encode_latest(nothing_outer) == bytes_maybe_unset
-    @test encode_latest(zero_outer)    == bytes_maybe_zero
+    @test encode_latest(zero_outer) == bytes_maybe_zero
 end
 
 end  # module TestPresence

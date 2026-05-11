@@ -28,9 +28,9 @@ include("setup.jl")
     # carries the range. Single-number reservations would collapse to
     # bare Int; this one stays a UnitRange.
     @test ProtocGen.reserved_fields(M) ==
-        (names = String[], numbers = Union{Int,UnitRange{Int}}[1000:9999])
+          (names = String[], numbers = Union{Int,UnitRange{Int}}[1000:9999])
 
-    full_pb  = fixture("test_messages_proto2_full.pb")
+    full_pb = fixture("test_messages_proto2_full.pb")
     empty_pb = fixture("test_messages_proto2_empty.pb")
     @test isempty(empty_pb)
 
@@ -40,28 +40,28 @@ include("setup.jl")
     full = decode_latest(M, full_pb)
 
     # Singular scalars across all 16 wire encodings.
-    @test full.optional_int32    == Int32(-123)
-    @test full.optional_int64    == Int64(-123456789012)
-    @test full.optional_uint32   == UInt32(4123456789)
-    @test full.optional_uint64   == UInt64(12345678901234567890)
-    @test full.optional_sint32   == Int32(-200)
-    @test full.optional_sint64   == Int64(-200000000000)
-    @test full.optional_fixed32  == UInt32(0xCAFEBABE)
-    @test full.optional_fixed64  == UInt64(0xDEADBEEFCAFEBABE)
+    @test full.optional_int32 == Int32(-123)
+    @test full.optional_int64 == Int64(-123456789012)
+    @test full.optional_uint32 == UInt32(4123456789)
+    @test full.optional_uint64 == UInt64(12345678901234567890)
+    @test full.optional_sint32 == Int32(-200)
+    @test full.optional_sint64 == Int64(-200000000000)
+    @test full.optional_fixed32 == UInt32(0xCAFEBABE)
+    @test full.optional_fixed64 == UInt64(0xDEADBEEFCAFEBABE)
     @test full.optional_sfixed32 == Int32(-2147483647)
     @test full.optional_sfixed64 == Int64(-9223372036854775807)
     @test isapprox(full.optional_float, 3.14f0; atol = 1.0f-6)
     @test isapprox(full.optional_double, 2.718281828459045; atol = 1e-12)
-    @test full.optional_bool     === true
-    @test full.optional_string   == "héllo"
-    @test full.optional_bytes    == UInt8[0xff, 0x00, 0xab]
+    @test full.optional_bool === true
+    @test full.optional_string == "héllo"
+    @test full.optional_bytes == UInt8[0xff, 0x00, 0xab]
 
     # Singular submessage and enum.
     @test full.optional_nested_message !== nothing
     @test full.optional_nested_message.a == Int32(42)
     @test full.optional_foreign_message !== nothing
     @test full.optional_foreign_message.c == Int32(99)
-    @test full.optional_nested_enum  == p2.var"TestAllTypesProto2.NestedEnum".NEG
+    @test full.optional_nested_enum == p2.var"TestAllTypesProto2.NestedEnum".NEG
     @test full.optional_foreign_enum == p2.ForeignEnumProto2.FOREIGN_BAR
 
     # Repeated, packed, unpacked.
@@ -69,12 +69,13 @@ include("setup.jl")
     @test full.repeated_string == ["a", "b"]
     @test length(full.repeated_nested_message) == 2
     @test full.repeated_nested_message[1].a == 10
-    @test full.repeated_nested_enum ==
-        [p2.var"TestAllTypesProto2.NestedEnum".FOO,
-         p2.var"TestAllTypesProto2.NestedEnum".BAR,
-         p2.var"TestAllTypesProto2.NestedEnum".NEG]
-    @test full.packed_int32   == Int32[1, 2, 3]
-    @test full.packed_bool    == [true, false]
+    @test full.repeated_nested_enum == [
+        p2.var"TestAllTypesProto2.NestedEnum".FOO,
+        p2.var"TestAllTypesProto2.NestedEnum".BAR,
+        p2.var"TestAllTypesProto2.NestedEnum".NEG,
+    ]
+    @test full.packed_int32 == Int32[1, 2, 3]
+    @test full.packed_bool == [true, false]
     @test full.unpacked_int32 == Int32[1, 2]
 
     # Maps.
@@ -91,15 +92,15 @@ include("setup.jl")
 
     # Default-annotated fields: wire path ignores `[default = X]`. Setting
     # any of them in the fixture must round-trip the *fixture* value.
-    @test full.default_int32  == Int32(1)
+    @test full.default_int32 == Int32(1)
     @test full.default_string == "override"
-    @test full.default_bool   === false  # upstream default is true; we set false
+    @test full.default_bool === false  # upstream default is true; we set false
 
     # Field-name munge battery — pick a few of the ugliest.
-    @test full._field_name3   == Int32(3)
-    @test full.field__name4_  == Int32(4)
+    @test full._field_name3 == Int32(3)
+    @test full.field__name4_ == Int32(4)
     @test full.__field_name13 == Int32(13)
-    @test full.FIELD_NAME11   == Int32(11)
+    @test full.FIELD_NAME11 == Int32(11)
 
     # Re-encode is byte-identical to the protoc fixture. Map fields are
     # OrderedDict so insertion order (= wire order on decode) survives the
@@ -127,10 +128,7 @@ include("setup.jl")
 end
 
 @testset "conformance corpus — proto3" begin
-    response = run_codegen(
-        "test_messages_proto3.pb",
-        ["test_messages_proto3.proto"],
-    )
+    response = run_codegen("test_messages_proto3.pb", ["test_messages_proto3.proto"])
     @test response.error === nothing
     @test length(response.file) == 1
     f = response.file[1]
@@ -143,16 +141,23 @@ end
     # features under test: cross-package import emission for WKT-typed
     # fields, abstract supertype + forwarding decode for the
     # `recursive_message` / `corecursive` cycle.
-    @test occursin("import ProtocGen.google.protobuf as google_protobuf",
-                   f.content)
-    @test occursin("optional_timestamp::Union{Nothing,google_protobuf.Timestamp}",
-                   f.content)
-    @test occursin("recursive_message::Union{Nothing,AbstractTestAllTypesProto3}",
-                   f.content)
-    @test occursin("@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
-                   f.content)
-    @test occursin("var\"#core\".eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
-                   f.content)
+    @test occursin("import ProtocGen.google.protobuf as google_protobuf", f.content)
+    @test occursin(
+        "optional_timestamp::Union{Nothing,google_protobuf.Timestamp}",
+        f.content,
+    )
+    @test occursin(
+        "recursive_message::Union{Nothing,AbstractTestAllTypesProto3}",
+        f.content,
+    )
+    @test occursin(
+        "@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
+        f.content,
+    )
+    @test occursin(
+        "var\"#core\".eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
+        f.content,
+    )
 
     p3 = eval_generated(f.content, :GeneratedConfP3)
     M = p3.TestAllTypesProto3
@@ -165,37 +170,37 @@ end
     @test Symbol(AE.MOO) === :ALIAS_BAZ
 
     @test ProtocGen.reserved_fields(M) ==
-        (names = String[], numbers = Union{Int,UnitRange{Int}}[501:510])
+          (names = String[], numbers = Union{Int,UnitRange{Int}}[501:510])
 
-    full_pb  = fixture("test_messages_proto3_full.pb")
+    full_pb = fixture("test_messages_proto3_full.pb")
     empty_pb = fixture("test_messages_proto3_empty.pb")
     @test isempty(empty_pb)
 
     full = decode_latest(M, full_pb)
 
     # Implicit-presence scalars are bare-typed (no Union{Nothing,...}).
-    @test full.optional_int32    === Int32(-123)
-    @test full.optional_int64    === Int64(-123456789012)
-    @test full.optional_uint32   === UInt32(4123456789)
-    @test full.optional_uint64   === UInt64(12345678901234567890)
-    @test full.optional_sint32   === Int32(-200)
-    @test full.optional_sint64   === Int64(-200000000000)
-    @test full.optional_fixed32  === UInt32(0xCAFEBABE)
-    @test full.optional_fixed64  === UInt64(0xDEADBEEFCAFEBABE)
+    @test full.optional_int32 === Int32(-123)
+    @test full.optional_int64 === Int64(-123456789012)
+    @test full.optional_uint32 === UInt32(4123456789)
+    @test full.optional_uint64 === UInt64(12345678901234567890)
+    @test full.optional_sint32 === Int32(-200)
+    @test full.optional_sint64 === Int64(-200000000000)
+    @test full.optional_fixed32 === UInt32(0xCAFEBABE)
+    @test full.optional_fixed64 === UInt64(0xDEADBEEFCAFEBABE)
     @test full.optional_sfixed32 === Int32(-2147483647)
     @test full.optional_sfixed64 === Int64(-9223372036854775807)
     @test isapprox(full.optional_float, 3.14f0; atol = 1.0f-6)
     @test isapprox(full.optional_double, 2.718281828459045; atol = 1e-12)
-    @test full.optional_bool     === true
-    @test full.optional_string   == "héllo"
-    @test full.optional_bytes    == UInt8[0xff, 0x00, 0xab]
+    @test full.optional_bool === true
+    @test full.optional_string == "héllo"
+    @test full.optional_bytes == UInt8[0xff, 0x00, 0xab]
 
     # Singular submessage and enum.
     @test full.optional_nested_message !== nothing
     @test full.optional_nested_message.a == Int32(42)
     @test full.optional_foreign_message !== nothing
     @test full.optional_foreign_message.c == Int32(99)
-    @test full.optional_nested_enum  == p3.var"TestAllTypesProto3.NestedEnum".NEG
+    @test full.optional_nested_enum == p3.var"TestAllTypesProto3.NestedEnum".NEG
     @test full.optional_foreign_enum == p3.ForeignEnum.FOREIGN_BAR
     # Aliased enum: txtpb sets the field to `MOO`, which is an alias for
     # `ALIAS_BAZ`. Decoded value is the canonical instance.
@@ -207,11 +212,12 @@ end
     @test full.repeated_string == ["a", "b"]
     @test length(full.repeated_nested_message) == 2
     @test full.repeated_nested_message[1].a == 10
-    @test full.repeated_nested_enum ==
-        [p3.var"TestAllTypesProto3.NestedEnum".FOO,
-         p3.var"TestAllTypesProto3.NestedEnum".BAR,
-         p3.var"TestAllTypesProto3.NestedEnum".NEG]
-    @test full.packed_int32   == Int32[1, 2, 3]
+    @test full.repeated_nested_enum == [
+        p3.var"TestAllTypesProto3.NestedEnum".FOO,
+        p3.var"TestAllTypesProto3.NestedEnum".BAR,
+        p3.var"TestAllTypesProto3.NestedEnum".NEG,
+    ]
+    @test full.packed_int32 == Int32[1, 2, 3]
     @test full.unpacked_int32 == Int32[1, 2]
 
     # Maps.
@@ -227,10 +233,10 @@ end
     @test full.oneof_field.value == "hello-oneof"
 
     # Field-name munge battery.
-    @test full._field_name3   == Int32(3)
-    @test full.field__name4_  == Int32(4)
+    @test full._field_name3 == Int32(3)
+    @test full.field__name4_ == Int32(4)
     @test full.__field_name13 == Int32(13)
-    @test full.FIELD_NAME11   == Int32(11)
+    @test full.FIELD_NAME11 == Int32(11)
 
     # Re-encode is byte-identical to the protoc fixture. Same OrderedDict +
     # negative-enum encode reasoning as the proto2 case above.

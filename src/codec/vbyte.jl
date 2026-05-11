@@ -1,13 +1,21 @@
 # https://discourse.julialang.org/t/allocation-due-to-noinline-for-unsafe-read-and-unsafe-write-in-io-jl/69421
-@inline function _unsafe_write(io::S, ref::Ref{T}, nb::Integer) where {T,S<:Union{BufferedOutputStream,BufferedInputStream}}
+@inline function _unsafe_write(
+    io::S,
+    ref::Ref{T},
+    nb::Integer,
+) where {T,S<:Union{BufferedOutputStream,BufferedInputStream}}
     GC.@preserve ref unsafe_write(io, Base.unsafe_convert(Ref{T}, ref)::Ptr, nb)
 end
-@noinline _reached_maxsize_error(io::IOBuffer, nb) = throw(ArgumentError("Cannot write $nb bytes to IOBuffer at position $(position(io)) with maxsize $(io.maxsize)"))
+@noinline _reached_maxsize_error(io::IOBuffer, nb) = throw(
+    ArgumentError(
+        "Cannot write $nb bytes to IOBuffer at position $(position(io)) with maxsize $(io.maxsize)",
+    ),
+)
 @inline function _unsafe_write(io::IOBuffer, ref::Ref{T}, nb::Integer) where {T}
     io.ptr - 1 + nb > io.maxsize && _reached_maxsize_error(io, nb)
     GC.@preserve ref unsafe_write(io, Base.unsafe_convert(Ref{T}, ref)::Ptr, nb)
 end
-@inline function _unsafe_write(io::IO, ref::Ref{T}, nb::Integer) where T
+@inline function _unsafe_write(io::IO, ref::Ref{T}, nb::Integer) where {T}
     unsafe_write(io, ref, nb)
 end
 
@@ -88,37 +96,34 @@ end
     if (x < (one(UInt32) << 7))
         _unsafe_write(io, Ref(UInt8(x & 0x7F)), 1)
     elseif (x < (one(UInt32) << 14))
-        _unsafe_write(io,
+        _unsafe_write(io, Ref((UInt8(((x >> 0) & 0x7F) | (1 << 7)), UInt8(((x >> 7))))), 2)
+    elseif (x < (one(UInt32) << 21))
+        _unsafe_write(
+            io,
             Ref((
                 UInt8(((x >> 0) & 0x7F) | (1 << 7)),
-                UInt8(((x >> 7))),
-            )),
-            2,
-        )
-    elseif (x < (one(UInt32) << 21))
-        _unsafe_write(io,
-            Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14))),
             )),
             3,
         )
     elseif (x < (one(UInt32) << 28))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21))),
             )),
             4,
         )
     else
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28))),
@@ -126,44 +131,41 @@ end
             5,
         )
     end
-    return nothing;
+    return nothing
 end
 
 @inline function vbyte_encode(io::IO, x::UInt64)
     if (x < (one(UInt64) << 7))
         _unsafe_write(io, Ref(UInt8(x & 0x7F)), 1)
     elseif (x < (one(UInt64) << 14))
-        _unsafe_write(io,
+        _unsafe_write(io, Ref((UInt8(((x >> 0) & 0x7F) | (1 << 7)), UInt8(((x >> 7))))), 2)
+    elseif (x < (one(UInt64) << 21))
+        _unsafe_write(
+            io,
             Ref((
                 UInt8(((x >> 0) & 0x7F) | (1 << 7)),
-                UInt8(((x >> 7))),
-            )),
-            2,
-        )
-    elseif (x < (one(UInt64) << 21))
-        _unsafe_write(io,
-            Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14))),
             )),
             3,
         )
     elseif (x < (one(UInt64) << 28))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21))),
             )),
             4,
         )
     elseif (x < (one(UInt64) << 35))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28))),
@@ -171,10 +173,11 @@ end
             5,
         )
     elseif (x < (one(UInt64) << 42))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28) & 0x7F) | (1 << 7)),
@@ -183,10 +186,11 @@ end
             6,
         )
     elseif (x < (one(UInt64) << 49))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28) & 0x7F) | (1 << 7)),
@@ -196,10 +200,11 @@ end
             7,
         )
     elseif (x < (one(UInt64) << 56))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28) & 0x7F) | (1 << 7)),
@@ -210,10 +215,11 @@ end
             8,
         )
     elseif (x < (one(UInt64) << 63))
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28) & 0x7F) | (1 << 7)),
@@ -225,10 +231,11 @@ end
             9,
         )
     else
-        _unsafe_write(io,
+        _unsafe_write(
+            io,
             Ref((
-                UInt8(((x >>  0) & 0x7F) | (1 << 7)),
-                UInt8(((x >>  7) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 0) & 0x7F) | (1 << 7)),
+                UInt8(((x >> 7) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 14) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 21) & 0x7F) | (1 << 7)),
                 UInt8(((x >> 28) & 0x7F) | (1 << 7)),
@@ -241,5 +248,5 @@ end
             10,
         )
     end
-    return nothing;
+    return nothing
 end

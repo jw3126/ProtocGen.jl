@@ -32,7 +32,9 @@ function pb_make(T, args...; kwargs...)
     end
 end
 
-_parsed(x) = JSON.parse(encode_json(x))
+function _parsed(x)
+    JSON.parse(encode_json(x))
+end
 
 # Build a message of type `T` from `default_values(T)`, with the given
 # overrides merged in. Lets us touch only the fields a test cares about
@@ -62,7 +64,8 @@ end
     @testset "scalars: 64-bit ints emitted as JSON strings" begin
         # UninterpretedOption.positive_int_value :: Union{Nothing,UInt64};
         # negative_int_value :: Union{Nothing,Int64}.
-        u = pb_make(_G.UninterpretedOption, 
+        u = pb_make(
+            _G.UninterpretedOption,
             _G.var"UninterpretedOption.NamePart"[],
             nothing,                           # identifier_value
             UInt64(123456789012345),           # positive_int_value
@@ -75,17 +78,22 @@ end
         @test d["positiveIntValue"] == "123456789012345"
         @test d["negativeIntValue"] == "-987654321098765"
         # Decode accepts string and number forms for 64-bit.
-        back = decode_json(_G.UninterpretedOption,
-            "{\"positiveIntValue\": \"42\", \"negativeIntValue\": -7}")
+        back = decode_json(
+            _G.UninterpretedOption,
+            "{\"positiveIntValue\": \"42\", \"negativeIntValue\": -7}",
+        )
         @test back.positive_int_value == 42
         @test back.negative_int_value == -7
     end
 
     @testset "scalars: float / double / bytes / string" begin
         # UninterpretedOption.double_value :: Union{Nothing,Float64}
-        u = pb_make(_G.UninterpretedOption, 
+        u = pb_make(
+            _G.UninterpretedOption,
             _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing,
+            nothing,
+            nothing,
+            nothing,
             2.71828,
             nothing,
             nothing,
@@ -94,43 +102,78 @@ end
         @test d["doubleValue"] ≈ 2.71828
 
         # bytes (UninterpretedOption.string_value)
-        u2 = pb_make(_G.UninterpretedOption, 
+        u2 = pb_make(
+            _G.UninterpretedOption,
             _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing, nothing,
+            nothing,
+            nothing,
+            nothing,
+            nothing,
             UInt8[0x68, 0x69],   # "hi" → "aGk="
             nothing,
         )
         @test _parsed(u2)["stringValue"] == "aGk="
-        back = decode_json(_G.UninterpretedOption,
-            "{\"stringValue\": \"aGk=\"}")
+        back = decode_json(_G.UninterpretedOption, "{\"stringValue\": \"aGk=\"}")
         @test back.string_value == UInt8[0x68, 0x69]
 
         # string (aggregate_value)
-        u3 = pb_make(_G.UninterpretedOption, 
+        u3 = pb_make(
+            _G.UninterpretedOption,
             _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing, nothing, nothing,
+            nothing,
+            nothing,
+            nothing,
+            nothing,
+            nothing,
             "hello \"world\"",
         )
         @test _parsed(u3)["aggregateValue"] == "hello \"world\""
     end
 
     @testset "floats: NaN and ±Infinity emitted as JSON strings" begin
-        u_nan = pb_make(_G.UninterpretedOption, _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing, NaN, nothing, nothing)
+        u_nan = pb_make(
+            _G.UninterpretedOption,
+            _G.var"UninterpretedOption.NamePart"[],
+            nothing,
+            nothing,
+            nothing,
+            NaN,
+            nothing,
+            nothing,
+        )
         @test _parsed(u_nan)["doubleValue"] == "NaN"
 
-        u_inf = pb_make(_G.UninterpretedOption, _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing, Inf, nothing, nothing)
+        u_inf = pb_make(
+            _G.UninterpretedOption,
+            _G.var"UninterpretedOption.NamePart"[],
+            nothing,
+            nothing,
+            nothing,
+            Inf,
+            nothing,
+            nothing,
+        )
         @test _parsed(u_inf)["doubleValue"] == "Infinity"
 
-        u_ninf = pb_make(_G.UninterpretedOption, _G.var"UninterpretedOption.NamePart"[],
-            nothing, nothing, nothing, -Inf, nothing, nothing)
+        u_ninf = pb_make(
+            _G.UninterpretedOption,
+            _G.var"UninterpretedOption.NamePart"[],
+            nothing,
+            nothing,
+            nothing,
+            -Inf,
+            nothing,
+            nothing,
+        )
         @test _parsed(u_ninf)["doubleValue"] == "-Infinity"
 
-        @test isnan(decode_json(_G.UninterpretedOption,
-            "{\"doubleValue\": \"NaN\"}").double_value)
-        @test decode_json(_G.UninterpretedOption,
-            "{\"doubleValue\": \"Infinity\"}").double_value == Inf
+        @test isnan(
+            decode_json(_G.UninterpretedOption, "{\"doubleValue\": \"NaN\"}").double_value,
+        )
+        @test decode_json(
+            _G.UninterpretedOption,
+            "{\"doubleValue\": \"Infinity\"}",
+        ).double_value == Inf
     end
 
     @testset "default fields are omitted on encode" begin
@@ -148,9 +191,9 @@ end
         # default-skip predicate would otherwise drop it; the fix in
         # `_encode_json_message` is to disable default-skip for fields
         # whose declared type is `Union{Nothing,X}`.
-        f_set   = _make(_G.FieldDescriptorProto; name = "")
+        f_set = _make(_G.FieldDescriptorProto; name = "")
         f_unset = _make(_G.FieldDescriptorProto)  # name stays nothing
-        @test  haskey(_parsed(f_set),   "name") && _parsed(f_set)["name"]   == ""
+        @test haskey(_parsed(f_set), "name") && _parsed(f_set)["name"] == ""
         @test !haskey(_parsed(f_unset), "name")
         # Round-trip preserves the empty-string presence.
         @test decode_json(_G.FieldDescriptorProto, encode_json(f_set)).name == ""
@@ -158,8 +201,7 @@ end
     end
 
     @testset "JSON null on a presence-bearing field → use default" begin
-        back = decode_json(_G.FieldDescriptorProto,
-            "{\"name\": \"foo\", \"number\": null}")
+        back = decode_json(_G.FieldDescriptorProto, "{\"name\": \"foo\", \"number\": null}")
         @test back.name == "foo"
         @test back.number === nothing  # default for the optional field
     end
@@ -168,8 +210,8 @@ end
         T = _G.var"UninterpretedOption.NamePart"
         x_camel = decode_json(T, "{\"namePart\": \"hi\", \"isExtension\": true}")
         x_snake = decode_json(T, "{\"name_part\": \"hi\", \"is_extension\": true}")
-        @test x_camel.name_part == "hi"      == x_snake.name_part
-        @test x_camel.is_extension == true   == x_snake.is_extension
+        @test x_camel.name_part == "hi" == x_snake.name_part
+        @test x_camel.is_extension == true == x_snake.is_extension
     end
 
     @testset "encode emits camelCase keys" begin
@@ -214,9 +256,9 @@ end
     # -------------------------------------------------------------------------
 
     @testset "WKT: wrappers emit/parse as bare scalar" begin
-        @test encode_json(pb_make(_G.BoolValue, true))  == "true"
+        @test encode_json(pb_make(_G.BoolValue, true)) == "true"
         @test encode_json(pb_make(_G.BoolValue, false)) == "false"
-        @test decode_json(_G.BoolValue, "true").value  == true
+        @test decode_json(_G.BoolValue, "true").value == true
         @test decode_json(_G.BoolValue, "false").value == false
 
         @test JSON.parse(encode_json(pb_make(_G.StringValue, "hi"))) == "hi"
@@ -228,7 +270,8 @@ end
         @test encode_json(pb_make(_G.Int32Value, Int32(-7))) == "-7"
         @test decode_json(_G.Int32Value, "42").value === Int32(42)
 
-        @test encode_json(pb_make(_G.Int64Value, Int64(123456789012345))) == "\"123456789012345\""
+        @test encode_json(pb_make(_G.Int64Value, Int64(123456789012345))) ==
+              "\"123456789012345\""
         @test decode_json(_G.Int64Value, "\"42\"").value == 42
         @test decode_json(_G.Int64Value, "42").value == 42
 
@@ -247,29 +290,46 @@ end
         @test occursin(r"^\"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\"$", s)
         back = decode_json(_G.Timestamp, s)
         @test back.seconds == ts.seconds
-        @test back.nanos   == ts.nanos
+        @test back.nanos == ts.nanos
         # No fractional when nanos == 0.
-        @test !occursin('.', encode_json(pb_make(_G.Timestamp, Int64(1715188800), Int32(0))))
+        @test !occursin(
+            '.',
+            encode_json(pb_make(_G.Timestamp, Int64(1715188800), Int32(0))),
+        )
         # Fractional precision picks 3 / 6 / 9 trailing digits.
-        @test occursin(".100Z",       encode_json(pb_make(_G.Timestamp, Int64(0), Int32(100_000_000))))
-        @test occursin(".000123Z",    encode_json(pb_make(_G.Timestamp, Int64(0), Int32(123_000))))
-        @test occursin(".000000007Z", encode_json(pb_make(_G.Timestamp, Int64(0), Int32(7))))
+        @test occursin(
+            ".100Z",
+            encode_json(pb_make(_G.Timestamp, Int64(0), Int32(100_000_000))),
+        )
+        @test occursin(
+            ".000123Z",
+            encode_json(pb_make(_G.Timestamp, Int64(0), Int32(123_000))),
+        )
+        @test occursin(
+            ".000000007Z",
+            encode_json(pb_make(_G.Timestamp, Int64(0), Int32(7))),
+        )
         # Timezone offset on parse normalizes to UTC.
         back_tz = decode_json(_G.Timestamp, "\"2024-05-08T00:00:00+02:00\"")
-        @test back_tz.seconds == decode_json(_G.Timestamp, "\"2024-05-07T22:00:00Z\"").seconds
+        @test back_tz.seconds ==
+              decode_json(_G.Timestamp, "\"2024-05-07T22:00:00Z\"").seconds
     end
 
     @testset "WKT: Duration string" begin
-        @test encode_json(pb_make(_G.Duration, Int64(0), Int32(0)))         == "\"0s\""
-        @test encode_json(pb_make(_G.Duration, Int64(1), Int32(500_000_000))) == "\"1.500s\""
-        @test encode_json(pb_make(_G.Duration, Int64(-1), Int32(-500_000_000))) == "\"-1.500s\""
-        @test encode_json(pb_make(_G.Duration, Int64(3), Int32(1)))         == "\"3.000000001s\""
-        for d in (pb_make(_G.Duration, Int64(0), Int32(0)),
-                  pb_make(_G.Duration, Int64(7), Int32(123_000_000)),
-                  pb_make(_G.Duration, Int64(-12), Int32(-500_000_000)))
+        @test encode_json(pb_make(_G.Duration, Int64(0), Int32(0))) == "\"0s\""
+        @test encode_json(pb_make(_G.Duration, Int64(1), Int32(500_000_000))) ==
+              "\"1.500s\""
+        @test encode_json(pb_make(_G.Duration, Int64(-1), Int32(-500_000_000))) ==
+              "\"-1.500s\""
+        @test encode_json(pb_make(_G.Duration, Int64(3), Int32(1))) == "\"3.000000001s\""
+        for d in (
+            pb_make(_G.Duration, Int64(0), Int32(0)),
+            pb_make(_G.Duration, Int64(7), Int32(123_000_000)),
+            pb_make(_G.Duration, Int64(-12), Int32(-500_000_000)),
+        )
             back = decode_json(_G.Duration, encode_json(d))
             @test back.seconds == d.seconds
-            @test back.nanos   == d.nanos
+            @test back.nanos == d.nanos
         end
     end
 
@@ -296,12 +356,15 @@ end
     end
 
     @testset "WKT: ListValue ↔ JSON array passthrough" begin
-        lv = pb_make(_G.ListValue, _G.AbstractValue[
-            pb_make(_G.Value, OneOf(:number_value, 1.0)),
-            pb_make(_G.Value, OneOf(:string_value, "two")),
-            pb_make(_G.Value, OneOf(:bool_value, true)),
-            pb_make(_G.Value, OneOf(:null_value, _G.NullValue.NULL_VALUE)),
-        ])
+        lv = pb_make(
+            _G.ListValue,
+            _G.AbstractValue[
+                pb_make(_G.Value, OneOf(:number_value, 1.0)),
+                pb_make(_G.Value, OneOf(:string_value, "two")),
+                pb_make(_G.Value, OneOf(:bool_value, true)),
+                pb_make(_G.Value, OneOf(:null_value, _G.NullValue.NULL_VALUE)),
+            ],
+        )
         @test encode_json(lv) == "[1.0,\"two\",true,null]"
         back = decode_json(_G.ListValue, "[1.0,\"two\",true,null]")
         @test length(back.values) == 4
@@ -325,15 +388,18 @@ end
     end
 
     @testset "WKT: Empty ↔ {}" begin
-        @test encode_json(pb_make(_G.Empty, )) == "{}"
+        @test encode_json(pb_make(_G.Empty)) == "{}"
         @test decode_json(_G.Empty, "{}") isa _G.Empty
     end
 
     @testset "WKT: Any wraps WKTs as `{\"@type\": …, \"value\": …}`" begin
         # Any wrapping a Timestamp: WKT special form under "value".
         ts = pb_make(_G.Timestamp, Int64(1715188800), Int32(0))
-        a = pb_make(_G.var"Any", "type.googleapis.com/google.protobuf.Timestamp",
-                        ProtocGen.encode(ts))
+        a = pb_make(
+            _G.var"Any",
+            "type.googleapis.com/google.protobuf.Timestamp",
+            ProtocGen.encode(ts),
+        )
         d = JSON.parse(encode_json(a))
         @test d["@type"] == "type.googleapis.com/google.protobuf.Timestamp"
         @test endswith(d["value"], "Z")
@@ -341,12 +407,15 @@ end
         back_a = decode_json(_G.var"Any", encode_json(a))
         back_ts = ProtocGen.decode(back_a.value, _G.Timestamp)
         @test back_ts.seconds == ts.seconds
-        @test back_ts.nanos   == ts.nanos
+        @test back_ts.nanos == ts.nanos
 
         # Any wrapping a BoolValue.
         bv = pb_make(_G.BoolValue, true)
-        a2 = pb_make(_G.var"Any", "type.googleapis.com/google.protobuf.BoolValue",
-                         ProtocGen.encode(bv))
+        a2 = pb_make(
+            _G.var"Any",
+            "type.googleapis.com/google.protobuf.BoolValue",
+            ProtocGen.encode(bv),
+        )
         d2 = JSON.parse(encode_json(a2))
         @test d2["@type"] == "type.googleapis.com/google.protobuf.BoolValue"
         @test d2["value"] == true
@@ -354,11 +423,14 @@ end
 
     @testset "WKT: Any wraps ordinary messages with fields inlined" begin
         sc = pb_make(_G.SourceContext, "foo.proto")
-        a = pb_make(_G.var"Any", "type.googleapis.com/google.protobuf.SourceContext",
-                        ProtocGen.encode(sc))
+        a = pb_make(
+            _G.var"Any",
+            "type.googleapis.com/google.protobuf.SourceContext",
+            ProtocGen.encode(sc),
+        )
         d = JSON.parse(encode_json(a))
         @test d == Dict(
-            "@type"    => "type.googleapis.com/google.protobuf.SourceContext",
+            "@type" => "type.googleapis.com/google.protobuf.SourceContext",
             "fileName" => "foo.proto",
         )
         # Round-trip
@@ -376,10 +448,10 @@ end
 
     @testset "lookup_message_type covers self-bootstrap WKTs and descriptors" begin
         @test ProtocGen.lookup_message_type("google.protobuf.Timestamp") === _G.Timestamp
-        @test ProtocGen.lookup_message_type("google.protobuf.FileDescriptorProto") === _G.FileDescriptorProto
+        @test ProtocGen.lookup_message_type("google.protobuf.FileDescriptorProto") ===
+              _G.FileDescriptorProto
         @test ProtocGen.lookup_message_type("nonexistent.Foo") === nothing
     end
-
 end
 
 end # module

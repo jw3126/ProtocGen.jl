@@ -7,7 +7,7 @@ include("setup.jl")
     # `name: "the-name" / nested { v: 7 } / maybe: 0 / hint: "hi"`; the
     # explicit `maybe: 0` is the presence signal we care about. `p2_minimal.pb`
     # leaves both optionals unset.
-    p2_full_pb    = fixture("p2_full.pb")
+    p2_full_pb = fixture("p2_full.pb")
     p2_minimal_pb = fixture("p2_minimal.pb")
 
     response = run_codegen("p2.pb", ["p2.proto"])
@@ -30,16 +30,16 @@ include("setup.jl")
     @test full.name == "the-name"
     @test full.nested.v == 7
     @test full.maybe === Int32(0)
-    @test full.hint  === "hi"
+    @test full.hint === "hi"
 
     minimal = decode_latest(p2_mod.Wrap, p2_minimal_pb)
     @test minimal.name == "n"
     @test minimal.nested.v == 1
     @test minimal.maybe === nothing
-    @test minimal.hint  === nothing
+    @test minimal.hint === nothing
 
     # Re-encoded bytes match what protoc would have emitted, byte-identically.
-    @test encode_latest(full)    == p2_full_pb
+    @test encode_latest(full) == p2_full_pb
     @test encode_latest(minimal) == p2_minimal_pb
 
     # Missing required → clear DecodeError. Hand-crafted bytes: only the

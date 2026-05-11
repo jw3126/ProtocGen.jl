@@ -48,9 +48,12 @@ end
     request = GC.CodeGeneratorRequest()
     req_bytes = ProtocGen.encode(request)
 
-    in_pipe = Pipe();  Base.link_pipe!(in_pipe)
-    write(in_pipe.in, req_bytes); close(in_pipe.in)
-    out_pipe = Pipe(); Base.link_pipe!(out_pipe)
+    in_pipe = Pipe()
+    Base.link_pipe!(in_pipe)
+    write(in_pipe.in, req_bytes)
+    close(in_pipe.in)
+    out_pipe = Pipe()
+    Base.link_pipe!(out_pipe)
 
     rc = redirect_stdin(in_pipe) do
         redirect_stdout(out_pipe) do
@@ -67,7 +70,8 @@ end
     @test response.supported_features == UInt64(1)
 
     # Unexpected positional args → exit 2, no stdout output.
-    out_pipe2 = Pipe(); Base.link_pipe!(out_pipe2)
+    out_pipe2 = Pipe()
+    Base.link_pipe!(out_pipe2)
     rc2 = redirect_stdout(out_pipe2) do
         ProtocGen.PluginApp.main(["--unexpected"])
     end

@@ -2,7 +2,15 @@ module Codecs
 
 using BufferedStreams: BufferedOutputStream, BufferedInputStream
 
-@enum(WireType::UInt32, VARINT=0, FIXED64=1, LENGTH_DELIMITED=2, START_GROUP=3, END_GROUP=4, FIXED32=5)
+@enum(
+    WireType::UInt32,
+    VARINT = 0,
+    FIXED64 = 1,
+    LENGTH_DELIMITED = 2,
+    START_GROUP = 3,
+    END_GROUP = 4,
+    FIXED32 = 5
+)
 
 abstract type AbstractProtoDecoder end
 abstract type AbstractProtoEncoder end
@@ -39,10 +47,10 @@ struct ProtoEncoder{I<:IO} <: AbstractProtoEncoder
     io::I
 end
 
-function zigzag_encode(x::T) where {T <: Integer}
+function zigzag_encode(x::T) where {T<:Integer}
     return xor(x << 1, x >> (8 * sizeof(T) - 1))
 end
-function zigzag_decode(x::T) where {T <: Integer}
+function zigzag_decode(x::T) where {T<:Integer}
     return xor(x >> 1, -(x & T(1)))
 end
 
@@ -66,7 +74,9 @@ end
     buffer.occupied += 1
     @inbounds buffer.elements[buffer.occupied] = x
 end
-function _grow_by(::Type{T}) where {T<:Union{UInt32,UInt64,Int64,Int32,Enum{Int32},Enum{UInt32}}}
+function _grow_by(
+    ::Type{T},
+) where {T<:Union{UInt32,UInt64,Int64,Int32,Enum{Int32},Enum{UInt32}}}
     return div(128, sizeof(T))
 end
 function _grow_by(::Type)

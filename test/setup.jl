@@ -7,14 +7,16 @@ using Test
 using ProtocGen
 
 # Namespace aliases used everywhere we touch protoc output.
-const G  = ProtocGen.google.protobuf
+const G = ProtocGen.google.protobuf
 const GC = ProtocGen.google.protobuf.compiler
 
 # Test fixtures live in test/fixtures/pb/ as committed binary blobs;
 # fixtures/README.md documents the layout and the regen recipe
 # (`julia test/fixtures/regen.jl`).
 const FIXTURES = joinpath(@__DIR__, "fixtures", "pb")
-fixture(name) = read(joinpath(FIXTURES, name))
+function fixture(name)
+    read(joinpath(FIXTURES, name))
+end
 
 # Decode a FileDescriptorSet straight out of a fixture name.
 function load_fdset(name::AbstractString)
@@ -31,10 +33,8 @@ hand it to `run_plugin`, and return the decoded response.
 """
 function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
     fdset = load_fdset(fdset_fixture)
-    request = GC.CodeGeneratorRequest(
-        file_to_generate = proto_paths,
-        proto_file = fdset.file,
-    )
+    request =
+        GC.CodeGeneratorRequest(; file_to_generate = proto_paths, proto_file = fdset.file)
     req_bytes = ProtocGen.encode(request)
     out_io = IOBuffer()
     return ProtocGen.run_plugin(IOBuffer(req_bytes), out_io)

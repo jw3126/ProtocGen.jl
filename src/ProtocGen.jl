@@ -48,8 +48,18 @@ include("codec/Codecs.jl")
 @inline Codecs._merge_structs(::OneOf, s2::OneOf) = s2
 
 import .Codecs
-import .Codecs: _decode, _decode!, _encode, AbstractProtoDecoder, AbstractProtoEncoder,
-    ProtoDecoder, ProtoEncoder, BufferedVector, message_done, decode_tag, _encoded_size,
+import .Codecs:
+    _decode,
+    _decode!,
+    _encode,
+    AbstractProtoDecoder,
+    AbstractProtoEncoder,
+    ProtoDecoder,
+    ProtoEncoder,
+    BufferedVector,
+    message_done,
+    decode_tag,
+    _encoded_size,
     _skip_and_capture!
 
 abstract type AbstractProtoBufMessage end
@@ -143,6 +153,11 @@ include("testing.jl")
 
 export encode, decode, encode_json, decode_json
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
-export reserved_fields, extendable_field_numbers, oneof_field_types, field_numbers, default_values, json_field_names
+export reserved_fields,
+    extendable_field_numbers,
+    oneof_field_types,
+    field_numbers,
+    default_values,
+    json_field_names
 
 end # module

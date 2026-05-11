@@ -12,24 +12,24 @@
 
 import Dates
 
-const _G  = google.protobuf
-const _Empty       = _G.Empty
-const _Timestamp   = _G.Timestamp
-const _Duration    = _G.Duration
-const _FieldMask   = _G.FieldMask
-const _NullValue   = _G.NullValue
-const _Struct      = _G.Struct
-const _Value       = _G.Value
-const _ListValue   = _G.ListValue
-const _Any_        = _G.var"Any"   # `Any` is a Core type; the WKT shadows it inside _G
+const _G = google.protobuf
+const _Empty = _G.Empty
+const _Timestamp = _G.Timestamp
+const _Duration = _G.Duration
+const _FieldMask = _G.FieldMask
+const _NullValue = _G.NullValue
+const _Struct = _G.Struct
+const _Value = _G.Value
+const _ListValue = _G.ListValue
+const _Any_ = _G.var"Any"   # `Any` is a Core type; the WKT shadows it inside _G
 
 # All 9 wrapper types.
-const _BoolValue   = _G.BoolValue
-const _BytesValue  = _G.BytesValue
+const _BoolValue = _G.BoolValue
+const _BytesValue = _G.BytesValue
 const _DoubleValue = _G.DoubleValue
-const _FloatValue  = _G.FloatValue
-const _Int32Value  = _G.Int32Value
-const _Int64Value  = _G.Int64Value
+const _FloatValue = _G.FloatValue
+const _Int32Value = _G.Int32Value
+const _Int64Value = _G.Int64Value
 const _StringValue = _G.StringValue
 const _UInt32Value = _G.UInt32Value
 const _UInt64Value = _G.UInt64Value
@@ -39,15 +39,33 @@ const _UInt64Value = _G.UInt64Value
 # -----------------------------------------------------------------------------
 
 # Encode side: each wrapper passes through to its wrapped value.
-function _encode_json_value(io::IO, v::_BoolValue);   _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_BytesValue);  _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_DoubleValue); _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_FloatValue);  _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_Int32Value);  _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_Int64Value);  _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_StringValue); _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_UInt32Value); _encode_json_value(io, v.value); end
-function _encode_json_value(io::IO, v::_UInt64Value); _encode_json_value(io, v.value); end
+function _encode_json_value(io::IO, v::_BoolValue)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_BytesValue)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_DoubleValue)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_FloatValue)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_Int32Value)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_Int64Value)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_StringValue)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_UInt32Value)
+    _encode_json_value(io, v.value)
+end
+function _encode_json_value(io::IO, v::_UInt64Value)
+    _encode_json_value(io, v.value)
+end
 
 # Decode side: the JSON value is a scalar (or scalar-string), reconstruct
 # the wrapper. Typing each method against `Real` / `AbstractString` /
@@ -55,21 +73,51 @@ function _encode_json_value(io::IO, v::_UInt64Value); _encode_json_value(io, v.v
 # `_decode_json_value(::Type{T}, ::AbstractDict)` for messages — Dict
 # input falls to the message walker (which accepts the
 # `{"value": …}` envelope as a friendly fallback).
-function _decode_json_value(::Type{_BoolValue},   v::Bool;           kw...); return _BoolValue(v, UInt8[]); end
-function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...); return _StringValue(String(v), UInt8[]); end
-function _decode_json_value(::Type{_BytesValue},  v::AbstractString; kw...); return _BytesValue(_base64_decode(v), UInt8[]); end
-function _decode_json_value(::Type{_DoubleValue}, v::Real;           kw...); return _DoubleValue(Float64(v), UInt8[]); end
-function _decode_json_value(::Type{_DoubleValue}, v::AbstractString; kw...); return _DoubleValue(_decode_json_value(Float64, v; kw...), UInt8[]); end
-function _decode_json_value(::Type{_FloatValue},  v::Real;           kw...); return _FloatValue(Float32(v), UInt8[]); end
-function _decode_json_value(::Type{_FloatValue},  v::AbstractString; kw...); return _FloatValue(_decode_json_value(Float32, v; kw...), UInt8[]); end
-function _decode_json_value(::Type{_Int32Value},  v::Real;           kw...); return _Int32Value(Int32(v), UInt8[]); end
-function _decode_json_value(::Type{_Int32Value},  v::AbstractString; kw...); return _Int32Value(parse(Int32, v), UInt8[]); end
-function _decode_json_value(::Type{_Int64Value},  v::Real;           kw...); return _Int64Value(Int64(v), UInt8[]); end
-function _decode_json_value(::Type{_Int64Value},  v::AbstractString; kw...); return _Int64Value(parse(Int64, v), UInt8[]); end
-function _decode_json_value(::Type{_UInt32Value}, v::Real;           kw...); return _UInt32Value(UInt32(v), UInt8[]); end
-function _decode_json_value(::Type{_UInt32Value}, v::AbstractString; kw...); return _UInt32Value(parse(UInt32, v), UInt8[]); end
-function _decode_json_value(::Type{_UInt64Value}, v::Real;           kw...); return _UInt64Value(UInt64(v), UInt8[]); end
-function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...); return _UInt64Value(parse(UInt64, v), UInt8[]); end
+function _decode_json_value(::Type{_BoolValue}, v::Bool; kw...)
+    return _BoolValue(v, UInt8[])
+end
+function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...)
+    return _StringValue(String(v), UInt8[])
+end
+function _decode_json_value(::Type{_BytesValue}, v::AbstractString; kw...)
+    return _BytesValue(_base64_decode(v), UInt8[])
+end
+function _decode_json_value(::Type{_DoubleValue}, v::Real; kw...)
+    return _DoubleValue(Float64(v), UInt8[])
+end
+function _decode_json_value(::Type{_DoubleValue}, v::AbstractString; kw...)
+    return _DoubleValue(_decode_json_value(Float64, v; kw...), UInt8[])
+end
+function _decode_json_value(::Type{_FloatValue}, v::Real; kw...)
+    return _FloatValue(Float32(v), UInt8[])
+end
+function _decode_json_value(::Type{_FloatValue}, v::AbstractString; kw...)
+    return _FloatValue(_decode_json_value(Float32, v; kw...), UInt8[])
+end
+function _decode_json_value(::Type{_Int32Value}, v::Real; kw...)
+    return _Int32Value(Int32(v), UInt8[])
+end
+function _decode_json_value(::Type{_Int32Value}, v::AbstractString; kw...)
+    return _Int32Value(parse(Int32, v), UInt8[])
+end
+function _decode_json_value(::Type{_Int64Value}, v::Real; kw...)
+    return _Int64Value(Int64(v), UInt8[])
+end
+function _decode_json_value(::Type{_Int64Value}, v::AbstractString; kw...)
+    return _Int64Value(parse(Int64, v), UInt8[])
+end
+function _decode_json_value(::Type{_UInt32Value}, v::Real; kw...)
+    return _UInt32Value(UInt32(v), UInt8[])
+end
+function _decode_json_value(::Type{_UInt32Value}, v::AbstractString; kw...)
+    return _UInt32Value(parse(UInt32, v), UInt8[])
+end
+function _decode_json_value(::Type{_UInt64Value}, v::Real; kw...)
+    return _UInt64Value(UInt64(v), UInt8[])
+end
+function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...)
+    return _UInt64Value(parse(UInt64, v), UInt8[])
+end
 
 # -----------------------------------------------------------------------------
 # Empty — `{}`. Generic walker already produces this on encode (no fields)
@@ -89,7 +137,11 @@ const _TIMESTAMP_MAX_SECONDS = Int64(253402300799)   # 9999-12-31T23:59:59Z
 
 function _encode_json_value(io::IO, ts::_Timestamp)
     if ts.seconds < _TIMESTAMP_MIN_SECONDS || ts.seconds > _TIMESTAMP_MAX_SECONDS
-        throw(ArgumentError("Timestamp seconds out of range [$(Int(_TIMESTAMP_MIN_SECONDS)), $(Int(_TIMESTAMP_MAX_SECONDS))]: $(ts.seconds)"))
+        throw(
+            ArgumentError(
+                "Timestamp seconds out of range [$(Int(_TIMESTAMP_MIN_SECONDS)), $(Int(_TIMESTAMP_MAX_SECONDS))]: $(ts.seconds)",
+            ),
+        )
     end
     print(io, '"')
     _format_rfc3339(io, ts.seconds, ts.nanos)
@@ -126,7 +178,10 @@ end
 
 function _parse_rfc3339(s::AbstractString)
     # Accept "<date>T<time>[.fractional][Z|±hh:mm]". Reject lower-case 't'/'z'.
-    m = match(r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?(Z|[+\-]\d{2}:\d{2})$", s)
+    m = match(
+        r"^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?(Z|[+\-]\d{2}:\d{2})$",
+        s,
+    )
     m === nothing && throw(ArgumentError("invalid RFC 3339 timestamp: $(repr(s))"))
     yr, mo, da, hh, mm, ss = parse.(Int, (m[1], m[2], m[3], m[4], m[5], m[6]))
     frac = m[7]
@@ -142,7 +197,8 @@ function _parse_rfc3339(s::AbstractString)
     seconds = Int64(Dates.datetime2unix(dt))
     if tz != "Z"
         sign = tz[1] == '+' ? -1 : 1   # offset → subtract to get UTC
-        ohh = parse(Int, tz[2:3]); omm = parse(Int, tz[5:6])
+        ohh = parse(Int, tz[2:3])
+        omm = parse(Int, tz[5:6])
         seconds += sign * (ohh * 3600 + omm * 60)
     end
     return Int64(seconds), Int32(nanos)
@@ -157,14 +213,19 @@ const _DURATION_MAX_SECONDS = Int64(315576000000)
 
 function _encode_json_value(io::IO, d::_Duration)
     if d.seconds > _DURATION_MAX_SECONDS || d.seconds < -_DURATION_MAX_SECONDS
-        throw(ArgumentError("Duration seconds out of range [-$(Int(_DURATION_MAX_SECONDS)), $(Int(_DURATION_MAX_SECONDS))]: $(d.seconds)"))
+        throw(
+            ArgumentError(
+                "Duration seconds out of range [-$(Int(_DURATION_MAX_SECONDS)), $(Int(_DURATION_MAX_SECONDS))]: $(d.seconds)",
+            ),
+        )
     end
     print(io, '"')
     s, n = d.seconds, d.nanos
     # Sign convention: seconds and nanos must agree on sign per spec.
     if s < 0 || n < 0
         print(io, '-')
-        s = -s; n = -n
+        s = -s
+        n = -n
     end
     print(io, s)
     if n != 0
@@ -256,8 +317,8 @@ end
 # `_decode_json_message`.
 # -----------------------------------------------------------------------------
 
-const _AbstractValue     = _G.AbstractValue
-const _AbstractStruct    = _G.AbstractStruct
+const _AbstractValue = _G.AbstractValue
+const _AbstractStruct = _G.AbstractStruct
 const _AbstractListValue = _G.AbstractListValue
 
 # Value: emit whatever JSON value the active oneof member calls for.
@@ -403,9 +464,12 @@ end
 function _encode_json_value(io::IO, a::_Any_)
     fqn = _any_extract_fqn(a.type_url)
     T = lookup_message_type(fqn)
-    T === nothing && throw(ArgumentError(
-        "Any: no message type registered for $(repr(fqn)); " *
-        "load the proto module that defines it (or call ProtocGen.register_message_type)"))
+    T === nothing && throw(
+        ArgumentError(
+            "Any: no message type registered for $(repr(fqn)); " *
+            "load the proto module that defines it (or call ProtocGen.register_message_type)",
+        ),
+    )
     # Decode the embedded binary payload into the concrete type.
     msg = decode(a.value, T)
 
@@ -433,8 +497,11 @@ end
 # Like `_encode_json_message` but assumes the caller has already written
 # the opening `{` and an `@type` entry. Emits each field with a leading
 # `,` (since `@type` already populated the object).
-function _encode_json_message_after_at_type(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
-    keys   = json_field_names(T)
+function _encode_json_message_after_at_type(
+    io::IO,
+    msg::T,
+) where {T<:AbstractProtoBufMessage}
+    keys = json_field_names(T)
     oneofs = oneof_field_types(T)
     for jl_name in fieldnames(T)
         jl_name === Symbol("#unknown_fields") && continue
@@ -466,12 +533,12 @@ function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
 
     fqn = _any_extract_fqn(type_url)
     T = lookup_message_type(fqn)
-    T === nothing && throw(ArgumentError(
-        "Any: no message type registered for $(repr(fqn))"))
+    T === nothing &&
+        throw(ArgumentError("Any: no message type registered for $(repr(fqn))"))
 
     msg = if fqn in _WKT_VALUE_FORM
-        haskey(json, "value") || throw(ArgumentError(
-            "Any wrapping $(fqn) requires a 'value' field"))
+        haskey(json, "value") ||
+            throw(ArgumentError("Any wrapping $(fqn) requires a 'value' field"))
         _decode_json_value(T, json["value"]; kw...)
     else
         # Strip @type and pass the rest to the message walker.
@@ -506,7 +573,6 @@ end
 # Tell the message walker that these three types accept JSON `null` as a
 # real decoded value (rather than "field unset, use default"). See
 # `_accepts_json_null` in json.jl.
-@inline _accepts_json_null(::Type{_Value})         = true
+@inline _accepts_json_null(::Type{_Value}) = true
 @inline _accepts_json_null(::Type{_AbstractValue}) = true
-@inline _accepts_json_null(::Type{_NullValue.T})   = true
-
+@inline _accepts_json_null(::Type{_NullValue.T}) = true

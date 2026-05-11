@@ -32,18 +32,20 @@ exec julia --project="${HERE}/../.." --startup-file=no --color=no "$0" "$@"
 
 using ProtocGen
 const PBD = ProtocGen
-const _G  = PBD.google.protobuf
+const _G = PBD.google.protobuf
 const _GC = PBD.google.protobuf.compiler
 
-const HERE     = @__DIR__
+const HERE = @__DIR__
 const FDS_PATH = joinpath(HERE, "conformance_descriptors.pb")
 
 function load_generated_modules()
     fds = PBD.decode(read(FDS_PATH), _G.FileDescriptorSet)
-    request = _GC.CodeGeneratorRequest(
-        file_to_generate = ["conformance.proto",
-                            "test_messages_proto2_patched.proto",
-                            "test_messages_proto3.proto"],
+    request = _GC.CodeGeneratorRequest(;
+        file_to_generate = [
+            "conformance.proto",
+            "test_messages_proto2_patched.proto",
+            "test_messages_proto3.proto",
+        ],
         proto_file = fds.file,
     )
     response = PBD.generate(request)
@@ -51,9 +53,9 @@ function load_generated_modules()
         error("conformance testee: codegen failed:\n", response.error)
     end
     name_for = Dict(
-        "conformance_pb.jl"                  => :GenConformance,
+        "conformance_pb.jl" => :GenConformance,
         "test_messages_proto2_patched_pb.jl" => :GenProto2,
-        "test_messages_proto3_pb.jl"         => :GenProto3,
+        "test_messages_proto3_pb.jl" => :GenProto3,
     )
     out = Dict{String,Module}()
     for f in response.file
@@ -70,9 +72,9 @@ function load_generated_modules()
 end
 
 const MODULES = load_generated_modules()
-const Conf    = MODULES["conformance_pb.jl"]
-const Proto2  = MODULES["test_messages_proto2_patched_pb.jl"]
-const Proto3  = MODULES["test_messages_proto3_pb.jl"]
+const Conf = MODULES["conformance_pb.jl"]
+const Proto2 = MODULES["test_messages_proto2_patched_pb.jl"]
+const Proto3 = MODULES["test_messages_proto3_pb.jl"]
 
 const MESSAGE_TYPE = Dict{String,Type}(
     "protobuf_test_messages.proto2.TestAllTypesProto2" => Proto2.TestAllTypesProto2,
@@ -80,7 +82,7 @@ const MESSAGE_TYPE = Dict{String,Type}(
 )
 
 const WF_PROTOBUF = Conf.WireFormat.PROTOBUF
-const WF_JSON     = Conf.WireFormat.JSON
+const WF_JSON = Conf.WireFormat.JSON
 const TC_JSON_IGNORE_UNKNOWN = Conf.TestCategory.JSON_IGNORE_UNKNOWN_PARSING_TEST
 
 function read_le_uint32(io)::Union{Nothing,UInt32}
@@ -119,28 +121,38 @@ function handle_request(req)
     # know we'll fail. We don't predict those — return an empty FailureSet.
     if req.message_type == "conformance.FailureSet"
         fs = Conf.FailureSet(String[], UInt8[])
-        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, pb_encode(fs)), UInt8[])
+        return Conf.ConformanceResponse(
+            PBD.OneOf(:protobuf_payload, pb_encode(fs)),
+            UInt8[],
+        )
     end
 
     payload = req.payload
     if payload === nothing
-        return Conf.ConformanceResponse(PBD.OneOf(:parse_error, "no payload in request"), UInt8[])
+        return Conf.ConformanceResponse(
+            PBD.OneOf(:parse_error, "no payload in request"),
+            UInt8[],
+        )
     end
 
     # JSPB / TEXT_FORMAT input remain skipped; binary and JSON we handle.
     if !(payload.name in (:protobuf_payload, :json_payload))
         return skipped_response(
-            "input format $(payload.name) not supported by ProtocGen v1 (binary + JSON only)")
+            "input format $(payload.name) not supported by ProtocGen v1 (binary + JSON only)",
+        )
     end
     if !(req.requested_output_format in (WF_PROTOBUF, WF_JSON))
         return skipped_response(
-            "output format $(req.requested_output_format) not supported by ProtocGen v1 (binary + JSON only)")
+            "output format $(req.requested_output_format) not supported by ProtocGen v1 (binary + JSON only)",
+        )
     end
 
     T = get(MESSAGE_TYPE, req.message_type, nothing)
     if T === nothing
-        return Conf.ConformanceResponse(PBD.OneOf(:runtime_error,
-            "unknown message_type: $(req.message_type)"), UInt8[])
+        return Conf.ConformanceResponse(
+            PBD.OneOf(:runtime_error, "unknown message_type: $(req.message_type)"),
+            UInt8[],
+        )
     end
 
     # ---- Parse ----
@@ -160,21 +172,27 @@ function handle_request(req)
         bytes = try
             pb_encode(msg)
         catch e
-            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)), UInt8[])
+            return Conf.ConformanceResponse(
+                PBD.OneOf(:serialize_error, sprint(showerror, e)),
+                UInt8[],
+            )
         end
         return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, bytes), UInt8[])
     else  # WF_JSON
         json = try
             PBD.encode_json(msg)
         catch e
-            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)), UInt8[])
+            return Conf.ConformanceResponse(
+                PBD.OneOf(:serialize_error, sprint(showerror, e)),
+                UInt8[],
+            )
         end
         return Conf.ConformanceResponse(PBD.OneOf(:json_payload, json), UInt8[])
     end
 end
 
 function main()
-    in_io  = stdin
+    in_io = stdin
     out_io = stdout
     while true
         len = read_le_uint32(in_io)

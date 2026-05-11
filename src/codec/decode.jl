@@ -9,27 +9,46 @@ function decode_tag(d::AbstractProtoDecoder)
     return field_number, wire_type
 end
 
-const _ScalarTypes = Union{Float64,Float32,Int32,Int64,UInt64,UInt32,Bool,String,Vector{UInt8}}
+const _ScalarTypes =
+    Union{Float64,Float32,Int32,Int64,UInt64,UInt32,Bool,String,Vector{UInt8}}
 const _ScalarTypesEnum = Union{_ScalarTypes,Enum}
 
 # uint64
-_decode(d::AbstractProtoDecoder, ::Type{UInt64}) = vbyte_decode(get_stream(d), UInt64)
+function _decode(d::AbstractProtoDecoder, ::Type{UInt64})
+    vbyte_decode(get_stream(d), UInt64)
+end
 # uint32. The wire spec lets a UINT32 varint be up to 10 bytes — protoc
 # happily emits e.g. `varint(kInt64Max)` into a uint32 field, expecting
 # the decoder to consume the whole thing and truncate. Read as UInt64
 # and truncate, matching what Int32 already does (line below). The
 # bare `vbyte_decode(io, UInt32)` only handles up to 5 bytes; tags
 # (always ≤ 5 bytes) and small uint32 lengths are still its territory.
-_decode(d::AbstractProtoDecoder, ::Type{UInt32}) = vbyte_decode(get_stream(d), UInt64) % UInt32
+function _decode(d::AbstractProtoDecoder, ::Type{UInt32})
+    vbyte_decode(get_stream(d), UInt64) % UInt32
+end
 # int32: Negative int32 are encoded in 10 bytes...
 # TODO: add check the int is negative if larger than typemax UInt32
-_decode(d::AbstractProtoDecoder, ::Type{Int32}) = reinterpret(Int32, UInt32(vbyte_decode(get_stream(d), UInt64) % UInt32))
+function _decode(d::AbstractProtoDecoder, ::Type{Int32})
+    reinterpret(Int32, UInt32(vbyte_decode(get_stream(d), UInt64) % UInt32))
+end
 # int64
-_decode(d::AbstractProtoDecoder, ::Type{Int64}) = reinterpret(Int64, vbyte_decode(get_stream(d), UInt64))
+function _decode(d::AbstractProtoDecoder, ::Type{Int64})
+    reinterpret(Int64, vbyte_decode(get_stream(d), UInt64))
+end
 # sfixed32, sfixed64, # fixed32, fixed64
-_decode(d::AbstractProtoDecoder, ::Type{T}, ::Type{Val{:fixed}}) where {T <: Union{Int32,Int64,UInt32,UInt64}} = read(get_stream(d), T)
+function _decode(
+    d::AbstractProtoDecoder,
+    ::Type{T},
+    ::Type{Val{:fixed}},
+) where {T<:Union{Int32,Int64,UInt32,UInt64}}
+    read(get_stream(d), T)
+end
 # sint32, sint64
-function _decode(d::AbstractProtoDecoder, ::Type{T}, ::Type{Val{:zigzag}}) where {T <: Union{Int32,Int64}}
+function _decode(
+    d::AbstractProtoDecoder,
+    ::Type{T},
+    ::Type{Val{:zigzag}},
+) where {T<:Union{Int32,Int64}}
     v = vbyte_decode(get_stream(d), unsigned(T))
     z = zigzag_decode(v)
     return reinterpret(T, z)
@@ -39,8 +58,13 @@ end
 # allowed to write the varint in non-canonical (oversized, up to 10
 # bytes) form. Read as a UInt64 varint and check zero, matching what
 # the `Int32`/`Enum` decoders already do for their values.
-_decode(d::AbstractProtoDecoder, ::Type{Bool}) = vbyte_decode(get_stream(d), UInt64) != zero(UInt64)
-function _decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Enum{Int32},Enum{UInt32}}}
+function _decode(d::AbstractProtoDecoder, ::Type{Bool})
+    vbyte_decode(get_stream(d), UInt64) != zero(UInt64)
+end
+function _decode(
+    d::AbstractProtoDecoder,
+    ::Type{T},
+) where {T<:Union{Enum{Int32},Enum{UInt32}}}
     # protoc sign-extends negative enum values to int64 on the wire (10-byte
     # varint). Read as UInt64 then truncate so we consume the full payload.
     # Same trick the Int32 scalar decoder uses on line 15. Upstream
@@ -48,7 +72,9 @@ function _decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Enum{Int3
     val = vbyte_decode(get_stream(d), UInt64) % UInt32
     return Core.bitcast(T, reinterpret(Int32, val))
 end
-_decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Float64,Float32}} = read(get_stream(d), T)
+function _decode(d::AbstractProtoDecoder, ::Type{T}) where {T<:Union{Float64,Float32}}
+    read(get_stream(d), T)
+end
 # ----------------------------------------------------------------------------
 # Map-entry decode.
 #
@@ -64,10 +90,12 @@ _decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Float64,Float32}} 
 # Type-default for a map key/value cell. Scalars get their identity zero;
 # strings / bytes / enums get the obvious empty / numeric-zero forms;
 # message-typed values fall through to the helper below.
-@inline _map_default(::Type{T}) where {T<:Union{Float64,Float32,Int32,Int64,UInt32,UInt64,Bool}} = zero(T)
-@inline _map_default(::Type{String})              = ""
-@inline _map_default(::Type{Vector{UInt8}})       = UInt8[]
-@inline _map_default(::Type{T}) where {T<:Enum}   = T(0)
+@inline _map_default(
+    ::Type{T},
+) where {T<:Union{Float64,Float32,Int32,Int64,UInt32,UInt64,Bool}} = zero(T)
+@inline _map_default(::Type{String}) = ""
+@inline _map_default(::Type{Vector{UInt8}}) = UInt8[]
+@inline _map_default(::Type{T}) where {T<:Enum} = T(0)
 
 # Default for a message-typed map value: the all-defaults instance,
 # obtained by running the type's own decoder against an empty buffer
@@ -76,7 +104,10 @@ _decode(d::AbstractProtoDecoder, ::Type{T}) where {T <: Union{Float64,Float32}} 
     return _decode(ProtoDecoder(IOBuffer(UInt8[])), T, 0, false)
 end
 
-function _decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V<:_ScalarTypesEnum}
+function _decode!(
+    d::AbstractProtoDecoder,
+    buffer::AbstractDict{K,V},
+) where {K,V<:_ScalarTypesEnum}
     io = get_stream(d)
     pair_len = vbyte_decode(io, UInt32)
     pair_end_pos = position(io) + pair_len
@@ -117,7 +148,11 @@ function _decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}) where {K,V
 end
 
 for T in (:(:fixed), :(:zigzag))
-    @eval function _decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{Nothing,$(T)}}}) where {K,V}
+    @eval function _decode!(
+        d::AbstractProtoDecoder,
+        buffer::AbstractDict{K,V},
+        ::Type{Val{Tuple{Nothing,$(T)}}},
+    ) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
@@ -137,7 +172,11 @@ for T in (:(:fixed), :(:zigzag))
         return nothing
     end
 
-    @eval function _decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),Nothing}}}) where {K,V}
+    @eval function _decode!(
+        d::AbstractProtoDecoder,
+        buffer::AbstractDict{K,V},
+        ::Type{Val{Tuple{$(T),Nothing}}},
+    ) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
@@ -159,7 +198,11 @@ for T in (:(:fixed), :(:zigzag))
 end
 
 for T in (:(:fixed), :(:zigzag)), S in (:(:fixed), :(:zigzag))
-    @eval function _decode!(d::AbstractProtoDecoder, buffer::AbstractDict{K,V}, ::Type{Val{Tuple{$(T),$(S)}}}) where {K,V}
+    @eval function _decode!(
+        d::AbstractProtoDecoder,
+        buffer::AbstractDict{K,V},
+        ::Type{Val{Tuple{$(T),$(S)}}},
+    ) where {K,V}
         io = get_stream(d)
         pair_len = vbyte_decode(io, UInt32)
         pair_end_pos = position(io) + pair_len
@@ -200,7 +243,7 @@ function _decode(d::AbstractProtoDecoder, ::Type{Vector{UInt8}})
     bytesavailable(io) >= bytelen || throw(EOFError())
     return read(io, bytelen)
 end
-function _decode(d::AbstractProtoDecoder, ::Type{Base.CodeUnits{UInt8, String}})
+function _decode(d::AbstractProtoDecoder, ::Type{Base.CodeUnits{UInt8,String}})
     io = get_stream(d)
     bytelen = vbyte_decode(io, UInt32)
     bytesavailable(io) >= bytelen || throw(EOFError())
@@ -211,7 +254,11 @@ function _decode!(d::AbstractProtoDecoder, buffer::BufferedVector{Vector{UInt8}}
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Bool,Int32,Int64,UInt32,UInt64,Enum{Int32},Enum{UInt32}}}
+function _decode!(
+    d::AbstractProtoDecoder,
+    w::WireType,
+    buffer::BufferedVector{T},
+) where {T<:Union{Bool,Int32,Int64,UInt32,UInt64,Enum{Int32},Enum{UInt32}}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -226,7 +273,12 @@ function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}, ::Type{Val{:zigzag}}) where {T <: Union{Int32,Int64}}
+function _decode!(
+    d::AbstractProtoDecoder,
+    w::WireType,
+    buffer::BufferedVector{T},
+    ::Type{Val{:zigzag}},
+) where {T<:Union{Int32,Int64}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -241,7 +293,12 @@ function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}, ::Type{Val{:fixed}}) where {T <: Union{Int32,Int64,UInt32,UInt64}}
+function _decode!(
+    d::AbstractProtoDecoder,
+    w::WireType,
+    buffer::BufferedVector{T},
+    ::Type{Val{:fixed}},
+) where {T<:Union{Int32,Int64,UInt32,UInt64}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -249,7 +306,7 @@ function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T
         n_current = length(buffer.elements)
         resize!(buffer.elements, n_current + n_incoming)
         endpos = bytelen + position(io)
-        for i in (n_current+1):(n_current + n_incoming)
+        for i in (n_current+1):(n_current+n_incoming)
             buffer.occupied += 1
             @inbounds buffer.elements[i] = _decode(d, T, Val{:fixed})
         end
@@ -260,7 +317,11 @@ function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T}) where {T <: Union{Float32,Float64}}
+function _decode!(
+    d::AbstractProtoDecoder,
+    w::WireType,
+    buffer::BufferedVector{T},
+) where {T<:Union{Float32,Float64}}
     if w == LENGTH_DELIMITED
         io = get_stream(d)
         bytelen = vbyte_decode(io, UInt32)
@@ -268,7 +329,7 @@ function _decode!(d::AbstractProtoDecoder, w::WireType, buffer::BufferedVector{T
         n_current = length(buffer.elements)
         resize!(buffer.elements, n_current + n_incoming)
         endpos = bytelen + position(io)
-        for i in (n_current+1):(n_current + n_incoming)
+        for i in (n_current+1):(n_current+n_incoming)
             buffer.occupied += 1
             @inbounds buffer.elements[i] = _decode(d, T)
         end
@@ -283,7 +344,7 @@ end
     @warn "You are using code generated by an older version of ProtoBuf.jl, which \
     was deprecated. Please regenerate your protobuf definitions with the current version of \
     ProtoBuf.jl. The new version will allow for defining custom AbstractProtoDecoder variants. \
-    This warning is only printed once per session." maxlog=1
+    This warning is only printed once per session." maxlog = 1
     return nothing
 end
 
@@ -296,7 +357,7 @@ function _decode(d::AbstractProtoDecoder, ::Type{Ref{T}}) where {T}
     io = get_stream(d)
     bytelen = vbyte_decode(io, UInt32)
     endpos = bytelen + position(io)
-    if hasmethod(_decode, Tuple{AbstractProtoDecoder, Type{T}, Int, Bool})
+    if hasmethod(_decode, Tuple{AbstractProtoDecoder,Type{T},Int,Bool})
         out = _decode(d, T, endpos, false)
     else
         _warn_old_decode_method()
@@ -312,7 +373,7 @@ function _decode!(d::AbstractProtoDecoder, buffer::BufferedVector{T}) where {T}
 end
 
 function _decode(d::AbstractProtoDecoder, ::Type{Ref{T}}, ::Type{Val{:group}}) where {T}
-    if hasmethod(_decode, Tuple{AbstractProtoDecoder, Type{T}, Int, Bool})
+    if hasmethod(_decode, Tuple{AbstractProtoDecoder,Type{T},Int,Bool})
         out = _decode(d, T, 0, true)
     else
         _warn_old_decode_method()
@@ -321,7 +382,11 @@ function _decode(d::AbstractProtoDecoder, ::Type{Ref{T}}, ::Type{Val{:group}}) w
     return out
 end
 
-function _decode!(d::AbstractProtoDecoder, buffer::BufferedVector{T}, ::Type{Val{:group}}) where {T}
+function _decode!(
+    d::AbstractProtoDecoder,
+    buffer::BufferedVector{T},
+    ::Type{Val{:group}},
+) where {T}
     buffer[] = _decode(d, Ref{T}, Val{:group})
     return nothing
 end
@@ -347,7 +412,11 @@ function _decode!(d::AbstractProtoDecoder, buffer::Base.RefValue{T}) where {T}
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, buffer::Base.RefValue{S}, ::Type{Val{:group}}) where {S>:Nothing}
+function _decode!(
+    d::AbstractProtoDecoder,
+    buffer::Base.RefValue{S},
+    ::Type{Val{:group}},
+) where {S>:Nothing}
     T = Core.Compiler.typesubtract(S, Nothing, 2)
     if !isnothing(buffer[])
         buffer[] = _merge_structs(getindex(buffer)::T, _decode(d, Ref{T}, Val{:group}))
@@ -357,7 +426,11 @@ function _decode!(d::AbstractProtoDecoder, buffer::Base.RefValue{S}, ::Type{Val{
     return nothing
 end
 
-function _decode!(d::AbstractProtoDecoder, buffer::Base.RefValue{T}, ::Type{Val{:group}}) where {T}
+function _decode!(
+    d::AbstractProtoDecoder,
+    buffer::Base.RefValue{T},
+    ::Type{Val{:group}},
+) where {T}
     if isassigned(buffer)
         buffer[] = _merge_structs(buffer[], _decode(d, Ref{T}, Val{:group}))
     else
@@ -379,11 +452,11 @@ end
     # TODO: Error gracefully on unsuported types like Missing, Matrices...
     #       Would be easier if we have a HolyTrait for user defined structs
     merged_values = Tuple(
-        _merge_field_expr(name, type)
-        for (name, type)
-        in zip(fieldnames(T), fieldtypes(T))
+        _merge_field_expr(name, type) for (name, type) in zip(fieldnames(T), fieldtypes(T))
     )
-    return quote T($(merged_values...)) end
+    return quote
+        T($(merged_values...))
+    end
 end
 
 # Per-field merge expression for the @generated body. Inline-handle every
@@ -418,9 +491,13 @@ function _merge_field_expr(name::Symbol, type)
         else
             # Presence submessage / oneof: merge if both set, else
             # take whichever side is set.
-            return :(s2.$(name) === nothing ? s1.$(name) :
-                     (s1.$(name) === nothing ? s2.$(name) :
-                      _merge_structs(s1.$(name), s2.$(name))))
+            return :(
+                s2.$(name) === nothing ? s1.$(name) :
+                (
+                    s1.$(name) === nothing ? s2.$(name) :
+                    _merge_structs(s1.$(name), s2.$(name))
+                )
+            )
         end
     else
         # Bare submessage (proto2 required): always recurse.
@@ -431,10 +508,10 @@ end
 # Default-value detection for proto3 bare scalars and enums. Used by the
 # merge to decide whether `s2`'s value was on the wire or just the type's
 # zero-value.
-@inline _at_default(x::Number)            = iszero(x)
-@inline _at_default(x::AbstractString)    = isempty(x)
-@inline _at_default(x::AbstractVector)    = isempty(x)
-@inline _at_default(x::Base.Enum)         = Integer(x) == 0
+@inline _at_default(x::Number) = iszero(x)
+@inline _at_default(x::AbstractString) = isempty(x)
+@inline _at_default(x::AbstractVector) = isempty(x)
+@inline _at_default(x::Base.Enum) = Integer(x) == 0
 
 # OneOf-vs-OneOf is defined in the parent module (it depends on the
 # `OneOf` type, which lives there). The presence-wrapper case
@@ -448,9 +525,9 @@ end
     for (name, type) in zip(fieldnames(T), fieldtypes(T))
         (type <: _ScalarTypesEnum) && continue
         if (type <: AbstractVector)
-            push!(exprs, :(prepend!(s2.$(name), s1.$(name));))
+            push!(exprs, :(prepend!(s2.$(name), s1.$(name))))
         else
-            push!(exprs, :(_merge_structs!(s1.$(name), s2.$(name));))
+            push!(exprs, :(_merge_structs!(s1.$(name), s2.$(name))))
         end
     end
     return quote
@@ -464,14 +541,14 @@ end
     if wire_type == VARINT
         # `read(io, UInt8)` errors on EOF mid-byte, which is the right
         # behavior for a truncated varint.
-        while read(io, UInt8) >= 0x80 end
+        while read(io, UInt8) >= 0x80
+        end
     elseif wire_type == FIXED64
         bytesavailable(io) >= 8 || throw(EOFError())
         skip(io, 8)
     elseif wire_type == LENGTH_DELIMITED
         bytelen = vbyte_decode(io, UInt32)
-        bytesavailable(io) >= bytelen ||
-            throw(EOFError())
+        bytesavailable(io) >= bytelen || throw(EOFError())
         skip(io, bytelen)
     elseif wire_type == START_GROUP
         while peek(io) != UInt8(END_GROUP)
@@ -481,7 +558,8 @@ end
     elseif wire_type == FIXED32
         bytesavailable(io) >= 4 || throw(EOFError())
         skip(io, 4)
-    else wire_type == END_GROUP
+    else
+        wire_type == END_GROUP
         error("Encountered END_GROUP wiretype while skipping")
     end
     return nothing
@@ -504,8 +582,12 @@ end
 # value bytes to `buf` so the caller can replay them verbatim later.
 # Used by the codegen-emitted decode body to populate
 # `_unknown_fields` for later re-emission.
-function _skip_and_capture!(buf::Vector{UInt8}, d::AbstractProtoDecoder,
-                            field_number::Integer, wire_type::WireType)
+function _skip_and_capture!(
+    buf::Vector{UInt8},
+    d::AbstractProtoDecoder,
+    field_number::Integer,
+    wire_type::WireType,
+)
     io = get_stream(d)
     # Re-encode the tag we already decoded.
     _append_varint!(buf, (UInt32(field_number) << 3) | UInt32(wire_type))

@@ -7,10 +7,10 @@
 
 using Scratch: get_scratch!
 
-const _CONFORMANCE_PROTOBUF_TAG    = "v25.9"
-const _CONFORMANCE_RUNNER_VERSION  = "v25.9-1"
-const _CONFORMANCE_PROTOBUF_REPO   = "https://github.com/protocolbuffers/protobuf.git"
-const _CONFORMANCE_SCRATCH_KEY     = "conformance-runner-$_CONFORMANCE_RUNNER_VERSION"
+const _CONFORMANCE_PROTOBUF_TAG = "v25.9"
+const _CONFORMANCE_RUNNER_VERSION = "v25.9-1"
+const _CONFORMANCE_PROTOBUF_REPO = "https://github.com/protocolbuffers/protobuf.git"
+const _CONFORMANCE_SCRATCH_KEY = "conformance-runner-$_CONFORMANCE_RUNNER_VERSION"
 
 function _conformance_cache_dir()
     return get_scratch!(@__MODULE__, _CONFORMANCE_SCRATCH_KEY)
@@ -84,7 +84,9 @@ equivalent. Throws if `git` or `cmake` is missing on PATH.
 """
 function obtain_conformance_test_runner(; rebuild::Bool = false)
     if Sys.iswindows()
-        error("obtain_conformance_test_runner: cannot build on Windows (runner uses POSIX fork)")
+        error(
+            "obtain_conformance_test_runner: cannot build on Windows (runner uses POSIX fork)",
+        )
     end
 
     explicit = get(ENV, "CONFORMANCE_TEST_RUNNER", "")
@@ -102,14 +104,15 @@ function obtain_conformance_test_runner(; rebuild::Bool = false)
     _conformance_check_tool("git")
     _conformance_check_tool("cmake")
 
-    root  = _conformance_cache_dir()
-    src   = joinpath(root, "src")
+    root = _conformance_cache_dir()
+    src = joinpath(root, "src")
     build = joinpath(root, "build")
 
     _conformance_clone_source(src)
     _conformance_configure_and_build(src, build)
 
-    isfile(p) && Sys.isexecutable(p) ||
-        error("obtain_conformance_test_runner: build finished but $p is missing or not executable")
+    isfile(p) && Sys.isexecutable(p) || error(
+        "obtain_conformance_test_runner: build finished but $p is missing or not executable",
+    )
     return p
 end

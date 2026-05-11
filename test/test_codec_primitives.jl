@@ -3,8 +3,8 @@ module TestCodecPrimitives
 include("setup.jl")
 
 using ProtocGen: Codecs
-using .Codecs: ProtoDecoder, vbyte_encode, vbyte_decode,
-    zigzag_encode, zigzag_decode, _encode, _decode
+using .Codecs:
+    ProtoDecoder, vbyte_encode, vbyte_decode, zigzag_encode, zigzag_decode, _encode, _decode
 
 function roundtrip(::Type{T}, x::T) where {T}
     io = IOBuffer()
@@ -56,7 +56,15 @@ end
     end
 
     @testset "zigzag" begin
-        for x in (Int32(0), Int32(1), Int32(-1), Int32(127), Int32(-128), typemax(Int32), typemin(Int32))
+        for x in (
+            Int32(0),
+            Int32(1),
+            Int32(-1),
+            Int32(127),
+            Int32(-128),
+            typemax(Int32),
+            typemin(Int32),
+        )
             @test roundtrip_zigzag(Int32, x) == x
         end
         for x in (Int64(0), Int64(1), Int64(-1), typemax(Int64), typemin(Int64))
@@ -89,7 +97,8 @@ end
 
     @testset "tag encode/decode" begin
         for fn in (1, 2, 15, 16, 2047, 2048, typemax(Int32) >> 3)
-            for wt in (Codecs.VARINT, Codecs.FIXED64, Codecs.LENGTH_DELIMITED, Codecs.FIXED32)
+            for wt in
+                (Codecs.VARINT, Codecs.FIXED64, Codecs.LENGTH_DELIMITED, Codecs.FIXED32)
                 io = IOBuffer()
                 Codecs.encode_tag(io, fn, wt)
                 seekstart(io)

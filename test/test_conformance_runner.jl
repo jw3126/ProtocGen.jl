@@ -22,12 +22,12 @@ using Test
 using ProtocGen: obtain_conformance_test_runner
 
 const CONFORMANCE_DIR = joinpath(@__DIR__, "conformance")
-const TESTEE          = joinpath(CONFORMANCE_DIR, "testee.jl")
-const FAILURE_LIST    = joinpath(CONFORMANCE_DIR, "failure_list.txt")
+const TESTEE = joinpath(CONFORMANCE_DIR, "testee.jl")
+const FAILURE_LIST = joinpath(CONFORMANCE_DIR, "failure_list.txt")
 
 function _can_build()
     Sys.iswindows() && return false, "Windows (runner uses POSIX fork)"
-    Sys.which("git")   === nothing && return false, "`git` not on PATH"
+    Sys.which("git") === nothing && return false, "`git` not on PATH"
     Sys.which("cmake") === nothing && return false, "`cmake` not on PATH"
     return true, ""
 end
@@ -52,8 +52,11 @@ end
         err_s = String(take!(err))
 
         if proc.exitcode != 0
-            tail_lines(s, n) = join(last(split(s, '\n'; keepempty = false), n), "\n")
-            @info "conformance_test_runner failed; last 20 lines of stderr:" log = tail_lines(err_s, 20)
+            function tail_lines(s, n)
+                join(last(split(s, '\n'; keepempty = false), n), "\n")
+            end
+            @info "conformance_test_runner failed; last 20 lines of stderr:" log =
+                tail_lines(err_s, 20)
             @info "tail of stdout:" log = tail_lines(out_s, 5)
         end
 
