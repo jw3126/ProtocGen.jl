@@ -3,7 +3,7 @@
 # Implements the wire format described at
 #   https://protobuf.dev/programming-guides/json/
 # via a reflection-driven walker over our existing metadata methods
-# (`field_numbers`, `oneof_field_types`, `default_values`) plus the
+# (`field_numbers`, `oneof_field_types`, `StructHelpers.default_keywords`) plus the
 # codegen-emitted `json_field_names`.
 #
 # Coverage: scalars (including int64/uint64 → JSON string and bytes →
@@ -364,7 +364,7 @@ function _decode_json_message(
         end
     end
 
-    defaults = default_values(T)
+    defaults = StructHelpers.default_keywords(T)
     vals = Dict{Symbol,Any}()
     for k in propertynames(defaults)
         vals[k] = getproperty(defaults, k)

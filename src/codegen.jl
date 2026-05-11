@@ -364,7 +364,7 @@ Base.@kwdef struct FieldModel
     elem_jl_type::String        # element type (drops Vector{} / Union{Nothing,})
     wire_annotation::String = "" # "" / "Val{:fixed}" / "Val{:zigzag}"
     init_value::String          # initializer used inside decode body
-    default_value::String       # default exposed via PB.default_values
+    default_value::String       # default exposed via StructHelpers.default_keywords
     encode_skip::String         # predicate used at encode-time to skip the field
 end
 
@@ -873,11 +873,7 @@ function _emit_message(
     # explicitly.
     println(io, "end")
 
-    # Metadata. (`default_values` is no longer emitted per type — the
-    # default-stub in src/ProtocGen.jl forwards to
-    # `StructHelpers.default_keywords`, which is what the @batteries
-    # call below populates per type.)
-
+    # Metadata.
     println(io, "function PB.field_numbers(::var\"#core\".Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
