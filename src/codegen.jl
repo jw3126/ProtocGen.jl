@@ -66,31 +66,42 @@ end
 
 function _scalar_jl_type_and_wire(t)
     T = var"FieldDescriptorProto.Type"
-    if t === T.TYPE_DOUBLE   ; return ("Float64",       "")
-    elseif t === T.TYPE_FLOAT    ; return ("Float32",       "")
-    elseif t === T.TYPE_INT64    ; return ("Int64",         "")
-    elseif t === T.TYPE_UINT64   ; return ("UInt64",        "")
-    elseif t === T.TYPE_INT32    ; return ("Int32",         "")
-    elseif t === T.TYPE_FIXED64  ; return ("UInt64",        "Val{:fixed}")
-    elseif t === T.TYPE_FIXED32  ; return ("UInt32",        "Val{:fixed}")
-    elseif t === T.TYPE_BOOL     ; return ("Bool",          "")
-    elseif t === T.TYPE_STRING   ; return ("String",        "")
-    elseif t === T.TYPE_BYTES    ; return ("Vector{UInt8}", "")
-    elseif t === T.TYPE_UINT32   ; return ("UInt32",        "")
-    elseif t === T.TYPE_SFIXED32 ; return ("Int32",         "Val{:fixed}")
-    elseif t === T.TYPE_SFIXED64 ; return ("Int64",         "Val{:fixed}")
-    elseif t === T.TYPE_SINT32   ; return ("Int32",         "Val{:zigzag}")
-    elseif t === T.TYPE_SINT64   ; return ("Int64",         "Val{:zigzag}")
+    # Scalar Julia types reach the generated file through the
+    # `var"#base" = Base` alias emitted at the top of every output —
+    # this immunizes scalar field annotations against a user proto
+    # that declares a message with the same name as a Core scalar type
+    # (e.g. `message Bool`). Base re-exports every Core scalar, plus
+    # `Vector` itself, so a single alias suffices. `#` cannot occur in
+    # a protobuf field name, so the alias is guaranteed not to clash
+    # with user code.
+    B = "var\"#base\""
+    if t === T.TYPE_DOUBLE   ; return ("$(B).Float64",       "")
+    elseif t === T.TYPE_FLOAT    ; return ("$(B).Float32",       "")
+    elseif t === T.TYPE_INT64    ; return ("$(B).Int64",         "")
+    elseif t === T.TYPE_UINT64   ; return ("$(B).UInt64",        "")
+    elseif t === T.TYPE_INT32    ; return ("$(B).Int32",         "")
+    elseif t === T.TYPE_FIXED64  ; return ("$(B).UInt64",        "Val{:fixed}")
+    elseif t === T.TYPE_FIXED32  ; return ("$(B).UInt32",        "Val{:fixed}")
+    elseif t === T.TYPE_BOOL     ; return ("$(B).Bool",          "")
+    elseif t === T.TYPE_STRING   ; return ("$(B).String",        "")
+    elseif t === T.TYPE_BYTES    ; return ("$(B).Vector{$(B).UInt8}", "")
+    elseif t === T.TYPE_UINT32   ; return ("$(B).UInt32",        "")
+    elseif t === T.TYPE_SFIXED32 ; return ("$(B).Int32",         "Val{:fixed}")
+    elseif t === T.TYPE_SFIXED64 ; return ("$(B).Int64",         "Val{:fixed}")
+    elseif t === T.TYPE_SINT32   ; return ("$(B).Int32",         "Val{:zigzag}")
+    elseif t === T.TYPE_SINT64   ; return ("$(B).Int64",         "Val{:zigzag}")
     end
     error("scalar mapping not defined for $t")
 end
 
 function _scalar_zero(jl_type::String)
-    if jl_type == "String"
+    # `jl_type` strings come from `_scalar_jl_type_and_wire`, which
+    # qualifies every Core scalar via the `var"#base"` alias.
+    if endswith(jl_type, ".String")
         return "\"\""
-    elseif jl_type == "Vector{UInt8}"
-        return "UInt8[]"
-    elseif jl_type == "Bool"
+    elseif endswith(jl_type, ".Vector{var\"#base\".UInt8}")
+        return "var\"#base\".UInt8[]"
+    elseif endswith(jl_type, ".Bool")
         return "false"
     else
         return "zero($(jl_type))"
@@ -124,7 +135,7 @@ end
 # carries `import <julia_module> as <alias>` per package, where <alias> is
 # the package name with dots → underscores. The WKT entry is hardcoded;
 # real users with multi-package proto trees will eventually configure this
-# via a plugin parameter (Phase 7c+ / Phase 11).
+# via a plugin parameter.
 const WKT_PACKAGE_MAP = Dict{String,String}(
     "google.protobuf" => "ProtocGen.google.protobuf",
 )
@@ -501,7 +512,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default   = "Vector{$(scalar_jl)}()"
             skip      = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
-            # Phase 5/6: proto3 explicit `optional` and proto2 `optional`
+            # proto3 explicit `optional` and proto2 `optional`
             # carry presence. Surface that in Julia by typing the field as
             # `Union{Nothing,T}` defaulted to `nothing`. The decode path
             # overwrites `nothing` on tag, the encode path skips iff
@@ -518,11 +529,11 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
             default   = init_val
             if is_required
                 skip = "true"
-            elseif scalar_jl == "String"
+            elseif endswith(scalar_jl, ".String")
                 skip = "!isempty(_x.$(jl_fieldname))"
-            elseif scalar_jl == "Vector{UInt8}"
+            elseif endswith(scalar_jl, ".Vector{var\"#base\".UInt8}")
                 skip = "!isempty(_x.$(jl_fieldname))"
-            elseif scalar_jl == "Bool"
+            elseif endswith(scalar_jl, ".Bool")
                 skip = "_x.$(jl_fieldname) != false"
             else
                 skip = "_x.$(jl_fieldname) != $(init_val)"
@@ -534,7 +545,7 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         # iterate them. So `emit_unpacked_loop` stays false for those
         # element types — the codec call handles the loop internally.
         is_packed_eligible =
-            is_repeated && !(scalar_jl == "String" || scalar_jl == "Vector{UInt8}")
+            is_repeated && !(endswith(scalar_jl, ".String") || endswith(scalar_jl, ".Vector{var\"#base\".UInt8}"))
         is_packed = is_packed_eligible && _is_packed_repeated(field, names.syntax)
         return FieldModel(;
             proto_name,
@@ -712,8 +723,7 @@ end
 function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::LocalNames,
                        parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
                        batteries_kw::String = "",
-                       enumbatteries_kw::String = "",
-                       emit_batteries::Bool = true)
+                       enumbatteries_kw::String = "")
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -727,15 +737,13 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     for e in msg.enum_type
         _emit_enum(io, e, jl_name_plain;
                    parent_proto = proto_fqn,
-                   enumbatteries_kw = enumbatteries_kw,
-                   emit_batteries = emit_batteries)
+                   enumbatteries_kw = enumbatteries_kw)
     end
     for nested in msg.nested_type
         _is_map_entry(nested) && continue
         _emit_message(io, nested, jl_name_plain, names, proto_fqn;
                       batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw,
-                      emit_batteries = emit_batteries)
+                      enumbatteries_kw = enumbatteries_kw)
     end
 
     synthetic = _synthetic_oneof_indices(msg)
@@ -757,75 +765,45 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     # their abstract supertype so other participants can type their
     # fields against the abstract.
     #
-    # `Base.@kwdef` synthesizes an outer kwarg constructor next to the
-    # struct, giving users `T(; field1=val, ...)` ergonomics. Plain
-    # positional construction (used by the generated decode body) still
-    # works through Julia's compiler-generated all-fields constructor.
+    # No inline `= default` per field — kwarg construction (with
+    # proto-defined defaults) is supplied by the @batteries
+    # `kwconstructor=true` decoration emitted below, paired with a
+    # `StructHelpers.default_keywords` overload. The struct definition
+    # itself stays a plain `struct T ... end`.
+    #
     # `var\"#unknown_fields\"` instead of plain `_unknown_fields` for the
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
-    println(io, "Base.@kwdef ", is_cycle_participant ?
+    println(io, is_cycle_participant ?
             "struct $(jl_name) <: $(_abstract_name(jl_name))" :
             "struct $(jl_name) <: PB.AbstractProtoBufMessage")
     param_names = String[]
     for f in plain_fields
-        # proto2 required submessages have `default_value = Ref{T}()`,
-        # which doesn't fit the concrete field type T. Emit those without
-        # a default — kwarg construction then requires the user to pass
-        # them explicitly, mirroring the protocol's "required" semantics.
-        if f.is_required && f.is_message
-            println(io, "    ", f.jl_fieldname, "::", f.jl_type)
-        else
-            println(io, "    ", f.jl_fieldname, "::", f.jl_type, " = ", f.default_value)
-        end
+        println(io, "    ", f.jl_fieldname, "::", f.jl_type)
         push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
-        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
+        println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
-    println(io, "    var\"#unknown_fields\"::Vector{UInt8} = UInt8[]")
+    println(io, "    var\"#unknown_fields\"::Vector{UInt8}")
     push!(param_names, "var\"#unknown_fields\"")
-    # Inner constructor with `_unknown_fields=UInt8[]` default. Coexists
-    # with @kwdef's outer kwarg constructor and replaces Julia's auto-
-    # generated all-positional constructor; users get
-    #     T(field1, ..., fieldN-1)              (buffer defaults to UInt8[])
-    #     T(field1, ..., fieldN-1, buffer)      (explicit buffer)
-    #     T(; field1=val, ...)                  (kwarg form, all optional)
-    # The constructor is *inner* — emitting it as outer would split the
-    # binding partition on Julia 1.12 and break `Type{<:T}` dispatch.
-    #
-    # Skip the inner ctor for messages whose only field is the buffer
-    # (e.g. WKT `Empty`): there it collides with @kwdef's auto-positional
-    # `T(::Vector{UInt8})` since both take exactly the buffer arg.
-    if length(param_names) > 1
-        inner_params = join(param_names[1:end-1], ", ")
-        sep = isempty(inner_params) ? "" : ", "
-        println(io, "    function ", jl_name, "(", inner_params, sep, "_unknown_fields=UInt8[])")
-        pos_args = String[]
-        for n in param_names
-            push!(pos_args, n == "var\"#unknown_fields\"" ? "_unknown_fields" : n)
-        end
-        println(io, "        return new(", join(pos_args, ", "), ")")
-        println(io, "    end")
-    end
+    # No explicit inner ctor: the @batteries kwconstructor=true call
+    # below pairs with `default_keywords` to give users a kwarg ctor
+    # whose defaults include `var\"#unknown_fields\" = UInt8[]`, so a
+    # buffer-less call site like `T(name=\"Alice\")` works through the
+    # kwarg form. Decode-side construction goes through Julia's
+    # auto-generated all-positional ctor with every field passed
+    # explicitly.
     println(io, "end")
 
-    # Metadata.
-    println(io, "function PB.default_values(::Core.Type{", jl_name, "})")
-    pieces = String[]
-    for f in plain_fields
-        push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
-    end
-    for o in real_oneofs
-        push!(pieces, "$(o.jl_fieldname) = nothing")
-    end
-    push!(pieces, "var\"#unknown_fields\" = UInt8[]")
-    println(io, "    return (;", join(pieces, ", "), ")")
-    println(io, "end")
+    # Metadata. (`default_values` is no longer emitted per type — the
+    # default-stub in src/ProtocGen.jl forwards to
+    # `StructHelpers.default_keywords`, which is what the @batteries
+    # call below populates per type.)
 
-    println(io, "function PB.field_numbers(::Core.Type{", jl_name, "})")
+    println(io, "function PB.field_numbers(::var\"#core\".Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(f.number)")
@@ -838,7 +816,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "    return (;", join(pieces, ", "), ")")
     println(io, "end")
 
-    println(io, "function PB.json_field_names(::Core.Type{", jl_name, "})")
+    println(io, "function PB.json_field_names(::var\"#core\".Type{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         push!(pieces, "$(f.jl_fieldname) = $(repr(f.json_name))")
@@ -860,7 +838,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "PB.register_message_type(", repr(fqn), ", ", jl_name, ")")
 
     if !isempty(real_oneofs)
-        println(io, "function PB.oneof_field_types(::Core.Type{", jl_name, "})")
+        println(io, "function PB.oneof_field_types(::var\"#core\".Type{", jl_name, "})")
         oneof_pieces = String[]
         for o in real_oneofs
             inner = join(("$(m.jl_fieldname) = $(m.elem_jl_type)" for m in o.members), ", ")
@@ -875,7 +853,7 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io)
 
     # decode.
-    println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", jl_name, "}, _endpos::Int=0, _group::Bool=false)")
+    println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:", jl_name, "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)")
     for f in plain_fields
         println(io, "    ", f.jl_fieldname, " = ", f.init_value)
         if f.is_required
@@ -986,21 +964,39 @@ function _emit_message(io::IO, msg::DescriptorProto, parent_jl::String, names::L
     println(io, "    return encoded_size")
     println(io, "end")
 
-    # Always emit `@batteries TypeName typesalt=0x… <user kwargs>`. A
-    # bare `@batteries T` with only a typesalt registers T as
-    # "batterized" without adding any methods, so the default emission
-    # is behaviorally identical to a plain Julia struct while honoring
-    # the project convention that every struct carry an @batteries
-    # call. The typesalt is derived deterministically from the proto
-    # FQN so re-generation does not shift it.
-    #
-    # `emit_batteries` is false when this file declares a top-level
-    # `Type` or `Any` message — see the long comment in `codegen()` for
-    # the StructHelpers macro-shadowing details.
-    if emit_batteries
-        println(io, "@batteries ", jl_name, " ",
-                _join_kw(_format_typesalt_kw(proto_fqn), batteries_kw))
+    # `@batteries kwconstructor=true kwshow=true` does double duty:
+    #   - kwconstructor: gives users `T(; field1=…, …)` ergonomics; the
+    #     defaults for kwargs come from the `default_keywords` overload
+    #     below (StructHelpers ≥ 1.5).
+    #   - kwshow: prints `T(field1 = val, …)` and omits any field whose
+    #     value is `isequal` to its `default_keywords` entry, so the
+    #     buffer (and any unset proto-defaulted scalar) drops out.
+    # Typesalt is derived deterministically from the proto FQN so
+    # re-generation does not shift it.
+    base_batteries_kw = "kwconstructor=true kwshow=true"
+    println(io, "@batteries ", jl_name, " ",
+            _join_kw(_join_kw(_format_typesalt_kw(proto_fqn), base_batteries_kw),
+                     batteries_kw))
+
+    # `default_keywords` supplies kwarg defaults for `kwconstructor` and
+    # the omit-if-default predicate for `kwshow`. proto2 required
+    # submessages have no sane default (their codegen placeholder is a
+    # `Ref{T}()`), so we omit them — kwarg construction then errors
+    # with `UndefKeywordError` if the user doesn't pass one.
+    println(io, "function PB.StructHelpers.default_keywords(::var\"#core\".Type{", jl_name, "})")
+    pieces = String[]
+    for f in plain_fields
+        if f.is_required && f.is_message
+            continue
+        end
+        push!(pieces, "$(f.jl_fieldname) = $(f.default_value)")
     end
+    for o in real_oneofs
+        push!(pieces, "$(o.jl_fieldname) = nothing")
+    end
+    push!(pieces, "var\"#unknown_fields\" = UInt8[]")
+    println(io, "    return (;", join(pieces, ", "), ")")
+    println(io, "end")
 
     println(io)
 end
@@ -1081,7 +1077,8 @@ function _emit_decode_field(io::IO, f::FieldModel)
         end
     else
         if f.is_repeated
-            if f.elem_jl_type in ("String", "Vector{UInt8}")
+            if endswith(f.elem_jl_type, ".String") ||
+                    endswith(f.elem_jl_type, ".Vector{var\"#base\".UInt8}")
                 # Strings and bytes have no-wire-type BufferedVector decoders
                 # (decode.jl:107, 120). Bool/Float32/Float64 do *not* — they
                 # need the wire-type so the codec can switch between packed
@@ -1142,7 +1139,7 @@ function _emit_reserved_fields(io::IO, jl_name::String, msg::DescriptorProto)
         "String[]" :
         string("[", join(("\"$(n)\"" for n in names), ", "), "]")
 
-    println(io, "function PB.reserved_fields(::Core.Type{", jl_name, "})")
+    println(io, "function PB.reserved_fields(::var\"#core\".Type{", jl_name, "})")
     println(io, "    return (names = ", name_str, ", numbers = ", range_str, ")")
     println(io, "end")
 end
@@ -1178,8 +1175,7 @@ end
 
 function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
                     parent_proto::String = "",
-                    enumbatteries_kw::String = "",
-                    emit_batteries::Bool = true)
+                    enumbatteries_kw::String = "")
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
@@ -1193,10 +1189,8 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
-        if emit_batteries
-            println(io, "@enumbatteries ", jl_name, ".T ",
-                    _join_kw(salt_kw, enumbatteries_kw))
-        end
+        println(io, "@enumbatteries ", jl_name, ".T ",
+                _join_kw(salt_kw, enumbatteries_kw))
         println(io)
         return
     end
@@ -1228,12 +1222,10 @@ function _emit_enum(io::IO, e::EnumDescriptorProto, parent_jl::String;
     # builds the enum module as a `baremodule`, which doesn't import
     # `Base.eval`.
     for (alias, canonical) in aliases
-        println(io, "Core.eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
+        println(io, "var\"#core\".eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
     end
-    if emit_batteries
-        println(io, "@enumbatteries ", jl_name, ".T ",
-                _join_kw(salt_kw, enumbatteries_kw))
-    end
+    println(io, "@enumbatteries ", jl_name, ".T ",
+            _join_kw(salt_kw, enumbatteries_kw))
     println(io)
 end
 
@@ -1471,37 +1463,6 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     # convention. User-supplied `[batteries]` / `[enumbatteries]`
     # tables in `config` forward as keyword arguments to those calls
     # (e.g. `kwshow=true`, `hash=false`).
-    #
-    # Exception: `StructHelpers.@batteries`'s macro expansion
-    # references the bare symbol `Type` (meaning `Core.Type`) when
-    # building its method definitions. If the surrounding module
-    # defines a struct *named* `Type` or `Any`, that name shadows the
-    # Core binding for every macro call in the module, and *every*
-    # `@batteries` call expands to invalid `OurType{<:T}` forms — not
-    # just the ones on the shadowing types. The descriptor bootstrap
-    # exhibits both clashes (`google.protobuf.Type` and
-    # `google.protobuf.Any`); skip the entire @batteries / @enumbatteries
-    # emission for any file that declares a top-level message with
-    # one of those names. The fix belongs in StructHelpers itself
-    # (substitute `Core.Type` for the bare `Type` literal).
-    # Scan the *whole* proto package across the universe. Each
-    # `<package>` becomes one Julia submodule: any file in that package
-    # declaring a top-level `Type` or `Any` poisons every `@batteries`
-    # call in every other file too, since macro expansion happens
-    # inside the (single) Julia module that holds the package.
-    package_shadows_core = let
-        shadowed = false
-        for fqn in keys(universe.jl_names)
-            pkg = get(universe.package_of, fqn, "")
-            pkg == names.package || continue
-            simple = last(split(fqn, '.'; keepempty = false))
-            if simple == "Type" || simple == "Any"
-                shadowed = true; break
-            end
-        end
-        shadowed
-    end
-    emit_batteries   = !package_shadows_core
     batteries_kw     = _config_kw_table(config, "batteries")
     enumbatteries_kw = _config_kw_table(config, "enumbatteries")
 
@@ -1516,12 +1477,20 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     # work without the caller importing ProtocGen themselves.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io, "using ProtocGen.EnumX: @enumx")
-    if emit_batteries
-        # `@batteries` / `@enumbatteries` reach the user's namespace via
-        # the ProtocGen → StructHelpers re-export, so users only need to
-        # depend on ProtocGen.
-        println(io, "using ProtocGen.StructHelpers: @batteries, @enumbatteries")
-    end
+    # `@batteries` / `@enumbatteries` reach the user's namespace via
+    # the ProtocGen → StructHelpers re-export, so users only need to
+    # depend on ProtocGen.
+    println(io, "using ProtocGen.StructHelpers: @batteries, @enumbatteries")
+    # Capture the `Core` and `Base` *modules* under unmangleable names
+    # before any user message in this file gets a chance to shadow
+    # them with a struct. Generated code reaches `var"#core".Type{…}` /
+    # `Base.@kwdef` / `Core.eval` / `Core.include` through these
+    # aliases so a user proto declaring messages named `Core` or
+    # `Base` (and likewise a struct `Type`, etc.) doesn't poison the
+    # rest of the file. `#` cannot appear in a protobuf field name,
+    # so the aliases are guaranteed not to collide with user code.
+    println(io, "const var\"#core\" = Core")
+    println(io, "const var\"#base\" = Base")
 
     # Cross-package imports. Walk the file's referenced FQNs to find
     # external packages and emit one import line per package so
@@ -1570,8 +1539,7 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     for e in file.enum_type
         _emit_enum(io, e, "";
                    parent_proto = file_parent_proto,
-                   enumbatteries_kw = enumbatteries_kw,
-                   emit_batteries = emit_batteries)
+                   enumbatteries_kw = enumbatteries_kw)
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
     # Build a cycle-aware `LocalNames` view. _resolve_typename consults
@@ -1606,12 +1574,11 @@ function codegen(file::FileDescriptorProto, universe::Universe;
     for msg in sorted_msgs
         _emit_message(io, msg, "", cycle_names;
                       batteries_kw = batteries_kw,
-                      enumbatteries_kw = enumbatteries_kw,
-                      emit_batteries = emit_batteries)
+                      enumbatteries_kw = enumbatteries_kw)
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
     # / Ref{Abstract<X>} dispatches into the concrete struct's decoder.
-    # The same pattern routes JSON decode (Phase 12b) — `Struct.fields`
+    # The same pattern routes JSON decode — `Struct.fields`
     # is `OrderedDict{String,AbstractValue}` and the JSON walker has to
     # land on `Value` to reconstruct.
     if !isempty(cycle_participants)
@@ -1619,14 +1586,14 @@ function codegen(file::FileDescriptorProto, universe::Universe;
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
             abs_jl = _abstract_name(jl)
-            println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:", abs_jl, "}, _endpos::Int=0, _group::Bool=false)")
+            println(io, "function PB._decode(_d::PB.AbstractProtoDecoder, ::var\"#core\".Type{<:", abs_jl, "}, _endpos::var\"#base\".Int=0, _group::var\"#base\".Bool=false)")
             println(io, "    return PB._decode(_d, ", jl, ", _endpos, _group)")
             println(io, "end")
             # NOTE: invariant `Type{X}` (no `<:`) so the forwarding fires
             # only for the abstract supertype itself; the concrete struct
             # falls through to the generic walker via the
             # `T <: AbstractProtoBufMessage` method on `_decode_json_message`.
-            println(io, "function PB._decode_json_message(::Core.Type{", abs_jl, "}, json::AbstractDict; kw...)")
+            println(io, "function PB._decode_json_message(::var\"#core\".Type{", abs_jl, "}, json::AbstractDict; kw...)")
             println(io, "    return PB._decode_json_message(", jl, ", json; kw...)")
             println(io, "end")
         end

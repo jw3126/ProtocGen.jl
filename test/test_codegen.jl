@@ -11,17 +11,23 @@ include("setup.jl")
     @test occursin("struct Inner", f.content)
     @test occursin("struct Outer", f.content)
     @test occursin("nested::Union{Nothing,Inner}", f.content)
-    @test occursin("packed_ints::Vector{Int64}", f.content)
-    @test occursin("choice::Union{Nothing,OneOf{<:Union{Int32,String}}}", f.content)
+    # Scalar refs are emitted through the `var"#base"` alias defined
+    # at the top of every generated file, so a user proto declaring
+    # a message named e.g. `Bool` cannot shadow the codegen's scalar
+    # type annotations.
+    @test occursin("packed_ints::Vector{var\"#base\".Int64}", f.content)
+    @test occursin("choice::Union{Nothing,OneOf{<:Union{var\"#base\".Int32,var\"#base\".String}}}", f.content)
 
     # Eval the generated module and verify a round-trip.
     sample_mod = eval_generated(f.content, :GeneratedSample)
 
-    inner = Base.invokelatest(sample_mod.Inner, Int32(42))
-    outer = Base.invokelatest(sample_mod.Outer,
-                              "hello", Int32(7), inner,
-                              Int64[1, 2, 3, 4],
-                              ProtocGen.OneOf(:ci, Int32(99)))
+    inner = pb_make(sample_mod.Inner; a = Int32(42))
+    outer = pb_make(sample_mod.Outer;
+                              name = "hello",
+                              maybe = Int32(7),
+                              nested = inner,
+                              packed_ints = Int64[1, 2, 3, 4],
+                              choice = ProtocGen.OneOf(:ci, Int32(99)))
     decoded = decode_latest(sample_mod.Outer, encode_latest(outer))
     @test decoded.name == outer.name
     @test decoded.maybe == outer.maybe
@@ -47,10 +53,13 @@ include("setup.jl")
     @test occursin("Inner(", s)
     @test occursin("a = ", s)
     @test !occursin("unknown_fields", s)
-    # When the buffer carries bytes, it's shown with its var"" name.
-    inner_with_unknown = Base.invokelatest(sample_mod.Inner, Int32(1), UInt8[0xff])
+    # When the buffer carries bytes, it's shown — `kwshow` prints the
+    # field's Symbol name verbatim (no `var""` wrapping).
+    inner_with_unknown = pb_make(sample_mod.Inner;
+                                           a = Int32(1),
+                                           var"#unknown_fields" = UInt8[0xff])
     s2 = sprint(show, inner_with_unknown)
-    @test occursin("var\"#unknown_fields\" = ", s2)
+    @test occursin("#unknown_fields = ", s2)
 end
 
 @testset "codegen corpus: every wire encoding" begin
@@ -113,9 +122,10 @@ end
     f = response.file[1]
 
     # Maps surface as OrderedDict{K,V}; the synthetic *Entry messages stay invisible.
-    @test occursin("counts::OrderedDict{String,Int32}", f.content)
-    @test occursin("labels::OrderedDict{Int32,String}", f.content)
-    @test occursin("items::OrderedDict{String,Item}",   f.content)
+    # Scalar refs go through the `var"#base"` alias for shadow-immunity.
+    @test occursin("counts::OrderedDict{var\"#base\".String,var\"#base\".Int32}", f.content)
+    @test occursin("labels::OrderedDict{var\"#base\".Int32,var\"#base\".String}", f.content)
+    @test occursin("items::OrderedDict{var\"#base\".String,Item}",                f.content)
     @test !occursin("CountsEntry", f.content)
     @test !occursin("LabelsEntry", f.content)
     @test !occursin("ItemsEntry",  f.content)
@@ -175,7 +185,9 @@ end
     bad_cfg = Dict("batteries" => Dict("typesalt" => 0xdead))
     with_bad = ProtocGen.Codegen.codegen(file, universe; config = bad_cfg)
     @test !occursin("typesalt=0xdead", with_bad)
-    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16}\s*$"m, with_bad)
+    # The `kwconstructor=true kwshow=true` come from the always-emitted
+    # baseline; `bad_cfg`'s `typesalt` doesn't leak through.
+    @test occursin(r"@batteries Inner typesalt=0x[0-9a-f]{16} kwconstructor=true kwshow=true\s*$"m, with_bad)
 
     # `[enumbatteries]` populated → user kwargs joined onto every
     # `@enumbatteries <Name>.T …` line. corpus.proto carries `Color`.
@@ -185,6 +197,50 @@ end
     enum_cfg = Dict("enumbatteries" => Dict("kwshow" => true))
     with_enums = ProtocGen.Codegen.codegen(corpus_file, corpus_universe; config = enum_cfg)
     @test occursin(r"@enumbatteries Color\.T typesalt=0x[0-9a-f]{16} kwshow=true", with_enums)
+end
+
+@testset "codegen: @batteries works on Core/Base-shadowing types" begin
+    # `shadow.proto` declares messages named `Core`, `Base`, `Type`,
+    # `Any`, `Bool`, an enum `Integer`, and a `Holder` that pulls them
+    # all together. Each of these names shadows a Core / Base binding
+    # inside the generated module — the StructHelpers >=1.4.1 fix
+    # captures the original Core / Base values at quote-build time so
+    # @batteries macro expansion is no longer derailed.
+    response = run_codegen("shadow.pb", ["shadow.proto"])
+    @test response.error === nothing
+    @test length(response.file) == 1
+    f = first(response.file)
+
+    # Eval the file in a fresh anonymous module; this is where the
+    # macro-expansion-time shadowing would bite if it weren't fixed.
+    m = eval_generated(f.content, :GeneratedShadow)
+
+    # Every shadow message + enum was decorated with @batteries /
+    # @enumbatteries (StructHelpers.has_batteries returns true).
+    for name in (:Core, :Base, :Type, :Any, :Bool, :Holder)
+        T = Base.invokelatest(getproperty, m, name)
+        @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, T)
+    end
+    EnumT = Base.invokelatest(getproperty,
+                              Base.invokelatest(getproperty, m, :Integer),
+                              :T)
+    @test Base.invokelatest(ProtocGen.StructHelpers.has_batteries, EnumT)
+
+    # Holder ties them together — round-trip through binary format
+    # exercises the generated decode/encode plus the @batteries-
+    # decorated structs. Use kwarg construction so the buffer fills in
+    # from `default_keywords`.
+    msg = pb_make(m.Holder;
+        c  = pb_make(m.Core; v = Int32(1)),
+        b  = pb_make(m.Base; label = "label"),
+        t  = pb_make(m.Type; name = "type-name"),
+        a  = pb_make(m.Any;  url = "url"),
+        bl = pb_make(m.Bool; flag = true),
+        i  = Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
+    )
+    bytes = encode_latest(msg)
+    back  = decode_latest(m.Holder, bytes)
+    @test back == msg
 end
 
 end  # module TestCodegen

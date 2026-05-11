@@ -6,34 +6,31 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
+const var"#core" = Core
+const var"#base" = Base
 
 export SourceContext
 
-Base.@kwdef struct SourceContext <: PB.AbstractProtoBufMessage
-    file_name::String = ""
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
-    function SourceContext(file_name, _unknown_fields=UInt8[])
-        return new(file_name, _unknown_fields)
-    end
+struct SourceContext <: PB.AbstractProtoBufMessage
+    file_name::var"#base".String
+    var"#unknown_fields"::Vector{UInt8}
 end
-function PB.default_values(::Core.Type{SourceContext})
-    return (;file_name = "", var"#unknown_fields" = UInt8[])
-end
-function PB.field_numbers(::Core.Type{SourceContext})
+function PB.field_numbers(::var"#core".Type{SourceContext})
     return (;file_name = 1)
 end
-function PB.json_field_names(::Core.Type{SourceContext})
+function PB.json_field_names(::var"#core".Type{SourceContext})
     return (;file_name = "fileName")
 end
 PB.register_message_type("google.protobuf.SourceContext", SourceContext)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:SourceContext}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     file_name = ""
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            file_name = PB._decode(_d, String)
+            file_name = PB._decode(_d, var"#base".String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -54,6 +51,10 @@ function PB._encoded_size(_x::SourceContext)
     !isempty(_x.file_name) && (encoded_size += PB._encoded_size(_x.file_name, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
+end
+@batteries SourceContext typesalt=0x2ab8d30d0cd1846d kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{SourceContext})
+    return (;file_name = "", var"#unknown_fields" = UInt8[])
 end
 
 

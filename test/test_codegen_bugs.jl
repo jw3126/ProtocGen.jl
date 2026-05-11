@@ -1,4 +1,4 @@
-# Regression tests for two codegen bugs that lived in Phase 4–6. Both are
+# Regression tests for two codegen bugs that lived in earlier passes. Both are
 # fixed; this file is now a regression suite and is a natural candidate to
 # merge into test_codegen.jl.
 #

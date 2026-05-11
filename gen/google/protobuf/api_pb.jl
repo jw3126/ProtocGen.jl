@@ -6,38 +6,35 @@ import ProtocGen as PB
 using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
+using ProtocGen.StructHelpers: @batteries, @enumbatteries
+const var"#core" = Core
+const var"#base" = Base
 
 export Api, Method, Mixin
 
-Base.@kwdef struct Mixin <: PB.AbstractProtoBufMessage
-    name::String = ""
-    root::String = ""
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
-    function Mixin(name, root, _unknown_fields=UInt8[])
-        return new(name, root, _unknown_fields)
-    end
+struct Mixin <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    root::var"#base".String
+    var"#unknown_fields"::Vector{UInt8}
 end
-function PB.default_values(::Core.Type{Mixin})
-    return (;name = "", root = "", var"#unknown_fields" = UInt8[])
-end
-function PB.field_numbers(::Core.Type{Mixin})
+function PB.field_numbers(::var"#core".Type{Mixin})
     return (;name = 1, root = 2)
 end
-function PB.json_field_names(::Core.Type{Mixin})
+function PB.json_field_names(::var"#core".Type{Mixin})
     return (;name = "name", root = "root")
 end
 PB.register_message_type("google.protobuf.Mixin", Mixin)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Mixin}, _endpos::Int=0, _group::Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Mixin}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     name = ""
     root = ""
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, String)
+            name = PB._decode(_d, var"#base".String)
         elseif field_number == 2
-            root = PB._decode(_d, String)
+            root = PB._decode(_d, var"#base".String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -61,32 +58,30 @@ function PB._encoded_size(_x::Mixin)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries Mixin typesalt=0xb3cf99f6fd208d2c kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Mixin})
+    return (;name = "", root = "", var"#unknown_fields" = UInt8[])
+end
 
-Base.@kwdef struct Method <: PB.AbstractProtoBufMessage
-    name::String = ""
-    request_type_url::String = ""
-    request_streaming::Bool = false
-    response_type_url::String = ""
-    response_streaming::Bool = false
-    options::Vector{Option} = Vector{Option}()
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
-    function Method(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields=UInt8[])
-        return new(name, request_type_url, request_streaming, response_type_url, response_streaming, options, syntax, _unknown_fields)
-    end
+struct Method <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    request_type_url::var"#base".String
+    request_streaming::var"#base".Bool
+    response_type_url::var"#base".String
+    response_streaming::var"#base".Bool
+    options::Vector{Option}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
 end
-function PB.default_values(::Core.Type{Method})
-    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
-end
-function PB.field_numbers(::Core.Type{Method})
+function PB.field_numbers(::var"#core".Type{Method})
     return (;name = 1, request_type_url = 2, request_streaming = 3, response_type_url = 4, response_streaming = 5, options = 6, syntax = 7)
 end
-function PB.json_field_names(::Core.Type{Method})
+function PB.json_field_names(::var"#core".Type{Method})
     return (;name = "name", request_type_url = "requestTypeUrl", request_streaming = "requestStreaming", response_type_url = "responseTypeUrl", response_streaming = "responseStreaming", options = "options", syntax = "syntax")
 end
 PB.register_message_type("google.protobuf.Method", Method)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos::Int=0, _group::Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Method}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     name = ""
     request_type_url = ""
     request_streaming = false
@@ -98,15 +93,15 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Method}, _endpos:
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, String)
+            name = PB._decode(_d, var"#base".String)
         elseif field_number == 2
-            request_type_url = PB._decode(_d, String)
+            request_type_url = PB._decode(_d, var"#base".String)
         elseif field_number == 3
-            request_streaming = PB._decode(_d, Bool)
+            request_streaming = PB._decode(_d, var"#base".Bool)
         elseif field_number == 4
-            response_type_url = PB._decode(_d, String)
+            response_type_url = PB._decode(_d, var"#base".String)
         elseif field_number == 5
-            response_streaming = PB._decode(_d, Bool)
+            response_streaming = PB._decode(_d, var"#base".Bool)
         elseif field_number == 6
             PB._decode!(_d, options)
         elseif field_number == 7
@@ -144,32 +139,30 @@ function PB._encoded_size(_x::Method)
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
+@batteries Method typesalt=0x0831ab03c8efa53e kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Method})
+    return (;name = "", request_type_url = "", request_streaming = false, response_type_url = "", response_streaming = false, options = Vector{Option}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
+end
 
-Base.@kwdef struct Api <: PB.AbstractProtoBufMessage
-    name::String = ""
-    methods::Vector{Method} = Vector{Method}()
-    options::Vector{Option} = Vector{Option}()
-    version::String = ""
-    source_context::Union{Nothing,SourceContext} = nothing
-    mixins::Vector{Mixin} = Vector{Mixin}()
-    syntax::Syntax.T = Syntax.SYNTAX_PROTO2
-    var"#unknown_fields"::Vector{UInt8} = UInt8[]
-    function Api(name, methods, options, version, source_context, mixins, syntax, _unknown_fields=UInt8[])
-        return new(name, methods, options, version, source_context, mixins, syntax, _unknown_fields)
-    end
+struct Api <: PB.AbstractProtoBufMessage
+    name::var"#base".String
+    methods::Vector{Method}
+    options::Vector{Option}
+    version::var"#base".String
+    source_context::Union{Nothing,SourceContext}
+    mixins::Vector{Mixin}
+    syntax::Syntax.T
+    var"#unknown_fields"::Vector{UInt8}
 end
-function PB.default_values(::Core.Type{Api})
-    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
-end
-function PB.field_numbers(::Core.Type{Api})
+function PB.field_numbers(::var"#core".Type{Api})
     return (;name = 1, methods = 2, options = 3, version = 4, source_context = 5, mixins = 6, syntax = 7)
 end
-function PB.json_field_names(::Core.Type{Api})
+function PB.json_field_names(::var"#core".Type{Api})
     return (;name = "name", methods = "methods", options = "options", version = "version", source_context = "sourceContext", mixins = "mixins", syntax = "syntax")
 end
 PB.register_message_type("google.protobuf.Api", Api)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::Int=0, _group::Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Api}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
     name = ""
     methods = PB.BufferedVector{Method}()
     options = PB.BufferedVector{Option}()
@@ -181,13 +174,13 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::Core.Type{<:Api}, _endpos::In
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, String)
+            name = PB._decode(_d, var"#base".String)
         elseif field_number == 2
             PB._decode!(_d, methods)
         elseif field_number == 3
             PB._decode!(_d, options)
         elseif field_number == 4
-            version = PB._decode(_d, String)
+            version = PB._decode(_d, var"#base".String)
         elseif field_number == 5
             PB._decode!(_d, source_context)
         elseif field_number == 6
@@ -226,6 +219,10 @@ function PB._encoded_size(_x::Api)
     _x.syntax != Syntax.SYNTAX_PROTO2 && (encoded_size += PB._encoded_size(_x.syntax, 7))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
+end
+@batteries Api typesalt=0x21735bcf816e7fad kwconstructor=true kwshow=true
+function PB.StructHelpers.default_keywords(::var"#core".Type{Api})
+    return (;name = "", methods = Vector{Method}(), options = Vector{Option}(), version = "", source_context = nothing, mixins = Vector{Mixin}(), syntax = Syntax.SYNTAX_PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 

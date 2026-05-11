@@ -76,33 +76,6 @@ function Base.hash(m::AbstractProtoBufMessage, h::UInt)
     return h
 end
 
-# `Base.show` for generated messages — kwarg-style printout mirroring
-# the `@kwdef` constructor so the rendered form is also valid Julia
-# source. The unknown-fields buffer is suppressed when empty (the
-# common case) and rendered with its `var"#unknown_fields"` field name
-# only when it actually carries bytes.
-function Base.show(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
-    print(io, T, "(")
-    first = true
-    for name in fieldnames(T)
-        v = getfield(msg, name)
-        if name === Symbol("#unknown_fields") && isempty(v)
-            continue
-        end
-        first || print(io, ", ")
-        first = false
-        sname = String(name)
-        if startswith(sname, "#") || !Base.isidentifier(sname)
-            print(io, "var\"", sname, "\"")
-        else
-            print(io, sname)
-        end
-        print(io, " = ")
-        show(io, v)
-    end
-    print(io, ")")
-end
-
 function reserved_fields(::Type{T}) where {T}
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[])
 end
@@ -120,7 +93,7 @@ function field_numbers(::Type{T}) where {T}
 end
 
 function default_values(::Type{T}) where {T}
-    return (;)
+    return StructHelpers.default_keywords(T)
 end
 
 # Maps each Julia field name → the JSON key it serializes to. Codegen

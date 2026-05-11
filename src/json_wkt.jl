@@ -1,4 +1,4 @@
-# JSON special forms for the well-known types (Phase 12c).
+# JSON special forms for the well-known types.
 #
 # Each WKT type has its own canonical JSON representation that bypasses
 # the generic walker. Methods here override `_encode_json_value` /
@@ -55,21 +55,21 @@ function _encode_json_value(io::IO, v::_UInt64Value); _encode_json_value(io, v.v
 # `_decode_json_value(::Type{T}, ::AbstractDict)` for messages — Dict
 # input falls to the message walker (which accepts the
 # `{"value": …}` envelope as a friendly fallback).
-function _decode_json_value(::Type{_BoolValue},   v::Bool;           kw...); return _BoolValue(v); end
-function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...); return _StringValue(String(v)); end
-function _decode_json_value(::Type{_BytesValue},  v::AbstractString; kw...); return _BytesValue(_base64_decode(v)); end
-function _decode_json_value(::Type{_DoubleValue}, v::Real;           kw...); return _DoubleValue(Float64(v)); end
-function _decode_json_value(::Type{_DoubleValue}, v::AbstractString; kw...); return _DoubleValue(_decode_json_value(Float64, v; kw...)); end
-function _decode_json_value(::Type{_FloatValue},  v::Real;           kw...); return _FloatValue(Float32(v)); end
-function _decode_json_value(::Type{_FloatValue},  v::AbstractString; kw...); return _FloatValue(_decode_json_value(Float32, v; kw...)); end
-function _decode_json_value(::Type{_Int32Value},  v::Real;           kw...); return _Int32Value(Int32(v)); end
-function _decode_json_value(::Type{_Int32Value},  v::AbstractString; kw...); return _Int32Value(parse(Int32, v)); end
-function _decode_json_value(::Type{_Int64Value},  v::Real;           kw...); return _Int64Value(Int64(v)); end
-function _decode_json_value(::Type{_Int64Value},  v::AbstractString; kw...); return _Int64Value(parse(Int64, v)); end
-function _decode_json_value(::Type{_UInt32Value}, v::Real;           kw...); return _UInt32Value(UInt32(v)); end
-function _decode_json_value(::Type{_UInt32Value}, v::AbstractString; kw...); return _UInt32Value(parse(UInt32, v)); end
-function _decode_json_value(::Type{_UInt64Value}, v::Real;           kw...); return _UInt64Value(UInt64(v)); end
-function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...); return _UInt64Value(parse(UInt64, v)); end
+function _decode_json_value(::Type{_BoolValue},   v::Bool;           kw...); return _BoolValue(v, UInt8[]); end
+function _decode_json_value(::Type{_StringValue}, v::AbstractString; kw...); return _StringValue(String(v), UInt8[]); end
+function _decode_json_value(::Type{_BytesValue},  v::AbstractString; kw...); return _BytesValue(_base64_decode(v), UInt8[]); end
+function _decode_json_value(::Type{_DoubleValue}, v::Real;           kw...); return _DoubleValue(Float64(v), UInt8[]); end
+function _decode_json_value(::Type{_DoubleValue}, v::AbstractString; kw...); return _DoubleValue(_decode_json_value(Float64, v; kw...), UInt8[]); end
+function _decode_json_value(::Type{_FloatValue},  v::Real;           kw...); return _FloatValue(Float32(v), UInt8[]); end
+function _decode_json_value(::Type{_FloatValue},  v::AbstractString; kw...); return _FloatValue(_decode_json_value(Float32, v; kw...), UInt8[]); end
+function _decode_json_value(::Type{_Int32Value},  v::Real;           kw...); return _Int32Value(Int32(v), UInt8[]); end
+function _decode_json_value(::Type{_Int32Value},  v::AbstractString; kw...); return _Int32Value(parse(Int32, v), UInt8[]); end
+function _decode_json_value(::Type{_Int64Value},  v::Real;           kw...); return _Int64Value(Int64(v), UInt8[]); end
+function _decode_json_value(::Type{_Int64Value},  v::AbstractString; kw...); return _Int64Value(parse(Int64, v), UInt8[]); end
+function _decode_json_value(::Type{_UInt32Value}, v::Real;           kw...); return _UInt32Value(UInt32(v), UInt8[]); end
+function _decode_json_value(::Type{_UInt32Value}, v::AbstractString; kw...); return _UInt32Value(parse(UInt32, v), UInt8[]); end
+function _decode_json_value(::Type{_UInt64Value}, v::Real;           kw...); return _UInt64Value(UInt64(v), UInt8[]); end
+function _decode_json_value(::Type{_UInt64Value}, v::AbstractString; kw...); return _UInt64Value(parse(UInt64, v), UInt8[]); end
 
 # -----------------------------------------------------------------------------
 # Empty — `{}`. Generic walker already produces this on encode (no fields)
@@ -102,7 +102,7 @@ function _decode_json_value(::Type{_Timestamp}, s::AbstractString; kw...)
     if seconds < _TIMESTAMP_MIN_SECONDS || seconds > _TIMESTAMP_MAX_SECONDS
         throw(ArgumentError("Timestamp out of range: $(repr(s))"))
     end
-    return _Timestamp(seconds, nanos)
+    return _Timestamp(seconds, nanos, UInt8[])
 end
 
 function _format_rfc3339(io::IO, seconds::Integer, nanos::Integer)
@@ -191,7 +191,7 @@ function _decode_json_value(::Type{_Duration}, s::AbstractString; kw...)
     end
     seconds = sign * seconds_abs
     nanos = m[3] === nothing ? Int32(0) : Int32(sign * parse(Int, rpad(m[3], 9, '0')))
-    return _Duration(seconds, nanos)
+    return _Duration(seconds, nanos, UInt8[])
 end
 
 # -----------------------------------------------------------------------------
@@ -214,9 +214,9 @@ function _encode_json_value(io::IO, fm::_FieldMask)
 end
 
 function _decode_json_value(::Type{_FieldMask}, s::AbstractString; kw...)
-    isempty(s) && return _FieldMask(String[])
+    isempty(s) && return _FieldMask(String[], UInt8[])
     paths = [_to_snake(String(p)) for p in split(s, ',')]
-    return _FieldMask(paths)
+    return _FieldMask(paths, UInt8[])
 end
 
 # snake_case → camelCase per protoc's field-name conversion rule.
@@ -277,24 +277,24 @@ end
 
 # Value decode: dispatch on the JSON value's runtime type.
 function _decode_json_value(::Type{_Value}, ::Nothing; kw...)
-    return _Value(OneOf(:null_value, _NullValue.NULL_VALUE))
+    return _Value(OneOf(:null_value, _NullValue.NULL_VALUE), UInt8[])
 end
 function _decode_json_value(::Type{_Value}, v::Bool; kw...)
-    return _Value(OneOf(:bool_value, v))
+    return _Value(OneOf(:bool_value, v), UInt8[])
 end
 function _decode_json_value(::Type{_Value}, v::Real; kw...)
-    return _Value(OneOf(:number_value, Float64(v)))
+    return _Value(OneOf(:number_value, Float64(v)), UInt8[])
 end
 function _decode_json_value(::Type{_Value}, v::AbstractString; kw...)
-    return _Value(OneOf(:string_value, String(v)))
+    return _Value(OneOf(:string_value, String(v)), UInt8[])
 end
 function _decode_json_value(::Type{_Value}, v::AbstractDict; kw...)
     s = _decode_json_value(_Struct, v; kw...)
-    return _Value(OneOf(:struct_value, s))
+    return _Value(OneOf(:struct_value, s), UInt8[])
 end
 function _decode_json_value(::Type{_Value}, v::AbstractVector; kw...)
     lv = _decode_json_value(_ListValue, v; kw...)
-    return _Value(OneOf(:list_value, lv))
+    return _Value(OneOf(:list_value, lv), UInt8[])
 end
 
 # Struct: emit the fields dict as a bare JSON object.
@@ -310,7 +310,7 @@ function _decode_json_value(::Type{_Struct}, v::AbstractDict; kw...)
     for (k, jv) in v
         fields[String(k)] = _decode_json_value(_Value, jv; kw...)
     end
-    return _Struct(fields)
+    return _Struct(fields, UInt8[])
 end
 
 # ListValue: emit the values vector as a bare JSON array.
@@ -321,7 +321,7 @@ end
 
 function _decode_json_value(::Type{_ListValue}, v::AbstractVector; kw...)
     values = _AbstractValue[_decode_json_value(_Value, x; kw...) for x in v]
-    return _ListValue(values)
+    return _ListValue(values, UInt8[])
 end
 
 # Cycle-abstract forwarding. Invariant `Type{X}` so calls dispatched on
@@ -484,7 +484,7 @@ function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
     end
 
     # Re-encode to bytes for the Any wire form.
-    return _Any_(String(type_url), encode(msg))
+    return _Any_(String(type_url), encode(msg), UInt8[])
 end
 
 # -----------------------------------------------------------------------------

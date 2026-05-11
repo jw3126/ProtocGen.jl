@@ -111,20 +111,20 @@ function pb_decode(::Type{T}, bytes::AbstractVector{UInt8}) where {T}
 end
 
 function skipped_response(reason::AbstractString)
-    return Conf.ConformanceResponse(PBD.OneOf(:skipped, String(reason)))
+    return Conf.ConformanceResponse(PBD.OneOf(:skipped, String(reason)), UInt8[])
 end
 
 function handle_request(req)
     # The runner's first request is always a probe asking which tests we
     # know we'll fail. We don't predict those — return an empty FailureSet.
     if req.message_type == "conformance.FailureSet"
-        fs = Conf.FailureSet(String[])
-        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, pb_encode(fs)))
+        fs = Conf.FailureSet(String[], UInt8[])
+        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, pb_encode(fs)), UInt8[])
     end
 
     payload = req.payload
     if payload === nothing
-        return Conf.ConformanceResponse(PBD.OneOf(:parse_error, "no payload in request"))
+        return Conf.ConformanceResponse(PBD.OneOf(:parse_error, "no payload in request"), UInt8[])
     end
 
     # JSPB / TEXT_FORMAT input remain skipped; binary and JSON we handle.
@@ -140,7 +140,7 @@ function handle_request(req)
     T = get(MESSAGE_TYPE, req.message_type, nothing)
     if T === nothing
         return Conf.ConformanceResponse(PBD.OneOf(:runtime_error,
-            "unknown message_type: $(req.message_type)"))
+            "unknown message_type: $(req.message_type)"), UInt8[])
     end
 
     # ---- Parse ----
@@ -152,7 +152,7 @@ function handle_request(req)
             PBD.decode_json(T, payload.value; ignore_unknown_fields = ignore_unknown)
         end
     catch e
-        return Conf.ConformanceResponse(PBD.OneOf(:parse_error, sprint(showerror, e)))
+        return Conf.ConformanceResponse(PBD.OneOf(:parse_error, sprint(showerror, e)), UInt8[])
     end
 
     # ---- Serialize ----
@@ -160,16 +160,16 @@ function handle_request(req)
         bytes = try
             pb_encode(msg)
         catch e
-            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)))
+            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)), UInt8[])
         end
-        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, bytes))
+        return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, bytes), UInt8[])
     else  # WF_JSON
         json = try
             PBD.encode_json(msg)
         catch e
-            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)))
+            return Conf.ConformanceResponse(PBD.OneOf(:serialize_error, sprint(showerror, e)), UInt8[])
         end
-        return Conf.ConformanceResponse(PBD.OneOf(:json_payload, json))
+        return Conf.ConformanceResponse(PBD.OneOf(:json_payload, json), UInt8[])
     end
 end
 
@@ -186,7 +186,7 @@ function main()
         resp = try
             handle_request(req)
         catch e
-            Conf.ConformanceResponse(PBD.OneOf(:runtime_error, sprint(showerror, e)))
+            Conf.ConformanceResponse(PBD.OneOf(:runtime_error, sprint(showerror, e)), UInt8[])
         end
 
         out_bytes = pb_encode(resp)

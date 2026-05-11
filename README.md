@@ -41,8 +41,8 @@ person = Person(
     id = Int32(42),
     email = "alice@example.com",
     phones = [
-        PhoneNumber("+1-555-0100", PhoneType.PHONE_TYPE_MOBILE),
-        PhoneNumber("+1-555-0101", PhoneType.PHONE_TYPE_WORK),
+        PhoneNumber(number = "+1-555-0100", type = PhoneType.PHONE_TYPE_MOBILE),
+        PhoneNumber(number = "+1-555-0101", type = PhoneType.PHONE_TYPE_WORK),
     ],
     last_updated = google_protobuf.Timestamp(seconds = Int64(1_715_000_000)),
 )

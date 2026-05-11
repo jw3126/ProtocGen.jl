@@ -59,6 +59,7 @@ const DESCRIPTOR_SETS = [
     "test_messages_proto2_patched.proto",
     "test_messages_proto3.proto",
     "unittest_well_known_types.proto",
+    "shadow.proto",
 ]
 
 function find_protoc()

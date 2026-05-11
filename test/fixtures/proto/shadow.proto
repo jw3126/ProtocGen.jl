@@ -1,0 +1,42 @@
+// User proto whose message + enum names shadow Core / Base bindings
+// the @batteries macro internally references (Type, Any, Bool, UInt,
+// String, Symbol, AbstractString, Integer, IO) plus the module names
+// `Core` and `Base` themselves. Exercises the StructHelpers >=1.4.1
+// shadow-immunity fix end-to-end through the full codegen pipeline.
+syntax = "proto3";
+package shadow;
+
+message Core {
+  int32 v = 1;
+}
+
+message Base {
+  string label = 1;
+}
+
+message Type {
+  string name = 1;
+}
+
+message Any {
+  string url = 1;
+}
+
+message Bool {
+  bool flag = 1;
+}
+
+enum Integer {
+  INTEGER_UNSPECIFIED = 0;
+  INTEGER_ONE = 1;
+  INTEGER_TWO = 2;
+}
+
+message Holder {
+  Core   c   = 1;
+  Base   b   = 2;
+  Type   t   = 3;
+  Any    a   = 4;
+  Bool   bl  = 5;
+  Integer i  = 6;
+}
