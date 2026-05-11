@@ -1,5 +1,9 @@
 # ProtocGen.jl
 
+<p align="center">
+  <img src="docs/src/assets/logo.png" alt="ProtocGen.jl" width="320">
+</p>
+
 [![CI](https://github.com/jw3126/ProtocGen.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jw3126/ProtocGen.jl/actions/workflows/ci.yml)
 
 Julia code generator for Protocol Buffers.
