@@ -1,0 +1,42 @@
+name: Format
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  format-check:
+    name: JuliaFormatter check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: "1"
+      - uses: actions/cache@v5
+        env:
+          cache-name: cache-format-deps
+        with:
+          path: ~/.julia/artifacts
+          key: ${{ runner.os }}-format-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-format-${{ env.cache-name }}-
+            ${{ runner.os }}-format-
+            ${{ runner.os }}-
+      - name: Install JuliaFormatter
+        # Pin to a single registered minor so the formatter version drift
+        # cannot reformat code unilaterally between CI runs.
+        run: julia --color=no -e 'using Pkg; Pkg.add(name="JuliaFormatter", version="1")'
+      - name: Run JuliaFormatter
+        # The repo's .JuliaFormatter.toml is picked up automatically.
+        # `gen/` and `examples/out/` are excluded — they're machine-
+        # generated and reformatting would be undone on the next regen.
+        run: julia --color=no -e 'using JuliaFormatter; format(["src", "test"])'
+      - name: Check that the formatter produced no diff
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Code is not formatted. Run \`julia -e 'using JuliaFormatter; format([\"src\", \"test\"])'\` and commit the result."
+            exit 1
+          fi

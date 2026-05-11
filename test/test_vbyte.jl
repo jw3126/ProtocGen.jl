@@ -12,12 +12,9 @@ function test_vbyte_encode(input, expected)
     (io = IOBuffer(); vbyte_encode(io, unsigned(input)); @test take!(io) == expected)
 end
 function test_vbyte_roundtrip(input)
-    (
-        io = PipeBuffer(); vbyte_encode(io, unsigned(input)); @test vbyte_decode(
-            io,
-            typeof(unsigned(input)),
-        ) == input
-    )
+    (io = PipeBuffer();
+    vbyte_encode(io, unsigned(input));
+    @test vbyte_decode(io, typeof(unsigned(input))) == input)
 end
 
 @testset "vbyte" begin
