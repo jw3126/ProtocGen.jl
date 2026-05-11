@@ -19,7 +19,8 @@ include("setup.jl")
     response =
         run_codegen("unittest_well_known_types.pb", ["unittest_well_known_types.proto"])
     @test response.error === nothing
-    @test length(response.file) == 1
+    @test length(response.file) == 2
+    @test response.file[2].name == "_pb_includes.jl"
     f = response.file[1]
     @test f.name == "unittest_well_known_types_pb.jl"
 

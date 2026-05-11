@@ -73,22 +73,22 @@ function generate(request::_GC.CodeGeneratorRequest)
             ),
         )
     end
-    # Driver file: only useful when more than one .proto is being generated
-    # (single-file outputs don't benefit from a wrapping skeleton). The user
-    # `include`s it from wherever they want their namespace rooted.
-    if length(request.file_to_generate) > 1
-        driver = Codegen.codegen_driver(collect(request.file_to_generate), by_name)
-        push!(
-            files,
-            _GC.var"CodeGeneratorResponse.File"(
-                "_pb_includes.jl",
-                nothing,
-                driver,
-                nothing,
-                UInt8[],
-            ),
-        )
-    end
+    # Driver file: emitted unconditionally so the consumer's `include` call
+    # works the same whether the request has one or many .proto files. With
+    # a single file the driver still pulls its weight by declaring the
+    # proto-package module skeleton (otherwise the file's struct decls would
+    # end up flat at the include site, exposing a different public API).
+    driver = Codegen.codegen_driver(collect(request.file_to_generate), by_name)
+    push!(
+        files,
+        _GC.var"CodeGeneratorResponse.File"(
+            "_pb_includes.jl",
+            nothing,
+            driver,
+            nothing,
+            UInt8[],
+        ),
+    )
     return _GC.CodeGeneratorResponse(
         nothing,
         _FEATURE_PROTO3_OPTIONAL,
