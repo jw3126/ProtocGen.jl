@@ -14,7 +14,10 @@ include("setup.jl")
     response = ProtocGen.run_plugin(IOBuffer(req_bytes), out_io)
     @test response isa GC.CodeGeneratorResponse
     @test response.error === nothing
-    @test isempty(response.file)
+    # Driver file is always emitted (even for empty requests) — see comment
+    # in `plugin.jl` about API surface consistency across file counts.
+    @test length(response.file) == 1
+    @test response.file[1].name == "_pb_includes.jl"
     # Plugin claims it can handle proto3 `optional` so protoc doesn't reject
     # requests that contain them.
     @test response.supported_features == UInt64(1)  # FEATURE_PROTO3_OPTIONAL
@@ -22,7 +25,8 @@ include("setup.jl")
     # The bytes round-trip back to the same response.
     response2 = ProtocGen.decode(take!(out_io), GC.CodeGeneratorResponse)
     @test response2.error === nothing
-    @test isempty(response2.file)
+    @test length(response2.file) == 1
+    @test response2.file[1].name == "_pb_includes.jl"
     @test response2.supported_features == UInt64(1)
 
     # Malformed input: the plugin reports the failure in `error` instead of
@@ -66,7 +70,8 @@ end
     out_bytes = read(out_pipe)
     response = ProtocGen.decode(out_bytes, GC.CodeGeneratorResponse)
     @test response.error === nothing
-    @test isempty(response.file)
+    @test length(response.file) == 1
+    @test response.file[1].name == "_pb_includes.jl"
     @test response.supported_features == UInt64(1)
 
     # Unexpected positional args → exit 2, no stdout output.

@@ -5,9 +5,11 @@ include("setup.jl")
 @testset "codegen happy path" begin
     response = run_codegen("sample.pb", ["sample.proto"])
     @test response.error === nothing
-    @test length(response.file) == 1
+    # Per-proto `_pb.jl` plus the always-on `_pb_includes.jl` driver.
+    @test length(response.file) == 2
     f = response.file[1]
     @test f.name == "sample_pb.jl"
+    @test response.file[2].name == "_pb_includes.jl"
     @test occursin("struct Inner", f.content)
     @test occursin("struct Outer", f.content)
     @test occursin("nested::Union{Nothing,Inner}", f.content)
@@ -75,9 +77,10 @@ end
     # fixtures/txtpb/corpus_sample.txtpb (every field non-default).
     response = run_codegen("corpus.pb", ["corpus.proto"])
     @test response.error === nothing
-    @test length(response.file) == 1
+    @test length(response.file) == 2
     f = response.file[1]
     @test f.name == "corpus_pb.jl"
+    @test response.file[2].name == "_pb_includes.jl"
 
     corpus_mod = eval_generated(f.content, :GeneratedCorpus)
 
@@ -220,7 +223,8 @@ end
     # @batteries macro expansion is no longer derailed.
     response = run_codegen("shadow.pb", ["shadow.proto"])
     @test response.error === nothing
-    @test length(response.file) == 1
+    @test length(response.file) == 2
+    @test response.file[2].name == "_pb_includes.jl"
     f = first(response.file)
 
     # Eval the file in a fresh anonymous module; this is where the

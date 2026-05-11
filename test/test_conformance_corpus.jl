@@ -17,7 +17,8 @@ include("setup.jl")
         ["test_messages_proto2_patched.proto"],
     )
     @test response.error === nothing
-    @test length(response.file) == 1
+    @test length(response.file) == 2
+    @test response.file[2].name == "_pb_includes.jl"
     f = response.file[1]
     @test f.name == "test_messages_proto2_patched_pb.jl"
 
@@ -130,7 +131,8 @@ end
 @testset "conformance corpus — proto3" begin
     response = run_codegen("test_messages_proto3.pb", ["test_messages_proto3.proto"])
     @test response.error === nothing
-    @test length(response.file) == 1
+    @test length(response.file) == 2
+    @test response.file[2].name == "_pb_includes.jl"
     f = response.file[1]
     @test f.name == "test_messages_proto3_pb.jl"
 

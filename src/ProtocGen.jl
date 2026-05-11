@@ -80,10 +80,6 @@ function field_numbers(::Type{T}) where {T}
     return (;)
 end
 
-function default_values(::Type{T}) where {T}
-    return StructHelpers.default_keywords(T)
-end
-
 # Maps each Julia field name → the JSON key it serializes to. Codegen
 # emits a method per generated message reading the (already populated)
 # `json_name` from the FieldDescriptor; the default-empty NamedTuple
@@ -132,10 +128,6 @@ include("testing.jl")
 export encode, decode, encode_json, decode_json
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields,
-    extendable_field_numbers,
-    oneof_field_types,
-    field_numbers,
-    default_values,
-    json_field_names
+    extendable_field_numbers, oneof_field_types, field_numbers, json_field_names
 
 end # module

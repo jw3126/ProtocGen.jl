@@ -36,11 +36,11 @@ function _parsed(x)
     JSON.parse(encode_json(x))
 end
 
-# Build a message of type `T` from `default_values(T)`, with the given
-# overrides merged in. Lets us touch only the fields a test cares about
-# without listing every other slot as `nothing`.
+# Build a message of type `T` from `StructHelpers.default_keywords(T)`,
+# with the given overrides merged in. Lets us touch only the fields a
+# test cares about without listing every other slot as `nothing`.
 function _make(::Type{T}; overrides...) where {T}
-    d = ProtocGen.default_values(T)
+    d = ProtocGen.StructHelpers.default_keywords(T)
     merged = merge(d, NamedTuple(overrides))
     return T((merged[n] for n in fieldnames(T))...)
 end
@@ -54,7 +54,7 @@ end
     @testset "scalars: 32-bit int emitted as JSON number" begin
         # FieldDescriptorProto.number :: Union{Nothing,Int32}. We override
         # only `name` and `number`; everything else (including the
-        # required-with-default enums) comes from `default_values`.
+        # required-with-default enums) comes from `default_keywords`.
         f = _make(_G.FieldDescriptorProto; name = "name", number = Int32(7))
         d = _parsed(f)
         @test d["name"] == "name"
