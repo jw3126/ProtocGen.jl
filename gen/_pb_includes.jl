@@ -4,31 +4,25 @@
 # Include this file from wherever you want the namespace rooted.
 #! format: off
 
-const _PB_DIR  = @__DIR__
-const _PB_ROOT = @__MODULE__
-
 using ProtocGen: encode, decode, encode_json, decode_json
 
-# --- module skeleton ---
 module google
     module protobuf
+        include("google/protobuf/any_pb.jl")
+        include("google/protobuf/descriptor_pb.jl")
+        include("google/protobuf/duration_pb.jl")
+        include("google/protobuf/empty_pb.jl")
+        include("google/protobuf/field_mask_pb.jl")
+        include("google/protobuf/source_context_pb.jl")
+        include("google/protobuf/struct_pb.jl")
+        include("google/protobuf/timestamp_pb.jl")
+        include("google/protobuf/wrappers_pb.jl")
         module compiler
+            include("google/protobuf/compiler/plugin_pb.jl")
         end # module compiler
+        include("google/protobuf/type_pb.jl")
+        include("google/protobuf/api_pb.jl")
     end # module protobuf
 end # module google
-
-# --- file includes (topological order) ---
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/any_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/descriptor_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/duration_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/empty_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/field_mask_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/source_context_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/struct_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/timestamp_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/wrappers_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf.compiler, joinpath(_PB_DIR, "google/protobuf/compiler/plugin_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/type_pb.jl"))
-Core.include(_PB_ROOT.google.protobuf, joinpath(_PB_DIR, "google/protobuf/api_pb.jl"))
 
 #! format: on

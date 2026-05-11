@@ -251,7 +251,7 @@ end
         t = pb_make(m.Type; name = "type-name"),
         a = pb_make(m.Any; url = "url"),
         bl = pb_make(m.Bool; flag = true),
-        i = Base.invokelatest(getproperty, m.Integer, :INTEGER_TWO),
+        i = Base.invokelatest(getproperty, m.Integer, :TWO),
     )
     bytes = encode_latest(msg)
     back = decode_latest(m.Holder, bytes)

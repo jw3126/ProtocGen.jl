@@ -52,7 +52,7 @@ include("setup.jl")
         String[],
         WKT.Option[],
         nothing,
-        WKT.Syntax.SYNTAX_PROTO3,
+        WKT.Syntax.PROTO3,
     )
 
     t = pb_make(
@@ -91,7 +91,7 @@ include("setup.jl")
     @test decoded.source_context_field.file_name == "src.proto"
     @test decoded.type_field !== nothing
     @test decoded.type_field.name == "Foo"
-    @test decoded.type_field.syntax == WKT.Syntax.SYNTAX_PROTO3
+    @test decoded.type_field.syntax == WKT.Syntax.PROTO3
     @test decoded.int32_field !== nothing && decoded.int32_field.value == 42
     @test decoded.string_field !== nothing && decoded.string_field.value == "hello"
     @test decoded.bool_field !== nothing && decoded.bool_field.value === true

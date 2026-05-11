@@ -33,6 +33,60 @@ function _config_kw_table(config::AbstractDict, table::AbstractString)
     return join(parts, " ")
 end
 
+# Read `[codegen] strip_enum_prefix = …` from the TOML config; default true.
+# When true, codegen detects the per-enum UPPER_SNAKE_CASE prefix derived from
+# the enum type name and strips it from each value's Julia identifier (matching
+# protobuf-es / prost behavior). The wire form is preserved by the per-enum
+# `_enum_proto_prefix` metadata method codegen emits when stripping applies.
+function _strip_enum_prefix_enabled(config::AbstractDict)
+    cg = get(config, "codegen", nothing)
+    cg isa AbstractDict || return true
+    return get(cg, "strip_enum_prefix", true) === true
+end
+
+# "FeatureType" → "FEATURE_TYPE", "JSType" → "JS_TYPE", "Url" → "URL".
+# Insert an underscore before any uppercase letter that follows a lowercase or
+# digit, OR before any uppercase letter that's followed by a lowercase letter
+# (handles the run-of-uppercase boundary in "JSType" / "URLValue").
+function _to_upper_snake(s::AbstractString)
+    isempty(s) && return ""
+    out = IOBuffer()
+    cs = collect(s)
+    for (i, c) in enumerate(cs)
+        if i > 1 && isuppercase(c)
+            prev = cs[i-1]
+            nxt = i < length(cs) ? cs[i+1] : '\0'
+            if islowercase(prev) ||
+               isdigit(prev) ||
+               (isuppercase(prev) && nxt != '\0' && islowercase(nxt))
+                print(out, '_')
+            end
+        end
+        print(out, uppercase(c))
+    end
+    return String(take!(out))
+end
+
+# Detect the prefix to strip from each enum value, given the enum's leaf type
+# name and its value names. Returns "" when stripping does not apply, which
+# happens when:
+#   * not every value starts with `<UPPER_SNAKE>_`
+#   * stripping would leave a value that's empty or starts with a digit
+#     (Julia identifiers can't lead with a digit).
+function _detect_enum_prefix(enum_name::AbstractString, value_names::Vector{String})
+    isempty(enum_name) && return ""
+    isempty(value_names) && return ""
+    prefix = string(_to_upper_snake(enum_name), "_")
+    plen = lastindex(prefix)
+    for v in value_names
+        startswith(v, prefix) || return ""
+        rest = SubString(v, plen + 1)
+        isempty(rest) && return ""
+        isdigit(first(rest)) && return ""
+    end
+    return prefix
+end
+
 # ----------------------------------------------------------------------------
 # Stable 64-bit FNV-1a hash of a string. Used to derive a deterministic
 # `typesalt` for `@batteries` from a proto FQN. Stability matters: per
@@ -79,35 +133,35 @@ function _scalar_jl_type_and_wire(t)
     # a protobuf field name, so the alias is guaranteed not to clash
     # with user code.
     B = "var\"#base\""
-    if t === T.TYPE_DOUBLE
+    if t === T.DOUBLE
         return ("$(B).Float64", "")
-    elseif t === T.TYPE_FLOAT
+    elseif t === T.FLOAT
         return ("$(B).Float32", "")
-    elseif t === T.TYPE_INT64
+    elseif t === T.INT64
         return ("$(B).Int64", "")
-    elseif t === T.TYPE_UINT64
+    elseif t === T.UINT64
         return ("$(B).UInt64", "")
-    elseif t === T.TYPE_INT32
+    elseif t === T.INT32
         return ("$(B).Int32", "")
-    elseif t === T.TYPE_FIXED64
+    elseif t === T.FIXED64
         return ("$(B).UInt64", "Val{:fixed}")
-    elseif t === T.TYPE_FIXED32
+    elseif t === T.FIXED32
         return ("$(B).UInt32", "Val{:fixed}")
-    elseif t === T.TYPE_BOOL
+    elseif t === T.BOOL
         return ("$(B).Bool", "")
-    elseif t === T.TYPE_STRING
+    elseif t === T.STRING
         return ("$(B).String", "")
-    elseif t === T.TYPE_BYTES
+    elseif t === T.BYTES
         return ("$(B).Vector{$(B).UInt8}", "")
-    elseif t === T.TYPE_UINT32
+    elseif t === T.UINT32
         return ("$(B).UInt32", "")
-    elseif t === T.TYPE_SFIXED32
+    elseif t === T.SFIXED32
         return ("$(B).Int32", "Val{:fixed}")
-    elseif t === T.TYPE_SFIXED64
+    elseif t === T.SFIXED64
         return ("$(B).Int64", "Val{:fixed}")
-    elseif t === T.TYPE_SINT32
+    elseif t === T.SINT32
         return ("$(B).Int32", "Val{:zigzag}")
-    elseif t === T.TYPE_SINT64
+    elseif t === T.SINT64
         return ("$(B).Int64", "Val{:zigzag}")
     end
     error("scalar mapping not defined for $t")
@@ -213,6 +267,7 @@ Base.@kwdef struct LocalNames
     map_entries::Dict{String,DescriptorProto}
     package_of::Dict{String,String}  # FQN -> proto package
     cycle::Set{String} = Set{String}()  # message FQNs in a recursion cycle
+    strip_enum_prefix::Bool = true  # strip <UPPER_SNAKE>_ from enum value names
 end
 
 function _is_map_entry(msg::DescriptorProto)
@@ -285,7 +340,11 @@ end
 
 # Per-file view. Tables are shared references with the universe; `package`
 # and `syntax` come from the file itself.
-function _make_local_names(universe::Universe, file::FileDescriptorProto)
+function _make_local_names(
+    universe::Universe,
+    file::FileDescriptorProto;
+    strip_enum_prefix::Bool = true,
+)
     return LocalNames(;
         package = something(file.package, ""),
         syntax = something(file.syntax, "proto2"),
@@ -295,6 +354,7 @@ function _make_local_names(universe::Universe, file::FileDescriptorProto)
         enum_defs = universe.enum_defs,
         map_entries = universe.map_entries,
         package_of = universe.package_of,
+        strip_enum_prefix = strip_enum_prefix,
     )
 end
 
@@ -435,10 +495,10 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     number = Int(something(field.number, Int32(0)))
     label = field.label
     ftype = field.type
-    is_repeated = label === L.LABEL_REPEATED
-    is_message = ftype === T.TYPE_MESSAGE
-    is_enum = ftype === T.TYPE_ENUM
-    is_required = label === L.LABEL_REQUIRED  # only legal in proto2
+    is_repeated = label === L.REPEATED
+    is_message = ftype === T.MESSAGE
+    is_enum = ftype === T.ENUM
+    is_required = label === L.REQUIRED  # only legal in proto2
 
     if is_message
         ref_name = something(field.type_name, "")
@@ -631,7 +691,7 @@ function _wants_scalar_presence(field::FieldDescriptorProto, names::LocalNames)
     L = var"FieldDescriptorProto.Label"
     field.proto3_optional === true && return true
     if names.syntax == "proto2"
-        return field.label === L.LABEL_OPTIONAL
+        return field.label === L.OPTIONAL
     end
     return false
 end
@@ -642,9 +702,9 @@ end
 function _resolve_field_jl_type(field::FieldDescriptorProto, names::LocalNames)
     T = var"FieldDescriptorProto.Type"
     ftype = field.type
-    if ftype === T.TYPE_MESSAGE
+    if ftype === T.MESSAGE
         return _resolve_typename(something(field.type_name, ""), names)
-    elseif ftype === T.TYPE_ENUM
+    elseif ftype === T.ENUM
         return string(_resolve_typename(something(field.type_name, ""), names), ".T")
     else
         scalar_jl, _ = _scalar_jl_type_and_wire(ftype)
@@ -659,12 +719,12 @@ end
 function _map_wire_annot(field::FieldDescriptorProto)
     T = var"FieldDescriptorProto.Type"
     ftype = field.type
-    if ftype === T.TYPE_FIXED32 ||
-       ftype === T.TYPE_FIXED64 ||
-       ftype === T.TYPE_SFIXED32 ||
-       ftype === T.TYPE_SFIXED64
+    if ftype === T.FIXED32 ||
+       ftype === T.FIXED64 ||
+       ftype === T.SFIXED32 ||
+       ftype === T.SFIXED64
         return ":fixed"
-    elseif ftype === T.TYPE_SINT32 || ftype === T.TYPE_SINT64
+    elseif ftype === T.SINT32 || ftype === T.SINT64
         return ":zigzag"
     end
     return "Nothing"
@@ -694,17 +754,29 @@ function _map_entry_kv(entry::DescriptorProto, names::LocalNames)
 end
 
 # Find the enum's zero-valued member. proto3 mandates a 0 value as the first
-# entry; we look it up via LocalNames.enum_defs.
+# entry; we look it up via LocalNames.enum_defs. The returned name is the
+# stripped Julia identifier when prefix-stripping applies to this enum, so
+# call sites can splice it directly into `<EnumName>.<member>` references.
 function _first_enum_member(field::FieldDescriptorProto, names::LocalNames)
     fqn = something(field.type_name, "")
     edef = get(names.enum_defs, fqn, nothing)
     edef === nothing && error("codegen: enum $(fqn) not found in any input file")
+    leaf = something(edef.name, "")
+    prefix = if names.strip_enum_prefix
+        _detect_enum_prefix(leaf, [something(v.name, "") for v in edef.value])
+    else
+        ""
+    end
+    plen = lastindex(prefix)
+    function strip_one(name::AbstractString)
+        return isempty(prefix) ? String(name) : String(SubString(name, plen + 1))
+    end
     for v in edef.value
         if Int(something(v.number, Int32(0))) == 0
-            return something(v.name, "")
+            return strip_one(something(v.name, ""))
         end
     end
-    return something(first(edef.value).name, "")
+    return strip_one(something(first(edef.value).name, ""))
 end
 
 # ----------------------------------------------------------------------------
@@ -804,6 +876,7 @@ function _emit_message(
             jl_name_plain;
             parent_proto = proto_fqn,
             enumbatteries_kw = enumbatteries_kw,
+            strip_enum_prefix = names.strip_enum_prefix,
         )
     end
     for nested in msg.nested_type
@@ -1408,6 +1481,7 @@ function _emit_enum(
     parent_jl::String;
     parent_proto::String = "",
     enumbatteries_kw::String = "",
+    strip_enum_prefix::Bool = true,
 )
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1415,12 +1489,29 @@ function _emit_enum(
     proto_fqn = string(parent_proto, ".", name)
     salt_kw = _format_typesalt_kw(proto_fqn)
 
+    # Detect the per-enum prefix to strip from each value's Julia identifier.
+    # Driven by the leaf type name only (not the qualified `Outer.Inner` form),
+    # mirroring protobuf-es. When stripping does not apply (or is disabled by
+    # config), `prefix` is "" and value names pass through verbatim.
+    prefix = if strip_enum_prefix
+        _detect_enum_prefix(name, [something(v.name, "") for v in e.value])
+    else
+        ""
+    end
+    plen = lastindex(prefix)
+    function strip_value(v)
+        isempty(prefix) ? v : SubString(v, plen + 1)
+    end
+
     allow_alias = e.options !== nothing && e.options.allow_alias === true
     if !allow_alias
         members = join(
             (
-                string(something(v.name, ""), "=", Int(something(v.number, Int32(0))))
-                for v in e.value
+                string(
+                    strip_value(something(v.name, "")),
+                    "=",
+                    Int(something(v.number, Int32(0))),
+                ) for v in e.value
             ),
             " ",
         )
@@ -1429,6 +1520,7 @@ function _emit_enum(
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
         println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
+        _emit_enum_proto_prefix(io, jl_name, prefix)
         println(io)
         return
     end
@@ -1441,17 +1533,17 @@ function _emit_enum(
     # bind to the same enum *instance* as the canonical, so
     # `Foo.MOO === Foo.ALIAS_BAZ` and `Symbol(Foo.MOO)` returns
     # `:ALIAS_BAZ` (canonical wins on display, matching protoc).
-    seen = Dict{Int,String}()  # number -> canonical name
+    seen = Dict{Int,String}()  # number -> canonical name (stripped form)
     canonicals = Tuple{String,Int}[]
-    aliases = Tuple{String,String}[]  # (alias, canonical)
+    aliases = Tuple{String,String}[]  # (alias, canonical) — both stripped
     for v in e.value
-        vname = something(v.name, "")
+        vname = strip_value(something(v.name, ""))
         vnum = Int(something(v.number, Int32(0)))
         if haskey(seen, vnum)
-            push!(aliases, (vname, seen[vnum]))
+            push!(aliases, (String(vname), seen[vnum]))
         else
-            seen[vnum] = vname
-            push!(canonicals, (vname, vnum))
+            seen[vnum] = String(vname)
+            push!(canonicals, (String(vname), vnum))
         end
     end
     members = join((string(n, "=", num) for (n, num) in canonicals), " ")
@@ -1472,7 +1564,22 @@ function _emit_enum(
         )
     end
     println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
+    _emit_enum_proto_prefix(io, jl_name, prefix)
     println(io)
+end
+
+# Emit the per-enum `_enum_proto_prefix` overload only when stripping applied,
+# leaving the abstract default (returns "") in place otherwise.
+function _emit_enum_proto_prefix(io::IO, jl_name::AbstractString, prefix::AbstractString)
+    isempty(prefix) && return
+    println(
+        io,
+        "PB._enum_proto_prefix(::var\"#core\".Type{",
+        jl_name,
+        ".T}) = ",
+        repr(String(prefix)),
+    )
+    return
 end
 
 # ----------------------------------------------------------------------------
@@ -1497,7 +1604,7 @@ function _direct_message_deps(msg::DescriptorProto, names::LocalNames)
     T = var"FieldDescriptorProto.Type"
     for f in msg.field
         ftype = f.type
-        if ftype === T.TYPE_MESSAGE
+        if ftype === T.MESSAGE
             tn = something(f.type_name, "")
             if tn in names.messages
                 push!(deps, tn)
@@ -1517,7 +1624,7 @@ function _nested_message_deps(msg::DescriptorProto, names::LocalNames)
     function visit(m::DescriptorProto)
         for f in m.field
             ftype = f.type
-            if ftype === T.TYPE_MESSAGE
+            if ftype === T.MESSAGE
                 tn = something(f.type_name, "")
                 if tn in names.messages
                     push!(deps, tn)
@@ -1539,7 +1646,7 @@ function _toplevel_message_deps(msg::DescriptorProto, names::LocalNames)
     function visit(m::DescriptorProto)
         for f in m.field
             ftype = f.type
-            if ftype === var"FieldDescriptorProto.Type".TYPE_MESSAGE
+            if ftype === var"FieldDescriptorProto.Type".MESSAGE
                 tn = something(f.type_name, "")
                 # Only count deps that resolve to a top-level message in this
                 # file (not the message itself, not nested types of itself).
@@ -1706,7 +1813,11 @@ function codegen(
     universe::Universe;
     config::AbstractDict = Dict{String,Any}(),
 )
-    names = _make_local_names(universe, file)
+    names = _make_local_names(
+        universe,
+        file;
+        strip_enum_prefix = _strip_enum_prefix_enabled(config),
+    )
     io = IOBuffer()
     proto_name = something(file.name, "<unknown>")
     syntax = something(file.syntax, "proto2")
@@ -1799,6 +1910,7 @@ function codegen(
             "";
             parent_proto = file_parent_proto,
             enumbatteries_kw = enumbatteries_kw,
+            strip_enum_prefix = names.strip_enum_prefix,
         )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
@@ -1814,6 +1926,7 @@ function codegen(
         map_entries = names.map_entries,
         package_of = names.package_of,
         cycle = cycle_participants,
+        strip_enum_prefix = names.strip_enum_prefix,
     )
     # Forward `abstract type` for every cycle participant so the structs
     # in the cycle can reference each other through the abstract
@@ -1917,18 +2030,6 @@ function codegen_driver(
         foreach(n -> delete!(remaining, n), ready)
     end
 
-    # Collect the full package hierarchy that needs declaring up-front
-    # (every package + every prefix on the way to it).
-    pkg_set = Set{String}()
-    for path in order
-        pkg = something(by_name[path].package, "")
-        node = ""
-        for part in (isempty(pkg) ? String[] : split(pkg, '.'))
-            node = isempty(node) ? String(part) : "$node.$part"
-            push!(pkg_set, node)
-        end
-    end
-
     io = IOBuffer()
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# Driver file: declares the proto-package module skeleton")
@@ -1936,79 +2037,46 @@ function codegen_driver(
     println(io, "# Include this file from wherever you want the namespace rooted.")
     println(io, "#! format: off")
     println(io)
-    println(io, "const _PB_DIR  = @__DIR__")
-    println(io, "const _PB_ROOT = @__MODULE__")
-    println(io)
     # Bring the codec entry points into the wrapping module so callers
     # holding a `MyProtos.tutorial.Person` can do `MyProtos.encode(msg)`
     # without needing their own `using ProtocGen`.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io)
 
-    # Emit empty skeleton modules (nested) so cross-module references in
-    # the per-file outputs resolve before any `_pb.jl` is loaded.
-    println(io, "# --- module skeleton ---")
-    _emit_empty_skeleton(io, _build_skeleton_tree(pkg_set), "", 0)
-    println(io)
-
-    # Emit `Core.include(<module>, <abs path>)` for each file in topo
-    # order. This evaluates the file in its target module regardless of
-    # where the driver sits in the dispatcher's module stack.
-    println(io, "# --- file includes (topological order) ---")
+    # Walk the topo order, transitioning between module paths by closing
+    # back to the lowest common ancestor and opening down to the new
+    # target. `include(...)` is then plain Julia: relative to this driver
+    # file and evaluated in the enclosing `module`. Reopening a module
+    # later in the same file is fine — Julia merges the contents.
+    current_path = String[]
     for path in order
         f = by_name[path]
         pkg = something(f.package, "")
+        target_path = isempty(pkg) ? String[] : String.(split(pkg, '.'))
         out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
-        mod_expr = isempty(pkg) ? "_PB_ROOT" : "_PB_ROOT." * pkg
-        # `Core.include(M, file)` evaluates `file` in module `M` and uses
-        # the current `task_local_storage()[:SOURCE_PATH]` for relative
-        # path resolution — so wrap with `joinpath(_PB_DIR, …)` to make
-        # the include path resolve against this driver file's directory.
-        println(io, "Core.include(", mod_expr, ", joinpath(_PB_DIR, ", repr(out_name), "))")
+
+        lca = 0
+        while lca < length(current_path) &&
+                  lca < length(target_path) &&
+                  current_path[lca+1] == target_path[lca+1]
+            lca += 1
+        end
+        for d in length(current_path):-1:(lca+1)
+            println(io, "    "^(d - 1), "end # module ", current_path[d])
+        end
+        for d in (lca+1):length(target_path)
+            println(io, "    "^(d - 1), "module ", target_path[d])
+        end
+        current_path = target_path
+        println(io, "    "^length(current_path), "include(", repr(out_name), ")")
+    end
+    for d in length(current_path):-1:1
+        println(io, "    "^(d - 1), "end # module ", current_path[d])
     end
 
     println(io)
     println(io, "#! format: on")
     return String(take!(io))
-end
-
-# Skeleton tree: every internal node is a package component. We don't
-# attach includes to nodes — those are emitted separately in topo order.
-struct _SkeletonNode
-    children::Dict{String,_SkeletonNode}
-end
-function _SkeletonNode()
-    _SkeletonNode(Dict{String,_SkeletonNode}())
-end
-
-function _build_skeleton_tree(pkg_set::Set{String})
-    root = _SkeletonNode()
-    for pkg in pkg_set
-        node = root
-        for part in split(pkg, '.')
-            node = get!(node.children, String(part), _SkeletonNode())
-        end
-    end
-    return root
-end
-
-function _emit_empty_skeleton(io::IO, node::_SkeletonNode, name::String, depth::Int)
-    indent = "    "^depth
-    if !isempty(name)
-        println(io, indent, "module ", name)
-    end
-    for child_name in sort!(collect(keys(node.children)))
-        _emit_empty_skeleton(
-            io,
-            node.children[child_name],
-            child_name,
-            isempty(name) ? depth : depth + 1,
-        )
-    end
-    if !isempty(name)
-        println(io, indent, "end # module ", name)
-    end
-    return nothing
 end
 
 end # module Codegen

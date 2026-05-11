@@ -240,11 +240,13 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{FieldOptions})
     return (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"FieldDescriptorProto.Type" TYPE_DOUBLE=1 TYPE_FLOAT=2 TYPE_INT64=3 TYPE_UINT64=4 TYPE_INT32=5 TYPE_FIXED64=6 TYPE_FIXED32=7 TYPE_BOOL=8 TYPE_STRING=9 TYPE_GROUP=10 TYPE_MESSAGE=11 TYPE_BYTES=12 TYPE_UINT32=13 TYPE_ENUM=14 TYPE_SFIXED32=15 TYPE_SFIXED64=16 TYPE_SINT32=17 TYPE_SINT64=18
+@enumx var"FieldDescriptorProto.Type" DOUBLE=1 FLOAT=2 INT64=3 UINT64=4 INT32=5 FIXED64=6 FIXED32=7 BOOL=8 STRING=9 GROUP=10 MESSAGE=11 BYTES=12 UINT32=13 ENUM=14 SFIXED32=15 SFIXED64=16 SINT32=17 SINT64=18
 @enumbatteries var"FieldDescriptorProto.Type".T typesalt=0xa3b3794ec94803a4
+PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Type".T}) = "TYPE_"
 
-@enumx var"FieldDescriptorProto.Label" LABEL_OPTIONAL=1 LABEL_REQUIRED=2 LABEL_REPEATED=3
+@enumx var"FieldDescriptorProto.Label" OPTIONAL=1 REQUIRED=2 REPEATED=3
 @enumbatteries var"FieldDescriptorProto.Label".T typesalt=0xa25262cc56149f9a
+PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Label".T}) = "LABEL_"
 
 struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
     name::Union{Nothing,var"#base".String}
