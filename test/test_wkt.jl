@@ -108,15 +108,7 @@ end
             "name",
             "",
         )
-        t = pb_make(
-            WKT.Type,
-            "MyType",
-            [field],
-            String[],
-            [opt],
-            sc,
-            WKT.Syntax.PROTO3,
-        )
+        t = pb_make(WKT.Type, "MyType", [field], String[], [opt], sc, WKT.Syntax.PROTO3)
         decoded, _ = rt(t)
         @test decoded.name == "MyType"
         @test length(decoded.fields) == 1

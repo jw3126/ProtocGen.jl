@@ -54,9 +54,10 @@ function _to_upper_snake(s::AbstractString)
     cs = collect(s)
     for (i, c) in enumerate(cs)
         if i > 1 && isuppercase(c)
-            prev = cs[i - 1]
-            nxt = i < length(cs) ? cs[i + 1] : '\0'
-            if islowercase(prev) || isdigit(prev) ||
+            prev = cs[i-1]
+            nxt = i < length(cs) ? cs[i+1] : '\0'
+            if islowercase(prev) ||
+               isdigit(prev) ||
                (isuppercase(prev) && nxt != '\0' && islowercase(nxt))
                 print(out, '_')
             end
@@ -1498,7 +1499,9 @@ function _emit_enum(
         ""
     end
     plen = lastindex(prefix)
-    strip_value(v) = isempty(prefix) ? v : SubString(v, plen + 1)
+    function strip_value(v)
+        isempty(prefix) ? v : SubString(v, plen + 1)
+    end
 
     allow_alias = e.options !== nothing && e.options.allow_alias === true
     if !allow_alias
