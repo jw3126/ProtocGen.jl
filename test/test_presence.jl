@@ -14,7 +14,8 @@ include("setup.jl")
     f = response.file[1]
 
     # Generated source carries the right type for the proto3-optional field.
-    @test occursin("maybe::Union{Nothing,var\"#base\".Int32}", f.content)
+    # `sample.proto` has no built-in name collisions, so scalars render bare.
+    @test occursin("maybe::Union{Nothing,Int32}", f.content)
 
     sample_mod = eval_generated(f.content, :GeneratedSamplePresence)
 

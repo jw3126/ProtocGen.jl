@@ -8,12 +8,11 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export DoubleValue, FloatValue, Int64Value, UInt64Value, Int32Value, UInt32Value, BoolValue, StringValue, BytesValue
 
 struct DoubleValue <: PB.AbstractProtoBufMessage
-    value::var"#base".Float64
+    value::Float64
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{DoubleValue})
@@ -24,13 +23,13 @@ function PB.json_field_names(::var"#core".Type{DoubleValue})
 end
 PB.register_message_type("google.protobuf.DoubleValue", DoubleValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:DoubleValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".Float64)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:DoubleValue}, _endpos::Int=0, _group::Bool=false)
+    value = zero(Float64)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Float64)
+            value = PB._decode(_d, Float64)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -40,7 +39,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::DoubleValue)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".Float64) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(Float64) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -48,17 +47,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::DoubleValue)
 end
 function PB._encoded_size(_x::DoubleValue)
     encoded_size = 0
-    _x.value != zero(var"#base".Float64) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(Float64) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries DoubleValue typesalt=0xe1fd93ab793341d3 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{DoubleValue})
-    return (;value = zero(var"#base".Float64), var"#unknown_fields" = UInt8[])
+    return (;value = zero(Float64), var"#unknown_fields" = UInt8[])
 end
 
 struct FloatValue <: PB.AbstractProtoBufMessage
-    value::var"#base".Float32
+    value::Float32
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{FloatValue})
@@ -69,13 +68,13 @@ function PB.json_field_names(::var"#core".Type{FloatValue})
 end
 PB.register_message_type("google.protobuf.FloatValue", FloatValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FloatValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".Float32)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FloatValue}, _endpos::Int=0, _group::Bool=false)
+    value = zero(Float32)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Float32)
+            value = PB._decode(_d, Float32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -85,7 +84,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::FloatValue)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".Float32) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(Float32) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -93,17 +92,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::FloatValue)
 end
 function PB._encoded_size(_x::FloatValue)
     encoded_size = 0
-    _x.value != zero(var"#base".Float32) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(Float32) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries FloatValue typesalt=0x6518821ed723ac50 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{FloatValue})
-    return (;value = zero(var"#base".Float32), var"#unknown_fields" = UInt8[])
+    return (;value = zero(Float32), var"#unknown_fields" = UInt8[])
 end
 
 struct Int64Value <: PB.AbstractProtoBufMessage
-    value::var"#base".Int64
+    value::Int64
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Int64Value})
@@ -114,13 +113,13 @@ function PB.json_field_names(::var"#core".Type{Int64Value})
 end
 PB.register_message_type("google.protobuf.Int64Value", Int64Value)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Int64Value}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".Int64)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Int64Value}, _endpos::Int=0, _group::Bool=false)
+    value = zero(Int64)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Int64)
+            value = PB._decode(_d, Int64)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -130,7 +129,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int64Value)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".Int64) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(Int64) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -138,17 +137,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int64Value)
 end
 function PB._encoded_size(_x::Int64Value)
     encoded_size = 0
-    _x.value != zero(var"#base".Int64) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(Int64) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Int64Value typesalt=0x58a5d453d4f3d863 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Int64Value})
-    return (;value = zero(var"#base".Int64), var"#unknown_fields" = UInt8[])
+    return (;value = zero(Int64), var"#unknown_fields" = UInt8[])
 end
 
 struct UInt64Value <: PB.AbstractProtoBufMessage
-    value::var"#base".UInt64
+    value::UInt64
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{UInt64Value})
@@ -159,13 +158,13 @@ function PB.json_field_names(::var"#core".Type{UInt64Value})
 end
 PB.register_message_type("google.protobuf.UInt64Value", UInt64Value)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UInt64Value}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".UInt64)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UInt64Value}, _endpos::Int=0, _group::Bool=false)
+    value = zero(UInt64)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".UInt64)
+            value = PB._decode(_d, UInt64)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -175,7 +174,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt64Value)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".UInt64) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(UInt64) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -183,17 +182,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt64Value)
 end
 function PB._encoded_size(_x::UInt64Value)
     encoded_size = 0
-    _x.value != zero(var"#base".UInt64) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(UInt64) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries UInt64Value typesalt=0x8c649f4e31904cda kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{UInt64Value})
-    return (;value = zero(var"#base".UInt64), var"#unknown_fields" = UInt8[])
+    return (;value = zero(UInt64), var"#unknown_fields" = UInt8[])
 end
 
 struct Int32Value <: PB.AbstractProtoBufMessage
-    value::var"#base".Int32
+    value::Int32
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Int32Value})
@@ -204,13 +203,13 @@ function PB.json_field_names(::var"#core".Type{Int32Value})
 end
 PB.register_message_type("google.protobuf.Int32Value", Int32Value)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Int32Value}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".Int32)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Int32Value}, _endpos::Int=0, _group::Bool=false)
+    value = zero(Int32)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Int32)
+            value = PB._decode(_d, Int32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -220,7 +219,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int32Value)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".Int32) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(Int32) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -228,17 +227,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Int32Value)
 end
 function PB._encoded_size(_x::Int32Value)
     encoded_size = 0
-    _x.value != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(Int32) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries Int32Value typesalt=0x92c3b4d30d88fec6 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Int32Value})
-    return (;value = zero(var"#base".Int32), var"#unknown_fields" = UInt8[])
+    return (;value = zero(Int32), var"#unknown_fields" = UInt8[])
 end
 
 struct UInt32Value <: PB.AbstractProtoBufMessage
-    value::var"#base".UInt32
+    value::UInt32
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{UInt32Value})
@@ -249,13 +248,13 @@ function PB.json_field_names(::var"#core".Type{UInt32Value})
 end
 PB.register_message_type("google.protobuf.UInt32Value", UInt32Value)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UInt32Value}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = zero(var"#base".UInt32)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UInt32Value}, _endpos::Int=0, _group::Bool=false)
+    value = zero(UInt32)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".UInt32)
+            value = PB._decode(_d, UInt32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -265,7 +264,7 @@ end
 
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt32Value)
     initpos = position(_e.io)
-    _x.value != zero(var"#base".UInt32) && PB._encode(_e, 1, _x.value)
+    _x.value != zero(UInt32) && PB._encode(_e, 1, _x.value)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
     end
@@ -273,17 +272,17 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::UInt32Value)
 end
 function PB._encoded_size(_x::UInt32Value)
     encoded_size = 0
-    _x.value != zero(var"#base".UInt32) && (encoded_size += PB._encoded_size(_x.value, 1))
+    _x.value != zero(UInt32) && (encoded_size += PB._encoded_size(_x.value, 1))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries UInt32Value typesalt=0x2d5d644aec89ef73 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{UInt32Value})
-    return (;value = zero(var"#base".UInt32), var"#unknown_fields" = UInt8[])
+    return (;value = zero(UInt32), var"#unknown_fields" = UInt8[])
 end
 
 struct BoolValue <: PB.AbstractProtoBufMessage
-    value::var"#base".Bool
+    value::Bool
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{BoolValue})
@@ -294,13 +293,13 @@ function PB.json_field_names(::var"#core".Type{BoolValue})
 end
 PB.register_message_type("google.protobuf.BoolValue", BoolValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:BoolValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:BoolValue}, _endpos::Int=0, _group::Bool=false)
     value = false
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Bool)
+            value = PB._decode(_d, Bool)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -328,7 +327,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{BoolValue})
 end
 
 struct StringValue <: PB.AbstractProtoBufMessage
-    value::var"#base".String
+    value::String
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{StringValue})
@@ -339,13 +338,13 @@ function PB.json_field_names(::var"#core".Type{StringValue})
 end
 PB.register_message_type("google.protobuf.StringValue", StringValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:StringValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:StringValue}, _endpos::Int=0, _group::Bool=false)
     value = ""
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".String)
+            value = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -373,7 +372,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{StringValue})
 end
 
 struct BytesValue <: PB.AbstractProtoBufMessage
-    value::var"#base".Vector{var"#base".UInt8}
+    value::Vector{UInt8}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{BytesValue})
@@ -384,13 +383,13 @@ function PB.json_field_names(::var"#core".Type{BytesValue})
 end
 PB.register_message_type("google.protobuf.BytesValue", BytesValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:BytesValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    value = var"#base".UInt8[]
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:BytesValue}, _endpos::Int=0, _group::Bool=false)
+    value = UInt8[]
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            value = PB._decode(_d, var"#base".Vector{var"#base".UInt8})
+            value = PB._decode(_d, Vector{UInt8})
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -414,7 +413,7 @@ function PB._encoded_size(_x::BytesValue)
 end
 @batteries BytesValue typesalt=0xbdcfded20e17fb8b kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{BytesValue})
-    return (;value = var"#base".UInt8[], var"#unknown_fields" = UInt8[])
+    return (;value = UInt8[], var"#unknown_fields" = UInt8[])
 end
 
 

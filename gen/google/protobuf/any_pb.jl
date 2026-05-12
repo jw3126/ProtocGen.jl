@@ -8,13 +8,12 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export Any
 
 struct Any <: PB.AbstractProtoBufMessage
-    type_url::var"#base".String
-    value::var"#base".Vector{var"#base".UInt8}
+    type_url::String
+    value::Vector{UInt8}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Any})
@@ -25,16 +24,16 @@ function PB.json_field_names(::var"#core".Type{Any})
 end
 PB.register_message_type("google.protobuf.Any", Any)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Any}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Any}, _endpos::Int=0, _group::Bool=false)
     type_url = ""
-    value = var"#base".UInt8[]
+    value = UInt8[]
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            type_url = PB._decode(_d, var"#base".String)
+            type_url = PB._decode(_d, String)
         elseif field_number == 2
-            value = PB._decode(_d, var"#base".Vector{var"#base".UInt8})
+            value = PB._decode(_d, Vector{UInt8})
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -60,7 +59,7 @@ function PB._encoded_size(_x::Any)
 end
 @batteries Any typesalt=0x215f47cf815db4a7 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Any})
-    return (;type_url = "", value = var"#base".UInt8[], var"#unknown_fields" = UInt8[])
+    return (;type_url = "", value = UInt8[], var"#unknown_fields" = UInt8[])
 end
 
 

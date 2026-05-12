@@ -7,29 +7,27 @@ using ProtocGen: OneOf, OrderedDict
 using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
-const var"#core" = Core
-const var"#base" = Base
 
 import ProtocGen.google.protobuf as google_protobuf
 
 export Version, CodeGeneratorRequest, CodeGeneratorResponse
 
 struct Version <: PB.AbstractProtoBufMessage
-    major::Union{Nothing,var"#base".Int32}
-    minor::Union{Nothing,var"#base".Int32}
-    patch::Union{Nothing,var"#base".Int32}
-    suffix::Union{Nothing,var"#base".String}
+    major::Union{Nothing,Int32}
+    minor::Union{Nothing,Int32}
+    patch::Union{Nothing,Int32}
+    suffix::Union{Nothing,String}
     var"#unknown_fields"::Vector{UInt8}
 end
-function PB.field_numbers(::var"#core".Type{Version})
+function PB.field_numbers(::Type{Version})
     return (;major = 1, minor = 2, patch = 3, suffix = 4)
 end
-function PB.json_field_names(::var"#core".Type{Version})
+function PB.json_field_names(::Type{Version})
     return (;major = "major", minor = "minor", patch = "patch", suffix = "suffix")
 end
 PB.register_message_type("google.protobuf.compiler.Version", Version)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Version}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Type{<:Version}, _endpos::Int=0, _group::Bool=false)
     major = nothing
     minor = nothing
     patch = nothing
@@ -38,13 +36,13 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Version}, _
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            major = PB._decode(_d, var"#base".Int32)
+            major = PB._decode(_d, Int32)
         elseif field_number == 2
-            minor = PB._decode(_d, var"#base".Int32)
+            minor = PB._decode(_d, Int32)
         elseif field_number == 3
-            patch = PB._decode(_d, var"#base".Int32)
+            patch = PB._decode(_d, Int32)
         elseif field_number == 4
-            suffix = PB._decode(_d, var"#base".String)
+            suffix = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -73,28 +71,28 @@ function PB._encoded_size(_x::Version)
     return encoded_size
 end
 @batteries Version typesalt=0x7217040640164560 kwconstructor=true kwshow=true
-function PB.StructHelpers.default_keywords(::var"#core".Type{Version})
+function PB.StructHelpers.default_keywords(::Type{Version})
     return (;major = nothing, minor = nothing, patch = nothing, suffix = nothing, var"#unknown_fields" = UInt8[])
 end
 
 struct CodeGeneratorRequest <: PB.AbstractProtoBufMessage
-    file_to_generate::Vector{var"#base".String}
-    parameter::Union{Nothing,var"#base".String}
+    file_to_generate::Vector{String}
+    parameter::Union{Nothing,String}
     proto_file::Vector{google_protobuf.FileDescriptorProto}
     source_file_descriptors::Vector{google_protobuf.FileDescriptorProto}
     compiler_version::Union{Nothing,Version}
     var"#unknown_fields"::Vector{UInt8}
 end
-function PB.field_numbers(::var"#core".Type{CodeGeneratorRequest})
+function PB.field_numbers(::Type{CodeGeneratorRequest})
     return (;file_to_generate = 1, parameter = 2, proto_file = 15, source_file_descriptors = 17, compiler_version = 3)
 end
-function PB.json_field_names(::var"#core".Type{CodeGeneratorRequest})
+function PB.json_field_names(::Type{CodeGeneratorRequest})
     return (;file_to_generate = "fileToGenerate", parameter = "parameter", proto_file = "protoFile", source_file_descriptors = "sourceFileDescriptors", compiler_version = "compilerVersion")
 end
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorRequest", CodeGeneratorRequest)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:CodeGeneratorRequest}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    file_to_generate = PB.BufferedVector{var"#base".String}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Type{<:CodeGeneratorRequest}, _endpos::Int=0, _group::Bool=false)
+    file_to_generate = PB.BufferedVector{String}()
     parameter = nothing
     proto_file = PB.BufferedVector{google_protobuf.FileDescriptorProto}()
     source_file_descriptors = PB.BufferedVector{google_protobuf.FileDescriptorProto}()
@@ -105,7 +103,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:CodeGenerat
         if field_number == 1
             PB._decode!(_d, file_to_generate)
         elseif field_number == 2
-            parameter = PB._decode(_d, var"#base".String)
+            parameter = PB._decode(_d, String)
         elseif field_number == 15
             PB._decode!(_d, proto_file)
         elseif field_number == 17
@@ -142,30 +140,30 @@ function PB._encoded_size(_x::CodeGeneratorRequest)
     return encoded_size
 end
 @batteries CodeGeneratorRequest typesalt=0xf7f3ef064e2e96c3 kwconstructor=true kwshow=true
-function PB.StructHelpers.default_keywords(::var"#core".Type{CodeGeneratorRequest})
-    return (;file_to_generate = Vector{var"#base".String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, var"#unknown_fields" = UInt8[])
+function PB.StructHelpers.default_keywords(::Type{CodeGeneratorRequest})
+    return (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, var"#unknown_fields" = UInt8[])
 end
 
 @enumx var"CodeGeneratorResponse.Feature" NONE=0 PROTO3_OPTIONAL=1 SUPPORTS_EDITIONS=2
 @enumbatteries var"CodeGeneratorResponse.Feature".T typesalt=0x0f8ab756e8575a15
-PB._enum_proto_prefix(::var"#core".Type{var"CodeGeneratorResponse.Feature".T}) = "FEATURE_"
+PB._enum_proto_prefix(::Type{var"CodeGeneratorResponse.Feature".T}) = "FEATURE_"
 
 struct var"CodeGeneratorResponse.File" <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
-    insertion_point::Union{Nothing,var"#base".String}
-    content::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
+    insertion_point::Union{Nothing,String}
+    content::Union{Nothing,String}
     generated_code_info::Union{Nothing,google_protobuf.GeneratedCodeInfo}
     var"#unknown_fields"::Vector{UInt8}
 end
-function PB.field_numbers(::var"#core".Type{var"CodeGeneratorResponse.File"})
+function PB.field_numbers(::Type{var"CodeGeneratorResponse.File"})
     return (;name = 1, insertion_point = 2, content = 15, generated_code_info = 16)
 end
-function PB.json_field_names(::var"#core".Type{var"CodeGeneratorResponse.File"})
+function PB.json_field_names(::Type{var"CodeGeneratorResponse.File"})
     return (;name = "name", insertion_point = "insertionPoint", content = "content", generated_code_info = "generatedCodeInfo")
 end
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse.File", var"CodeGeneratorResponse.File")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"CodeGeneratorResponse.File"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Type{<:var"CodeGeneratorResponse.File"}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     insertion_point = nothing
     content = nothing
@@ -174,11 +172,11 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"CodeGen
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            insertion_point = PB._decode(_d, var"#base".String)
+            insertion_point = PB._decode(_d, String)
         elseif field_number == 15
-            content = PB._decode(_d, var"#base".String)
+            content = PB._decode(_d, String)
         elseif field_number == 16
             PB._decode!(_d, generated_code_info)
         else
@@ -209,27 +207,27 @@ function PB._encoded_size(_x::var"CodeGeneratorResponse.File")
     return encoded_size
 end
 @batteries var"CodeGeneratorResponse.File" typesalt=0x2b998e53eb248b6b kwconstructor=true kwshow=true
-function PB.StructHelpers.default_keywords(::var"#core".Type{var"CodeGeneratorResponse.File"})
+function PB.StructHelpers.default_keywords(::Type{var"CodeGeneratorResponse.File"})
     return (;name = nothing, insertion_point = nothing, content = nothing, generated_code_info = nothing, var"#unknown_fields" = UInt8[])
 end
 
 struct CodeGeneratorResponse <: PB.AbstractProtoBufMessage
-    error::Union{Nothing,var"#base".String}
-    supported_features::Union{Nothing,var"#base".UInt64}
-    minimum_edition::Union{Nothing,var"#base".Int32}
-    maximum_edition::Union{Nothing,var"#base".Int32}
+    error::Union{Nothing,String}
+    supported_features::Union{Nothing,UInt64}
+    minimum_edition::Union{Nothing,Int32}
+    maximum_edition::Union{Nothing,Int32}
     file::Vector{var"CodeGeneratorResponse.File"}
     var"#unknown_fields"::Vector{UInt8}
 end
-function PB.field_numbers(::var"#core".Type{CodeGeneratorResponse})
+function PB.field_numbers(::Type{CodeGeneratorResponse})
     return (;error = 1, supported_features = 2, minimum_edition = 3, maximum_edition = 4, file = 15)
 end
-function PB.json_field_names(::var"#core".Type{CodeGeneratorResponse})
+function PB.json_field_names(::Type{CodeGeneratorResponse})
     return (;error = "error", supported_features = "supportedFeatures", minimum_edition = "minimumEdition", maximum_edition = "maximumEdition", file = "file")
 end
 PB.register_message_type("google.protobuf.compiler.CodeGeneratorResponse", CodeGeneratorResponse)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:CodeGeneratorResponse}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::Type{<:CodeGeneratorResponse}, _endpos::Int=0, _group::Bool=false)
     error = nothing
     supported_features = nothing
     minimum_edition = nothing
@@ -239,13 +237,13 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:CodeGenerat
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            error = PB._decode(_d, var"#base".String)
+            error = PB._decode(_d, String)
         elseif field_number == 2
-            supported_features = PB._decode(_d, var"#base".UInt64)
+            supported_features = PB._decode(_d, UInt64)
         elseif field_number == 3
-            minimum_edition = PB._decode(_d, var"#base".Int32)
+            minimum_edition = PB._decode(_d, Int32)
         elseif field_number == 4
-            maximum_edition = PB._decode(_d, var"#base".Int32)
+            maximum_edition = PB._decode(_d, Int32)
         elseif field_number == 15
             PB._decode!(_d, file)
         else
@@ -278,7 +276,7 @@ function PB._encoded_size(_x::CodeGeneratorResponse)
     return encoded_size
 end
 @batteries CodeGeneratorResponse typesalt=0x5f389b7fadee87b1 kwconstructor=true kwshow=true
-function PB.StructHelpers.default_keywords(::var"#core".Type{CodeGeneratorResponse})
+function PB.StructHelpers.default_keywords(::Type{CodeGeneratorResponse})
     return (;error = nothing, supported_features = nothing, minimum_edition = nothing, maximum_edition = nothing, file = Vector{var"CodeGeneratorResponse.File"}(), var"#unknown_fields" = UInt8[])
 end
 

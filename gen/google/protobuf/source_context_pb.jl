@@ -8,12 +8,11 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export SourceContext
 
 struct SourceContext <: PB.AbstractProtoBufMessage
-    file_name::var"#base".String
+    file_name::String
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{SourceContext})
@@ -24,13 +23,13 @@ function PB.json_field_names(::var"#core".Type{SourceContext})
 end
 PB.register_message_type("google.protobuf.SourceContext", SourceContext)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:SourceContext}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:SourceContext}, _endpos::Int=0, _group::Bool=false)
     file_name = ""
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            file_name = PB._decode(_d, var"#base".String)
+            file_name = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end

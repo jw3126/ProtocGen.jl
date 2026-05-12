@@ -156,8 +156,12 @@ end
         "@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
         f.content,
     )
+    # `test_messages_proto3.proto` has no top-level name that collides
+    # with `Core`, so the alias `eval(...)` call renders with the bare
+    # `Core.` prefix. (When `Core` is shadowed, codegen falls back to
+    # `var"#core".eval(...)` — exercised by shadow.proto's tests.)
     @test occursin(
-        "var\"#core\".eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
+        "Core.eval(var\"TestAllTypesProto3.AliasedEnum\", :(const MOO = ALIAS_BAZ))",
         f.content,
     )
 
