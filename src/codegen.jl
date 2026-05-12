@@ -1437,11 +1437,10 @@ function _emit_decode_field(io::IO, f::FieldModel)
             )
         end
     elseif f.is_message
-        if f.is_repeated
-            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
-        else
-            println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
-        end
+        # Same dispatch for repeated and singular submessages: the codec
+        # routes BufferedVector / Ref{T} / Ref{Union{Nothing,T}} through
+        # their own `_decode!` methods.
+        println(io, "            PB._decode!(_d, ", f.jl_fieldname, ")")
     elseif f.is_enum
         if f.is_repeated
             println(io, "            PB._decode!(_d, wire_type, ", f.jl_fieldname, ")")

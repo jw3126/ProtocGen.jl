@@ -9,3 +9,8 @@
 .claude
 Session.vim
 /examples/out/
+
+# Auto-generated driver emitted by the plugin alongside `*_pb.jl`
+# outputs. Not used at runtime — `gen/google/google.jl` is the
+# hand-maintained entry point — so the generated copy stays out of git.
+/gen/_pb_includes.jl
