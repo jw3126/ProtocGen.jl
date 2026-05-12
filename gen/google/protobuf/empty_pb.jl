@@ -8,7 +8,6 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export Empty
 
@@ -23,7 +22,7 @@ function PB.json_field_names(::var"#core".Type{Empty})
 end
 PB.register_message_type("google.protobuf.Empty", Empty)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Empty}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Empty}, _endpos::Int=0, _group::Bool=false)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)

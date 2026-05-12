@@ -8,13 +8,12 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export FileDescriptorSet, FileDescriptorProto, DescriptorProto, ExtensionRangeOptions, FieldDescriptorProto, OneofDescriptorProto, EnumDescriptorProto, EnumValueDescriptorProto, ServiceDescriptorProto, MethodDescriptorProto, FileOptions, MessageOptions, FieldOptions, OneofOptions, EnumOptions, EnumValueOptions, ServiceOptions, MethodOptions, UninterpretedOption, SourceCodeInfo, GeneratedCodeInfo
 
 struct var"UninterpretedOption.NamePart" <: PB.AbstractProtoBufMessage
-    name_part::var"#base".String
-    is_extension::var"#base".Bool
+    name_part::String
+    is_extension::Bool
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{var"UninterpretedOption.NamePart"})
@@ -25,7 +24,7 @@ function PB.json_field_names(::var"#core".Type{var"UninterpretedOption.NamePart"
 end
 PB.register_message_type("google.protobuf.UninterpretedOption.NamePart", var"UninterpretedOption.NamePart")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"UninterpretedOption.NamePart"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"UninterpretedOption.NamePart"}, _endpos::Int=0, _group::Bool=false)
     name_part = ""
     _saw_name_part = false
     is_extension = false
@@ -34,10 +33,10 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"Uninter
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name_part = PB._decode(_d, var"#base".String)
+            name_part = PB._decode(_d, String)
             _saw_name_part = true
         elseif field_number == 2
-            is_extension = PB._decode(_d, var"#base".Bool)
+            is_extension = PB._decode(_d, Bool)
             _saw_is_extension = true
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
@@ -71,12 +70,12 @@ end
 
 struct UninterpretedOption <: PB.AbstractProtoBufMessage
     name::Vector{var"UninterpretedOption.NamePart"}
-    identifier_value::Union{Nothing,var"#base".String}
-    positive_int_value::Union{Nothing,var"#base".UInt64}
-    negative_int_value::Union{Nothing,var"#base".Int64}
-    double_value::Union{Nothing,var"#base".Float64}
-    string_value::Union{Nothing,var"#base".Vector{var"#base".UInt8}}
-    aggregate_value::Union{Nothing,var"#base".String}
+    identifier_value::Union{Nothing,String}
+    positive_int_value::Union{Nothing,UInt64}
+    negative_int_value::Union{Nothing,Int64}
+    double_value::Union{Nothing,Float64}
+    string_value::Union{Nothing,Vector{UInt8}}
+    aggregate_value::Union{Nothing,String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{UninterpretedOption})
@@ -87,7 +86,7 @@ function PB.json_field_names(::var"#core".Type{UninterpretedOption})
 end
 PB.register_message_type("google.protobuf.UninterpretedOption", UninterpretedOption)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UninterpretedOption}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:UninterpretedOption}, _endpos::Int=0, _group::Bool=false)
     name = PB.BufferedVector{var"UninterpretedOption.NamePart"}()
     identifier_value = nothing
     positive_int_value = nothing
@@ -101,17 +100,17 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Uninterpret
         if field_number == 2
             PB._decode!(_d, name)
         elseif field_number == 3
-            identifier_value = PB._decode(_d, var"#base".String)
+            identifier_value = PB._decode(_d, String)
         elseif field_number == 4
-            positive_int_value = PB._decode(_d, var"#base".UInt64)
+            positive_int_value = PB._decode(_d, UInt64)
         elseif field_number == 5
-            negative_int_value = PB._decode(_d, var"#base".Int64)
+            negative_int_value = PB._decode(_d, Int64)
         elseif field_number == 6
-            double_value = PB._decode(_d, var"#base".Float64)
+            double_value = PB._decode(_d, Float64)
         elseif field_number == 7
-            string_value = PB._decode(_d, var"#base".Vector{var"#base".UInt8})
+            string_value = PB._decode(_d, Vector{UInt8})
         elseif field_number == 8
-            aggregate_value = PB._decode(_d, var"#base".String)
+            aggregate_value = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -158,11 +157,11 @@ end
 
 struct FieldOptions <: PB.AbstractProtoBufMessage
     ctype::Union{Nothing,var"FieldOptions.CType".T}
-    packed::Union{Nothing,var"#base".Bool}
+    packed::Union{Nothing,Bool}
     jstype::Union{Nothing,var"FieldOptions.JSType".T}
-    lazy::Union{Nothing,var"#base".Bool}
-    deprecated::Union{Nothing,var"#base".Bool}
-    weak::Union{Nothing,var"#base".Bool}
+    lazy::Union{Nothing,Bool}
+    deprecated::Union{Nothing,Bool}
+    weak::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -177,7 +176,7 @@ function PB.reserved_fields(::var"#core".Type{FieldOptions})
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[4])
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldOptions}, _endpos::Int=0, _group::Bool=false)
     ctype = nothing
     packed = nothing
     jstype = nothing
@@ -191,15 +190,15 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldOption
         if field_number == 1
             ctype = PB._decode(_d, var"FieldOptions.CType".T)
         elseif field_number == 2
-            packed = PB._decode(_d, var"#base".Bool)
+            packed = PB._decode(_d, Bool)
         elseif field_number == 6
             jstype = PB._decode(_d, var"FieldOptions.JSType".T)
         elseif field_number == 5
-            lazy = PB._decode(_d, var"#base".Bool)
+            lazy = PB._decode(_d, Bool)
         elseif field_number == 3
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 10
-            weak = PB._decode(_d, var"#base".Bool)
+            weak = PB._decode(_d, Bool)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -249,17 +248,17 @@ PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Type".T}) = "TY
 PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Label".T}) = "LABEL_"
 
 struct FieldDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
-    number::Union{Nothing,var"#base".Int32}
+    name::Union{Nothing,String}
+    number::Union{Nothing,Int32}
     label::Union{Nothing,var"FieldDescriptorProto.Label".T}
     type::Union{Nothing,var"FieldDescriptorProto.Type".T}
-    type_name::Union{Nothing,var"#base".String}
-    extendee::Union{Nothing,var"#base".String}
-    default_value::Union{Nothing,var"#base".String}
-    oneof_index::Union{Nothing,var"#base".Int32}
-    json_name::Union{Nothing,var"#base".String}
+    type_name::Union{Nothing,String}
+    extendee::Union{Nothing,String}
+    default_value::Union{Nothing,String}
+    oneof_index::Union{Nothing,Int32}
+    json_name::Union{Nothing,String}
     options::Union{Nothing,FieldOptions}
-    proto3_optional::Union{Nothing,var"#base".Bool}
+    proto3_optional::Union{Nothing,Bool}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{FieldDescriptorProto})
@@ -270,7 +269,7 @@ function PB.json_field_names(::var"#core".Type{FieldDescriptorProto})
 end
 PB.register_message_type("google.protobuf.FieldDescriptorProto", FieldDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     number = nothing
     label = nothing
@@ -286,27 +285,27 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldDescri
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 3
-            number = PB._decode(_d, var"#base".Int32)
+            number = PB._decode(_d, Int32)
         elseif field_number == 4
             label = PB._decode(_d, var"FieldDescriptorProto.Label".T)
         elseif field_number == 5
             type = PB._decode(_d, var"FieldDescriptorProto.Type".T)
         elseif field_number == 6
-            type_name = PB._decode(_d, var"#base".String)
+            type_name = PB._decode(_d, String)
         elseif field_number == 2
-            extendee = PB._decode(_d, var"#base".String)
+            extendee = PB._decode(_d, String)
         elseif field_number == 7
-            default_value = PB._decode(_d, var"#base".String)
+            default_value = PB._decode(_d, String)
         elseif field_number == 9
-            oneof_index = PB._decode(_d, var"#base".Int32)
+            oneof_index = PB._decode(_d, Int32)
         elseif field_number == 10
-            json_name = PB._decode(_d, var"#base".String)
+            json_name = PB._decode(_d, String)
         elseif field_number == 8
             PB._decode!(_d, options)
         elseif field_number == 17
-            proto3_optional = PB._decode(_d, var"#base".Bool)
+            proto3_optional = PB._decode(_d, Bool)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -357,7 +356,7 @@ end
 @enumbatteries var"MethodOptions.IdempotencyLevel".T typesalt=0x97d41564f23ffb2b
 
 struct MethodOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,Bool}
     idempotency_level::Union{Nothing,var"MethodOptions.IdempotencyLevel".T}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
@@ -370,7 +369,7 @@ function PB.json_field_names(::var"#core".Type{MethodOptions})
 end
 PB.register_message_type("google.protobuf.MethodOptions", MethodOptions)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
     idempotency_level = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
@@ -378,7 +377,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodOptio
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 33
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 34
             idempotency_level = PB._decode(_d, var"MethodOptions.IdempotencyLevel".T)
         elseif field_number == 999
@@ -414,12 +413,12 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{MethodOptions})
 end
 
 struct MethodDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
-    input_type::Union{Nothing,var"#base".String}
-    output_type::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
+    input_type::Union{Nothing,String}
+    output_type::Union{Nothing,String}
     options::Union{Nothing,MethodOptions}
-    client_streaming::Union{Nothing,var"#base".Bool}
-    server_streaming::Union{Nothing,var"#base".Bool}
+    client_streaming::Union{Nothing,Bool}
+    server_streaming::Union{Nothing,Bool}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{MethodDescriptorProto})
@@ -430,7 +429,7 @@ function PB.json_field_names(::var"#core".Type{MethodDescriptorProto})
 end
 PB.register_message_type("google.protobuf.MethodDescriptorProto", MethodDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     input_type = nothing
     output_type = nothing
@@ -441,17 +440,17 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MethodDescr
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            input_type = PB._decode(_d, var"#base".String)
+            input_type = PB._decode(_d, String)
         elseif field_number == 3
-            output_type = PB._decode(_d, var"#base".String)
+            output_type = PB._decode(_d, String)
         elseif field_number == 4
             PB._decode!(_d, options)
         elseif field_number == 5
-            client_streaming = PB._decode(_d, var"#base".Bool)
+            client_streaming = PB._decode(_d, Bool)
         elseif field_number == 6
-            server_streaming = PB._decode(_d, var"#base".Bool)
+            server_streaming = PB._decode(_d, Bool)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -489,7 +488,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{MethodDescriptorPro
 end
 
 struct ServiceOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -501,14 +500,14 @@ function PB.json_field_names(::var"#core".Type{ServiceOptions})
 end
 PB.register_message_type("google.protobuf.ServiceOptions", ServiceOptions)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ServiceOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ServiceOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 33
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -540,7 +539,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{ServiceOptions})
 end
 
 struct ServiceDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
     method::Vector{MethodDescriptorProto}
     options::Union{Nothing,ServiceOptions}
     var"#unknown_fields"::Vector{UInt8}
@@ -553,7 +552,7 @@ function PB.json_field_names(::var"#core".Type{ServiceDescriptorProto})
 end
 PB.register_message_type("google.protobuf.ServiceDescriptorProto", ServiceDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ServiceDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ServiceDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     method = PB.BufferedVector{MethodDescriptorProto}()
     options = Ref{Union{Nothing,ServiceOptions}}(nothing)
@@ -561,7 +560,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ServiceDesc
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, method)
         elseif field_number == 3
@@ -608,7 +607,7 @@ function PB.json_field_names(::var"#core".Type{ExtensionRangeOptions})
 end
 PB.register_message_type("google.protobuf.ExtensionRangeOptions", ExtensionRangeOptions)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ExtensionRangeOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ExtensionRangeOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
@@ -653,7 +652,7 @@ function PB.json_field_names(::var"#core".Type{OneofOptions})
 end
 PB.register_message_type("google.protobuf.OneofOptions", OneofOptions)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:OneofOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:OneofOptions}, _endpos::Int=0, _group::Bool=false)
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
@@ -687,7 +686,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{OneofOptions})
 end
 
 struct OneofDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
     options::Union{Nothing,OneofOptions}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -699,14 +698,14 @@ function PB.json_field_names(::var"#core".Type{OneofDescriptorProto})
 end
 PB.register_message_type("google.protobuf.OneofDescriptorProto", OneofDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:OneofDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:OneofDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     options = Ref{Union{Nothing,OneofOptions}}(nothing)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, options)
         else
@@ -738,7 +737,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{OneofDescriptorProt
 end
 
 struct EnumValueOptions <: PB.AbstractProtoBufMessage
-    deprecated::Union{Nothing,var"#base".Bool}
+    deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -750,14 +749,14 @@ function PB.json_field_names(::var"#core".Type{EnumValueOptions})
 end
 PB.register_message_type("google.protobuf.EnumValueOptions", EnumValueOptions)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValueOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValueOptions}, _endpos::Int=0, _group::Bool=false)
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -789,8 +788,8 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValueOptions})
 end
 
 struct EnumValueDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
-    number::Union{Nothing,var"#base".Int32}
+    name::Union{Nothing,String}
+    number::Union{Nothing,Int32}
     options::Union{Nothing,EnumValueOptions}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -802,7 +801,7 @@ function PB.json_field_names(::var"#core".Type{EnumValueDescriptorProto})
 end
 PB.register_message_type("google.protobuf.EnumValueDescriptorProto", EnumValueDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValueDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValueDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     number = nothing
     options = Ref{Union{Nothing,EnumValueOptions}}(nothing)
@@ -810,9 +809,9 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValueDe
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            number = PB._decode(_d, var"#base".Int32)
+            number = PB._decode(_d, Int32)
         elseif field_number == 3
             PB._decode!(_d, options)
         else
@@ -846,8 +845,8 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValueDescriptor
 end
 
 struct EnumOptions <: PB.AbstractProtoBufMessage
-    allow_alias::Union{Nothing,var"#base".Bool}
-    deprecated::Union{Nothing,var"#base".Bool}
+    allow_alias::Union{Nothing,Bool}
+    deprecated::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -862,7 +861,7 @@ function PB.reserved_fields(::var"#core".Type{EnumOptions})
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[5])
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumOptions}, _endpos::Int=0, _group::Bool=false)
     allow_alias = nothing
     deprecated = nothing
     uninterpreted_option = PB.BufferedVector{UninterpretedOption}()
@@ -870,9 +869,9 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumOptions
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 2
-            allow_alias = PB._decode(_d, var"#base".Bool)
+            allow_alias = PB._decode(_d, Bool)
         elseif field_number == 3
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -906,8 +905,8 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{EnumOptions})
 end
 
 struct var"EnumDescriptorProto.EnumReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32}
-    var"#end"::Union{Nothing,var"#base".Int32}
+    start::Union{Nothing,Int32}
+    var"#end"::Union{Nothing,Int32}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{var"EnumDescriptorProto.EnumReservedRange"})
@@ -918,16 +917,16 @@ function PB.json_field_names(::var"#core".Type{var"EnumDescriptorProto.EnumReser
 end
 PB.register_message_type("google.protobuf.EnumDescriptorProto.EnumReservedRange", var"EnumDescriptorProto.EnumReservedRange")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"EnumDescriptorProto.EnumReservedRange"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"EnumDescriptorProto.EnumReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
     var"#end" = nothing
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            start = PB._decode(_d, var"#base".Int32)
+            start = PB._decode(_d, Int32)
         elseif field_number == 2
-            var"#end" = PB._decode(_d, var"#base".Int32)
+            var"#end" = PB._decode(_d, Int32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -957,11 +956,11 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{var"EnumDescriptorP
 end
 
 struct EnumDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
     value::Vector{EnumValueDescriptorProto}
     options::Union{Nothing,EnumOptions}
     reserved_range::Vector{var"EnumDescriptorProto.EnumReservedRange"}
-    reserved_name::Vector{var"#base".String}
+    reserved_name::Vector{String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{EnumDescriptorProto})
@@ -972,17 +971,17 @@ function PB.json_field_names(::var"#core".Type{EnumDescriptorProto})
 end
 PB.register_message_type("google.protobuf.EnumDescriptorProto", EnumDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     value = PB.BufferedVector{EnumValueDescriptorProto}()
     options = Ref{Union{Nothing,EnumOptions}}(nothing)
     reserved_range = PB.BufferedVector{var"EnumDescriptorProto.EnumReservedRange"}()
-    reserved_name = PB.BufferedVector{var"#base".String}()
+    reserved_name = PB.BufferedVector{String}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, value)
         elseif field_number == 3
@@ -1022,14 +1021,14 @@ function PB._encoded_size(_x::EnumDescriptorProto)
 end
 @batteries EnumDescriptorProto typesalt=0x9e00878e76d2768f kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{EnumDescriptorProto})
-    return (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+    return (;name = nothing, value = Vector{EnumValueDescriptorProto}(), options = nothing, reserved_range = Vector{var"EnumDescriptorProto.EnumReservedRange"}(), reserved_name = Vector{String}(), var"#unknown_fields" = UInt8[])
 end
 
 struct MessageOptions <: PB.AbstractProtoBufMessage
-    message_set_wire_format::Union{Nothing,var"#base".Bool}
-    no_standard_descriptor_accessor::Union{Nothing,var"#base".Bool}
-    deprecated::Union{Nothing,var"#base".Bool}
-    map_entry::Union{Nothing,var"#base".Bool}
+    message_set_wire_format::Union{Nothing,Bool}
+    no_standard_descriptor_accessor::Union{Nothing,Bool}
+    deprecated::Union{Nothing,Bool}
+    map_entry::Union{Nothing,Bool}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -1044,7 +1043,7 @@ function PB.reserved_fields(::var"#core".Type{MessageOptions})
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[8, 9])
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MessageOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MessageOptions}, _endpos::Int=0, _group::Bool=false)
     message_set_wire_format = nothing
     no_standard_descriptor_accessor = nothing
     deprecated = nothing
@@ -1054,13 +1053,13 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:MessageOpti
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            message_set_wire_format = PB._decode(_d, var"#base".Bool)
+            message_set_wire_format = PB._decode(_d, Bool)
         elseif field_number == 2
-            no_standard_descriptor_accessor = PB._decode(_d, var"#base".Bool)
+            no_standard_descriptor_accessor = PB._decode(_d, Bool)
         elseif field_number == 3
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 7
-            map_entry = PB._decode(_d, var"#base".Bool)
+            map_entry = PB._decode(_d, Bool)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -1098,8 +1097,8 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{MessageOptions})
 end
 
 struct var"DescriptorProto.ExtensionRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32}
-    var"#end"::Union{Nothing,var"#base".Int32}
+    start::Union{Nothing,Int32}
+    var"#end"::Union{Nothing,Int32}
     options::Union{Nothing,ExtensionRangeOptions}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -1111,7 +1110,7 @@ function PB.json_field_names(::var"#core".Type{var"DescriptorProto.ExtensionRang
 end
 PB.register_message_type("google.protobuf.DescriptorProto.ExtensionRange", var"DescriptorProto.ExtensionRange")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"DescriptorProto.ExtensionRange"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"DescriptorProto.ExtensionRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
     var"#end" = nothing
     options = Ref{Union{Nothing,ExtensionRangeOptions}}(nothing)
@@ -1119,9 +1118,9 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"Descrip
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            start = PB._decode(_d, var"#base".Int32)
+            start = PB._decode(_d, Int32)
         elseif field_number == 2
-            var"#end" = PB._decode(_d, var"#base".Int32)
+            var"#end" = PB._decode(_d, Int32)
         elseif field_number == 3
             PB._decode!(_d, options)
         else
@@ -1155,8 +1154,8 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{var"DescriptorProto
 end
 
 struct var"DescriptorProto.ReservedRange" <: PB.AbstractProtoBufMessage
-    start::Union{Nothing,var"#base".Int32}
-    var"#end"::Union{Nothing,var"#base".Int32}
+    start::Union{Nothing,Int32}
+    var"#end"::Union{Nothing,Int32}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{var"DescriptorProto.ReservedRange"})
@@ -1167,16 +1166,16 @@ function PB.json_field_names(::var"#core".Type{var"DescriptorProto.ReservedRange
 end
 PB.register_message_type("google.protobuf.DescriptorProto.ReservedRange", var"DescriptorProto.ReservedRange")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"DescriptorProto.ReservedRange"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"DescriptorProto.ReservedRange"}, _endpos::Int=0, _group::Bool=false)
     start = nothing
     var"#end" = nothing
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            start = PB._decode(_d, var"#base".Int32)
+            start = PB._decode(_d, Int32)
         elseif field_number == 2
-            var"#end" = PB._decode(_d, var"#base".Int32)
+            var"#end" = PB._decode(_d, Int32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -1206,7 +1205,7 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{var"DescriptorProto
 end
 
 struct DescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
+    name::Union{Nothing,String}
     field::Vector{FieldDescriptorProto}
     extension::Vector{FieldDescriptorProto}
     nested_type::Vector{DescriptorProto}
@@ -1215,7 +1214,7 @@ struct DescriptorProto <: PB.AbstractProtoBufMessage
     oneof_decl::Vector{OneofDescriptorProto}
     options::Union{Nothing,MessageOptions}
     reserved_range::Vector{var"DescriptorProto.ReservedRange"}
-    reserved_name::Vector{var"#base".String}
+    reserved_name::Vector{String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{DescriptorProto})
@@ -1226,7 +1225,7 @@ function PB.json_field_names(::var"#core".Type{DescriptorProto})
 end
 PB.register_message_type("google.protobuf.DescriptorProto", DescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:DescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:DescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     field = PB.BufferedVector{FieldDescriptorProto}()
     extension = PB.BufferedVector{FieldDescriptorProto}()
@@ -1236,12 +1235,12 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:DescriptorP
     oneof_decl = PB.BufferedVector{OneofDescriptorProto}()
     options = Ref{Union{Nothing,MessageOptions}}(nothing)
     reserved_range = PB.BufferedVector{var"DescriptorProto.ReservedRange"}()
-    reserved_name = PB.BufferedVector{var"#base".String}()
+    reserved_name = PB.BufferedVector{String}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, field)
         elseif field_number == 6
@@ -1301,15 +1300,15 @@ function PB._encoded_size(_x::DescriptorProto)
 end
 @batteries DescriptorProto typesalt=0x395b277867bb123c kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{DescriptorProto})
-    return (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+    return (;name = nothing, field = Vector{FieldDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), nested_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), extension_range = Vector{var"DescriptorProto.ExtensionRange"}(), oneof_decl = Vector{OneofDescriptorProto}(), options = nothing, reserved_range = Vector{var"DescriptorProto.ReservedRange"}(), reserved_name = Vector{String}(), var"#unknown_fields" = UInt8[])
 end
 
 struct var"SourceCodeInfo.Location" <: PB.AbstractProtoBufMessage
-    path::Vector{var"#base".Int32}
-    span::Vector{var"#base".Int32}
-    leading_comments::Union{Nothing,var"#base".String}
-    trailing_comments::Union{Nothing,var"#base".String}
-    leading_detached_comments::Vector{var"#base".String}
+    path::Vector{Int32}
+    span::Vector{Int32}
+    leading_comments::Union{Nothing,String}
+    trailing_comments::Union{Nothing,String}
+    leading_detached_comments::Vector{String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{var"SourceCodeInfo.Location"})
@@ -1320,12 +1319,12 @@ function PB.json_field_names(::var"#core".Type{var"SourceCodeInfo.Location"})
 end
 PB.register_message_type("google.protobuf.SourceCodeInfo.Location", var"SourceCodeInfo.Location")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"SourceCodeInfo.Location"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    path = PB.BufferedVector{var"#base".Int32}()
-    span = PB.BufferedVector{var"#base".Int32}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"SourceCodeInfo.Location"}, _endpos::Int=0, _group::Bool=false)
+    path = PB.BufferedVector{Int32}()
+    span = PB.BufferedVector{Int32}()
     leading_comments = nothing
     trailing_comments = nothing
-    leading_detached_comments = PB.BufferedVector{var"#base".String}()
+    leading_detached_comments = PB.BufferedVector{String}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -1334,9 +1333,9 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"SourceC
         elseif field_number == 2
             PB._decode!(_d, wire_type, span)
         elseif field_number == 3
-            leading_comments = PB._decode(_d, var"#base".String)
+            leading_comments = PB._decode(_d, String)
         elseif field_number == 4
-            trailing_comments = PB._decode(_d, var"#base".String)
+            trailing_comments = PB._decode(_d, String)
         elseif field_number == 6
             PB._decode!(_d, leading_detached_comments)
         else
@@ -1370,7 +1369,7 @@ function PB._encoded_size(_x::var"SourceCodeInfo.Location")
 end
 @batteries var"SourceCodeInfo.Location" typesalt=0x5fa1c7e0f6692208 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{var"SourceCodeInfo.Location"})
-    return (;path = Vector{var"#base".Int32}(), span = Vector{var"#base".Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+    return (;path = Vector{Int32}(), span = Vector{Int32}(), leading_comments = nothing, trailing_comments = nothing, leading_detached_comments = Vector{String}(), var"#unknown_fields" = UInt8[])
 end
 
 struct SourceCodeInfo <: PB.AbstractProtoBufMessage
@@ -1385,7 +1384,7 @@ function PB.json_field_names(::var"#core".Type{SourceCodeInfo})
 end
 PB.register_message_type("google.protobuf.SourceCodeInfo", SourceCodeInfo)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:SourceCodeInfo}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:SourceCodeInfo}, _endpos::Int=0, _group::Bool=false)
     location = PB.BufferedVector{var"SourceCodeInfo.Location"}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
@@ -1422,26 +1421,26 @@ end
 @enumbatteries var"FileOptions.OptimizeMode".T typesalt=0x6773b55409fca24d
 
 struct FileOptions <: PB.AbstractProtoBufMessage
-    java_package::Union{Nothing,var"#base".String}
-    java_outer_classname::Union{Nothing,var"#base".String}
-    java_multiple_files::Union{Nothing,var"#base".Bool}
-    java_generate_equals_and_hash::Union{Nothing,var"#base".Bool}
-    java_string_check_utf8::Union{Nothing,var"#base".Bool}
+    java_package::Union{Nothing,String}
+    java_outer_classname::Union{Nothing,String}
+    java_multiple_files::Union{Nothing,Bool}
+    java_generate_equals_and_hash::Union{Nothing,Bool}
+    java_string_check_utf8::Union{Nothing,Bool}
     optimize_for::Union{Nothing,var"FileOptions.OptimizeMode".T}
-    go_package::Union{Nothing,var"#base".String}
-    cc_generic_services::Union{Nothing,var"#base".Bool}
-    java_generic_services::Union{Nothing,var"#base".Bool}
-    py_generic_services::Union{Nothing,var"#base".Bool}
-    php_generic_services::Union{Nothing,var"#base".Bool}
-    deprecated::Union{Nothing,var"#base".Bool}
-    cc_enable_arenas::Union{Nothing,var"#base".Bool}
-    objc_class_prefix::Union{Nothing,var"#base".String}
-    csharp_namespace::Union{Nothing,var"#base".String}
-    swift_prefix::Union{Nothing,var"#base".String}
-    php_class_prefix::Union{Nothing,var"#base".String}
-    php_namespace::Union{Nothing,var"#base".String}
-    php_metadata_namespace::Union{Nothing,var"#base".String}
-    ruby_package::Union{Nothing,var"#base".String}
+    go_package::Union{Nothing,String}
+    cc_generic_services::Union{Nothing,Bool}
+    java_generic_services::Union{Nothing,Bool}
+    py_generic_services::Union{Nothing,Bool}
+    php_generic_services::Union{Nothing,Bool}
+    deprecated::Union{Nothing,Bool}
+    cc_enable_arenas::Union{Nothing,Bool}
+    objc_class_prefix::Union{Nothing,String}
+    csharp_namespace::Union{Nothing,String}
+    swift_prefix::Union{Nothing,String}
+    php_class_prefix::Union{Nothing,String}
+    php_namespace::Union{Nothing,String}
+    php_metadata_namespace::Union{Nothing,String}
+    ruby_package::Union{Nothing,String}
     uninterpreted_option::Vector{UninterpretedOption}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -1456,7 +1455,7 @@ function PB.reserved_fields(::var"#core".Type{FileOptions})
     return (names = String[], numbers = Union{Int,UnitRange{Int}}[38])
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileOptions}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileOptions}, _endpos::Int=0, _group::Bool=false)
     java_package = nothing
     java_outer_classname = nothing
     java_multiple_files = nothing
@@ -1482,45 +1481,45 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileOptions
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            java_package = PB._decode(_d, var"#base".String)
+            java_package = PB._decode(_d, String)
         elseif field_number == 8
-            java_outer_classname = PB._decode(_d, var"#base".String)
+            java_outer_classname = PB._decode(_d, String)
         elseif field_number == 10
-            java_multiple_files = PB._decode(_d, var"#base".Bool)
+            java_multiple_files = PB._decode(_d, Bool)
         elseif field_number == 20
-            java_generate_equals_and_hash = PB._decode(_d, var"#base".Bool)
+            java_generate_equals_and_hash = PB._decode(_d, Bool)
         elseif field_number == 27
-            java_string_check_utf8 = PB._decode(_d, var"#base".Bool)
+            java_string_check_utf8 = PB._decode(_d, Bool)
         elseif field_number == 9
             optimize_for = PB._decode(_d, var"FileOptions.OptimizeMode".T)
         elseif field_number == 11
-            go_package = PB._decode(_d, var"#base".String)
+            go_package = PB._decode(_d, String)
         elseif field_number == 16
-            cc_generic_services = PB._decode(_d, var"#base".Bool)
+            cc_generic_services = PB._decode(_d, Bool)
         elseif field_number == 17
-            java_generic_services = PB._decode(_d, var"#base".Bool)
+            java_generic_services = PB._decode(_d, Bool)
         elseif field_number == 18
-            py_generic_services = PB._decode(_d, var"#base".Bool)
+            py_generic_services = PB._decode(_d, Bool)
         elseif field_number == 42
-            php_generic_services = PB._decode(_d, var"#base".Bool)
+            php_generic_services = PB._decode(_d, Bool)
         elseif field_number == 23
-            deprecated = PB._decode(_d, var"#base".Bool)
+            deprecated = PB._decode(_d, Bool)
         elseif field_number == 31
-            cc_enable_arenas = PB._decode(_d, var"#base".Bool)
+            cc_enable_arenas = PB._decode(_d, Bool)
         elseif field_number == 36
-            objc_class_prefix = PB._decode(_d, var"#base".String)
+            objc_class_prefix = PB._decode(_d, String)
         elseif field_number == 37
-            csharp_namespace = PB._decode(_d, var"#base".String)
+            csharp_namespace = PB._decode(_d, String)
         elseif field_number == 39
-            swift_prefix = PB._decode(_d, var"#base".String)
+            swift_prefix = PB._decode(_d, String)
         elseif field_number == 40
-            php_class_prefix = PB._decode(_d, var"#base".String)
+            php_class_prefix = PB._decode(_d, String)
         elseif field_number == 41
-            php_namespace = PB._decode(_d, var"#base".String)
+            php_namespace = PB._decode(_d, String)
         elseif field_number == 44
-            php_metadata_namespace = PB._decode(_d, var"#base".String)
+            php_metadata_namespace = PB._decode(_d, String)
         elseif field_number == 45
-            ruby_package = PB._decode(_d, var"#base".String)
+            ruby_package = PB._decode(_d, String)
         elseif field_number == 999
             PB._decode!(_d, uninterpreted_option)
         else
@@ -1590,18 +1589,18 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{FileOptions})
 end
 
 struct FileDescriptorProto <: PB.AbstractProtoBufMessage
-    name::Union{Nothing,var"#base".String}
-    package::Union{Nothing,var"#base".String}
-    dependency::Vector{var"#base".String}
-    public_dependency::Vector{var"#base".Int32}
-    weak_dependency::Vector{var"#base".Int32}
+    name::Union{Nothing,String}
+    package::Union{Nothing,String}
+    dependency::Vector{String}
+    public_dependency::Vector{Int32}
+    weak_dependency::Vector{Int32}
     message_type::Vector{DescriptorProto}
     enum_type::Vector{EnumDescriptorProto}
     service::Vector{ServiceDescriptorProto}
     extension::Vector{FieldDescriptorProto}
     options::Union{Nothing,FileOptions}
     source_code_info::Union{Nothing,SourceCodeInfo}
-    syntax::Union{Nothing,var"#base".String}
+    syntax::Union{Nothing,String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{FileDescriptorProto})
@@ -1612,12 +1611,12 @@ function PB.json_field_names(::var"#core".Type{FileDescriptorProto})
 end
 PB.register_message_type("google.protobuf.FileDescriptorProto", FileDescriptorProto)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescriptorProto}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescriptorProto}, _endpos::Int=0, _group::Bool=false)
     name = nothing
     package = nothing
-    dependency = PB.BufferedVector{var"#base".String}()
-    public_dependency = PB.BufferedVector{var"#base".Int32}()
-    weak_dependency = PB.BufferedVector{var"#base".Int32}()
+    dependency = PB.BufferedVector{String}()
+    public_dependency = PB.BufferedVector{Int32}()
+    weak_dependency = PB.BufferedVector{Int32}()
     message_type = PB.BufferedVector{DescriptorProto}()
     enum_type = PB.BufferedVector{EnumDescriptorProto}()
     service = PB.BufferedVector{ServiceDescriptorProto}()
@@ -1629,9 +1628,9 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescrip
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            package = PB._decode(_d, var"#base".String)
+            package = PB._decode(_d, String)
         elseif field_number == 3
             PB._decode!(_d, dependency)
         elseif field_number == 10
@@ -1651,7 +1650,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescrip
         elseif field_number == 9
             PB._decode!(_d, source_code_info)
         elseif field_number == 12
-            syntax = PB._decode(_d, var"#base".String)
+            syntax = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -1713,7 +1712,7 @@ function PB._encoded_size(_x::FileDescriptorProto)
 end
 @batteries FileDescriptorProto typesalt=0x4f6448a4b53820aa kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{FileDescriptorProto})
-    return (;name = nothing, package = nothing, dependency = Vector{var"#base".String}(), public_dependency = Vector{var"#base".Int32}(), weak_dependency = Vector{var"#base".Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, var"#unknown_fields" = UInt8[])
+    return (;name = nothing, package = nothing, dependency = Vector{String}(), public_dependency = Vector{Int32}(), weak_dependency = Vector{Int32}(), message_type = Vector{DescriptorProto}(), enum_type = Vector{EnumDescriptorProto}(), service = Vector{ServiceDescriptorProto}(), extension = Vector{FieldDescriptorProto}(), options = nothing, source_code_info = nothing, syntax = nothing, var"#unknown_fields" = UInt8[])
 end
 
 struct FileDescriptorSet <: PB.AbstractProtoBufMessage
@@ -1728,7 +1727,7 @@ function PB.json_field_names(::var"#core".Type{FileDescriptorSet})
 end
 PB.register_message_type("google.protobuf.FileDescriptorSet", FileDescriptorSet)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescriptorSet}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FileDescriptorSet}, _endpos::Int=0, _group::Bool=false)
     file = PB.BufferedVector{FileDescriptorProto}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
@@ -1762,10 +1761,10 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{FileDescriptorSet})
 end
 
 struct var"GeneratedCodeInfo.Annotation" <: PB.AbstractProtoBufMessage
-    path::Vector{var"#base".Int32}
-    source_file::Union{Nothing,var"#base".String}
-    var"#begin"::Union{Nothing,var"#base".Int32}
-    var"#end"::Union{Nothing,var"#base".Int32}
+    path::Vector{Int32}
+    source_file::Union{Nothing,String}
+    var"#begin"::Union{Nothing,Int32}
+    var"#end"::Union{Nothing,Int32}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
@@ -1776,8 +1775,8 @@ function PB.json_field_names(::var"#core".Type{var"GeneratedCodeInfo.Annotation"
 end
 PB.register_message_type("google.protobuf.GeneratedCodeInfo.Annotation", var"GeneratedCodeInfo.Annotation")
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"GeneratedCodeInfo.Annotation"}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    path = PB.BufferedVector{var"#base".Int32}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"GeneratedCodeInfo.Annotation"}, _endpos::Int=0, _group::Bool=false)
+    path = PB.BufferedVector{Int32}()
     source_file = nothing
     var"#begin" = nothing
     var"#end" = nothing
@@ -1787,11 +1786,11 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"Generat
         if field_number == 1
             PB._decode!(_d, wire_type, path)
         elseif field_number == 2
-            source_file = PB._decode(_d, var"#base".String)
+            source_file = PB._decode(_d, String)
         elseif field_number == 3
-            var"#begin" = PB._decode(_d, var"#base".Int32)
+            var"#begin" = PB._decode(_d, Int32)
         elseif field_number == 4
-            var"#end" = PB._decode(_d, var"#base".Int32)
+            var"#end" = PB._decode(_d, Int32)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -1821,7 +1820,7 @@ function PB._encoded_size(_x::var"GeneratedCodeInfo.Annotation")
 end
 @batteries var"GeneratedCodeInfo.Annotation" typesalt=0xeb7be3f082dbd320 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{var"GeneratedCodeInfo.Annotation"})
-    return (;path = Vector{var"#base".Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
+    return (;path = Vector{Int32}(), source_file = nothing, var"#begin" = nothing, var"#end" = nothing, var"#unknown_fields" = UInt8[])
 end
 
 struct GeneratedCodeInfo <: PB.AbstractProtoBufMessage
@@ -1836,7 +1835,7 @@ function PB.json_field_names(::var"#core".Type{GeneratedCodeInfo})
 end
 PB.register_message_type("google.protobuf.GeneratedCodeInfo", GeneratedCodeInfo)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:GeneratedCodeInfo}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:GeneratedCodeInfo}, _endpos::Int=0, _group::Bool=false)
     annotation = PB.BufferedVector{var"GeneratedCodeInfo.Annotation"}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)

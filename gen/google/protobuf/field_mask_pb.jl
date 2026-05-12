@@ -8,12 +8,11 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export FieldMask
 
 struct FieldMask <: PB.AbstractProtoBufMessage
-    paths::Vector{var"#base".String}
+    paths::Vector{String}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{FieldMask})
@@ -24,8 +23,8 @@ function PB.json_field_names(::var"#core".Type{FieldMask})
 end
 PB.register_message_type("google.protobuf.FieldMask", FieldMask)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldMask}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    paths = PB.BufferedVector{var"#base".String}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:FieldMask}, _endpos::Int=0, _group::Bool=false)
+    paths = PB.BufferedVector{String}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -54,7 +53,7 @@ function PB._encoded_size(_x::FieldMask)
 end
 @batteries FieldMask typesalt=0xe1df3b729904a745 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{FieldMask})
-    return (;paths = Vector{var"#base".String}(), var"#unknown_fields" = UInt8[])
+    return (;paths = Vector{String}(), var"#unknown_fields" = UInt8[])
 end
 
 

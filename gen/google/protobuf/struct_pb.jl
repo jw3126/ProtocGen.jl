@@ -8,7 +8,6 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export NullValue, Struct, Value, ListValue
 
@@ -23,7 +22,7 @@ abstract type AbstractStruct <: PB.AbstractProtoBufMessage end
 abstract type AbstractValue <: PB.AbstractProtoBufMessage end
 
 struct Struct <: AbstractStruct
-    fields::OrderedDict{var"#base".String,AbstractValue}
+    fields::OrderedDict{String,AbstractValue}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Struct})
@@ -34,8 +33,8 @@ function PB.json_field_names(::var"#core".Type{Struct})
 end
 PB.register_message_type("google.protobuf.Struct", Struct)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Struct}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    fields = OrderedDict{var"#base".String,AbstractValue}()
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Struct}, _endpos::Int=0, _group::Bool=false)
+    fields = OrderedDict{String,AbstractValue}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
@@ -64,11 +63,11 @@ function PB._encoded_size(_x::Struct)
 end
 @batteries Struct typesalt=0x19348fa6f6d470f6 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Struct})
-    return (;fields = OrderedDict{var"#base".String,AbstractValue}(), var"#unknown_fields" = UInt8[])
+    return (;fields = OrderedDict{String,AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 
 struct Value <: AbstractValue
-    kind::Union{Nothing,OneOf{<:Union{NullValue.T,var"#base".Float64,var"#base".String,var"#base".Bool,AbstractStruct,AbstractListValue}}}
+    kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}}
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Value})
@@ -79,22 +78,22 @@ function PB.json_field_names(::var"#core".Type{Value})
 end
 PB.register_message_type("google.protobuf.Value", Value)
 function PB.oneof_field_types(::var"#core".Type{Value})
-    return (;kind = (;null_value = NullValue.T, number_value = var"#base".Float64, string_value = var"#base".String, bool_value = var"#base".Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
+    return (;kind = (;null_value = NullValue.T, number_value = Float64, string_value = String, bool_value = Bool, struct_value = AbstractStruct, list_value = AbstractListValue))
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Value}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
-    kind::Union{Nothing,OneOf{<:Union{NullValue.T,var"#base".Float64,var"#base".String,var"#base".Bool,AbstractStruct,AbstractListValue}}} = nothing
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Value}, _endpos::Int=0, _group::Bool=false)
+    kind::Union{Nothing,OneOf{<:Union{NullValue.T,Float64,String,Bool,AbstractStruct,AbstractListValue}}} = nothing
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
             kind = OneOf(:null_value, PB._decode(_d, NullValue.T))
         elseif field_number == 2
-            kind = OneOf(:number_value, PB._decode(_d, var"#base".Float64))
+            kind = OneOf(:number_value, PB._decode(_d, Float64))
         elseif field_number == 3
-            kind = OneOf(:string_value, PB._decode(_d, var"#base".String))
+            kind = OneOf(:string_value, PB._decode(_d, String))
         elseif field_number == 4
-            kind = OneOf(:bool_value, PB._decode(_d, var"#base".Bool))
+            kind = OneOf(:bool_value, PB._decode(_d, Bool))
         elseif field_number == 5
             _v = Ref{Union{Nothing,AbstractStruct}}((!isnothing(kind) && kind.name === :struct_value) ? kind.value::AbstractStruct : nothing)
             PB._decode!(_d, _v)
@@ -199,7 +198,7 @@ function PB.json_field_names(::var"#core".Type{ListValue})
 end
 PB.register_message_type("google.protobuf.ListValue", ListValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ListValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:ListValue}, _endpos::Int=0, _group::Bool=false)
     values = PB.BufferedVector{AbstractValue}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
@@ -232,19 +231,19 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{ListValue})
     return (;values = Vector{AbstractValue}(), var"#unknown_fields" = UInt8[])
 end
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractListValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractListValue}, _endpos::Int=0, _group::Bool=false)
     return PB._decode(_d, ListValue, _endpos, _group)
 end
 function PB._decode_json_message(::var"#core".Type{AbstractListValue}, json::AbstractDict; kw...)
     return PB._decode_json_message(ListValue, json; kw...)
 end
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractStruct}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractStruct}, _endpos::Int=0, _group::Bool=false)
     return PB._decode(_d, Struct, _endpos, _group)
 end
 function PB._decode_json_message(::var"#core".Type{AbstractStruct}, json::AbstractDict; kw...)
     return PB._decode_json_message(Struct, json; kw...)
 end
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:AbstractValue}, _endpos::Int=0, _group::Bool=false)
     return PB._decode(_d, Value, _endpos, _group)
 end
 function PB._decode_json_message(::var"#core".Type{AbstractValue}, json::AbstractDict; kw...)

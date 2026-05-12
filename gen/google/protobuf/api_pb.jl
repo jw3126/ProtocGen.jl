@@ -8,13 +8,12 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export Api, Method, Mixin
 
 struct Mixin <: PB.AbstractProtoBufMessage
-    name::var"#base".String
-    root::var"#base".String
+    name::String
+    root::String
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Mixin})
@@ -25,16 +24,16 @@ function PB.json_field_names(::var"#core".Type{Mixin})
 end
 PB.register_message_type("google.protobuf.Mixin", Mixin)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Mixin}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Mixin}, _endpos::Int=0, _group::Bool=false)
     name = ""
     root = ""
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            root = PB._decode(_d, var"#base".String)
+            root = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -64,11 +63,11 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{Mixin})
 end
 
 struct Method <: PB.AbstractProtoBufMessage
-    name::var"#base".String
-    request_type_url::var"#base".String
-    request_streaming::var"#base".Bool
-    response_type_url::var"#base".String
-    response_streaming::var"#base".Bool
+    name::String
+    request_type_url::String
+    request_streaming::Bool
+    response_type_url::String
+    response_streaming::Bool
     options::Vector{Option}
     syntax::Syntax.T
     var"#unknown_fields"::Vector{UInt8}
@@ -81,7 +80,7 @@ function PB.json_field_names(::var"#core".Type{Method})
 end
 PB.register_message_type("google.protobuf.Method", Method)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Method}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Method}, _endpos::Int=0, _group::Bool=false)
     name = ""
     request_type_url = ""
     request_streaming = false
@@ -93,15 +92,15 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Method}, _e
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            request_type_url = PB._decode(_d, var"#base".String)
+            request_type_url = PB._decode(_d, String)
         elseif field_number == 3
-            request_streaming = PB._decode(_d, var"#base".Bool)
+            request_streaming = PB._decode(_d, Bool)
         elseif field_number == 4
-            response_type_url = PB._decode(_d, var"#base".String)
+            response_type_url = PB._decode(_d, String)
         elseif field_number == 5
-            response_streaming = PB._decode(_d, var"#base".Bool)
+            response_streaming = PB._decode(_d, Bool)
         elseif field_number == 6
             PB._decode!(_d, options)
         elseif field_number == 7
@@ -145,10 +144,10 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{Method})
 end
 
 struct Api <: PB.AbstractProtoBufMessage
-    name::var"#base".String
+    name::String
     methods::Vector{Method}
     options::Vector{Option}
-    version::var"#base".String
+    version::String
     source_context::Union{Nothing,SourceContext}
     mixins::Vector{Mixin}
     syntax::Syntax.T
@@ -162,7 +161,7 @@ function PB.json_field_names(::var"#core".Type{Api})
 end
 PB.register_message_type("google.protobuf.Api", Api)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Api}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Api}, _endpos::Int=0, _group::Bool=false)
     name = ""
     methods = PB.BufferedVector{Method}()
     options = PB.BufferedVector{Option}()
@@ -174,13 +173,13 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Api}, _endp
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, methods)
         elseif field_number == 3
             PB._decode!(_d, options)
         elseif field_number == 4
-            version = PB._decode(_d, var"#base".String)
+            version = PB._decode(_d, String)
         elseif field_number == 5
             PB._decode!(_d, source_context)
         elseif field_number == 6

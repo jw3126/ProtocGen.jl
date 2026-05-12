@@ -14,11 +14,13 @@ include("setup.jl")
     @test response.error === nothing
     f = response.file[1]
 
-    # Generated source carries the right shapes.
-    @test occursin("name::var\"#base\".String", f.content)         # required scalar → bare type
+    # Generated source carries the right shapes. `p2.proto` has no
+    # built-in collisions so scalar refs render bare; the shielded form
+    # (`var"#base".Int32`) is exercised by shadow.proto's tests.
+    @test occursin("name::String", f.content)         # required scalar → bare type
     @test occursin("nested::Inner", f.content)        # required submessage → bare type
-    @test occursin("maybe::Union{Nothing,var\"#base\".Int32}", f.content)  # proto2 optional → presence
-    @test occursin("hint::Union{Nothing,var\"#base\".String}", f.content)
+    @test occursin("maybe::Union{Nothing,Int32}", f.content)  # proto2 optional → presence
+    @test occursin("hint::Union{Nothing,String}", f.content)
     @test occursin("_saw_name", f.content)
     @test occursin("required field", f.content)
 

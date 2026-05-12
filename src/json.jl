@@ -294,8 +294,9 @@ function _encode_json_value(io::IO, v::Bool; kw...)
     return nothing
 end
 
-# 32-bit integers (and smaller) → JSON number.
-function _encode_json_value(io::IO, v::Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}; kw...)
+# 32-bit integers → JSON number. (protobuf has no 8/16-bit integer types,
+# so codegen never produces a field with one of those scalar types.)
+function _encode_json_value(io::IO, v::Union{Int32,UInt32}; kw...)
     print(io, v)
     return nothing
 end
@@ -555,31 +556,23 @@ function _decode_json_value(::Type{Bool}, v::Bool; kw...)
     return v
 end
 
-# Smaller integers. Accept either JSON number or numeric string.
-# `Bool <: Real`, so without explicit Bool methods below, JSON `true` /
+# 32-bit integers. Accept either JSON number or numeric string.
+# `Bool <: Real`, so without the explicit Bool method JSON `true` /
 # `false` would silently coerce to 0/1 — spec says reject. The Bool
 # method's first-arg union must match the Real method's exactly to
 # avoid Aqua ambiguity (more-specific second arg loses if first is
-# wider), so it's split into the two size groups.
-function _decode_json_value(
-    ::Type{T},
-    ::Bool;
-    kw...,
-) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
+# wider), so the two are kept symmetric.
+function _decode_json_value(::Type{T}, ::Bool; kw...) where {T<:Union{Int32,UInt32}}
     throw(ArgumentError("expected $(T), got JSON boolean"))
 end
-function _decode_json_value(
-    ::Type{T},
-    v::Real;
-    kw...,
-) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
+function _decode_json_value(::Type{T}, v::Real; kw...) where {T<:Union{Int32,UInt32}}
     return T(v)
 end
 function _decode_json_value(
     ::Type{T},
     v::AbstractString;
     kw...,
-) where {T<:Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}}
+) where {T<:Union{Int32,UInt32}}
     return _strict_parse_int(T, v)
 end
 

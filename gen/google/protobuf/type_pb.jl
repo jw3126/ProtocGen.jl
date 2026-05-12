@@ -8,7 +8,6 @@ using ProtocGen: encode, decode, encode_json, decode_json
 using ProtocGen.EnumX: @enumx
 using ProtocGen.StructHelpers: @batteries, @enumbatteries
 const var"#core" = Core
-const var"#base" = Base
 
 export Syntax, Type, Field, Enum, EnumValue, Option
 
@@ -17,7 +16,7 @@ export Syntax, Type, Field, Enum, EnumValue, Option
 PB._enum_proto_prefix(::var"#core".Type{Syntax.T}) = "SYNTAX_"
 
 struct Option <: PB.AbstractProtoBufMessage
-    name::var"#base".String
+    name::String
     value::Union{Nothing,Any}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -29,14 +28,14 @@ function PB.json_field_names(::var"#core".Type{Option})
 end
 PB.register_message_type("google.protobuf.Option", Option)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Option}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Option}, _endpos::Int=0, _group::Bool=false)
     name = ""
     value = Ref{Union{Nothing,Any}}(nothing)
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, value)
         else
@@ -77,14 +76,14 @@ PB._enum_proto_prefix(::var"#core".Type{var"Field.Cardinality".T}) = "CARDINALIT
 struct Field <: PB.AbstractProtoBufMessage
     kind::var"Field.Kind".T
     cardinality::var"Field.Cardinality".T
-    number::var"#base".Int32
-    name::var"#base".String
-    type_url::var"#base".String
-    oneof_index::var"#base".Int32
-    packed::var"#base".Bool
+    number::Int32
+    name::String
+    type_url::String
+    oneof_index::Int32
+    packed::Bool
     options::Vector{Option}
-    json_name::var"#base".String
-    default_value::var"#base".String
+    json_name::String
+    default_value::String
     var"#unknown_fields"::Vector{UInt8}
 end
 function PB.field_numbers(::var"#core".Type{Field})
@@ -95,13 +94,13 @@ function PB.json_field_names(::var"#core".Type{Field})
 end
 PB.register_message_type("google.protobuf.Field", Field)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Field}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Field}, _endpos::Int=0, _group::Bool=false)
     kind = var"Field.Kind".TYPE_UNKNOWN
     cardinality = var"Field.Cardinality".UNKNOWN
-    number = zero(var"#base".Int32)
+    number = zero(Int32)
     name = ""
     type_url = ""
-    oneof_index = zero(var"#base".Int32)
+    oneof_index = zero(Int32)
     packed = false
     options = PB.BufferedVector{Option}()
     json_name = ""
@@ -114,21 +113,21 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Field}, _en
         elseif field_number == 2
             cardinality = PB._decode(_d, var"Field.Cardinality".T)
         elseif field_number == 3
-            number = PB._decode(_d, var"#base".Int32)
+            number = PB._decode(_d, Int32)
         elseif field_number == 4
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 6
-            type_url = PB._decode(_d, var"#base".String)
+            type_url = PB._decode(_d, String)
         elseif field_number == 7
-            oneof_index = PB._decode(_d, var"#base".Int32)
+            oneof_index = PB._decode(_d, Int32)
         elseif field_number == 8
-            packed = PB._decode(_d, var"#base".Bool)
+            packed = PB._decode(_d, Bool)
         elseif field_number == 9
             PB._decode!(_d, options)
         elseif field_number == 10
-            json_name = PB._decode(_d, var"#base".String)
+            json_name = PB._decode(_d, String)
         elseif field_number == 11
-            default_value = PB._decode(_d, var"#base".String)
+            default_value = PB._decode(_d, String)
         else
             PB._skip_and_capture!(_unknown_fields, _d, field_number, wire_type)
         end
@@ -140,10 +139,10 @@ function PB._encode(_e::PB.AbstractProtoEncoder, _x::Field)
     initpos = position(_e.io)
     _x.kind != var"Field.Kind".TYPE_UNKNOWN && PB._encode(_e, 1, _x.kind)
     _x.cardinality != var"Field.Cardinality".UNKNOWN && PB._encode(_e, 2, _x.cardinality)
-    _x.number != zero(var"#base".Int32) && PB._encode(_e, 3, _x.number)
+    _x.number != zero(Int32) && PB._encode(_e, 3, _x.number)
     !isempty(_x.name) && PB._encode(_e, 4, _x.name)
     !isempty(_x.type_url) && PB._encode(_e, 6, _x.type_url)
-    _x.oneof_index != zero(var"#base".Int32) && PB._encode(_e, 7, _x.oneof_index)
+    _x.oneof_index != zero(Int32) && PB._encode(_e, 7, _x.oneof_index)
     _x.packed != false && PB._encode(_e, 8, _x.packed)
     !isempty(_x.options) && PB._encode(_e, 9, _x.options)
     !isempty(_x.json_name) && PB._encode(_e, 10, _x.json_name)
@@ -157,10 +156,10 @@ function PB._encoded_size(_x::Field)
     encoded_size = 0
     _x.kind != var"Field.Kind".TYPE_UNKNOWN && (encoded_size += PB._encoded_size(_x.kind, 1))
     _x.cardinality != var"Field.Cardinality".UNKNOWN && (encoded_size += PB._encoded_size(_x.cardinality, 2))
-    _x.number != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.number, 3))
+    _x.number != zero(Int32) && (encoded_size += PB._encoded_size(_x.number, 3))
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 4))
     !isempty(_x.type_url) && (encoded_size += PB._encoded_size(_x.type_url, 6))
-    _x.oneof_index != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.oneof_index, 7))
+    _x.oneof_index != zero(Int32) && (encoded_size += PB._encoded_size(_x.oneof_index, 7))
     _x.packed != false && (encoded_size += PB._encoded_size(_x.packed, 8))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 9))
     !isempty(_x.json_name) && (encoded_size += PB._encoded_size(_x.json_name, 10))
@@ -170,13 +169,13 @@ function PB._encoded_size(_x::Field)
 end
 @batteries Field typesalt=0xc655c8bf39b77649 kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Field})
-    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".UNKNOWN, number = zero(var"#base".Int32), name = "", type_url = "", oneof_index = zero(var"#base".Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
+    return (;kind = var"Field.Kind".TYPE_UNKNOWN, cardinality = var"Field.Cardinality".UNKNOWN, number = zero(Int32), name = "", type_url = "", oneof_index = zero(Int32), packed = false, options = Vector{Option}(), json_name = "", default_value = "", var"#unknown_fields" = UInt8[])
 end
 
 struct Type <: PB.AbstractProtoBufMessage
-    name::var"#base".String
+    name::String
     fields::Vector{Field}
-    oneofs::Vector{var"#base".String}
+    oneofs::Vector{String}
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
     syntax::Syntax.T
@@ -190,10 +189,10 @@ function PB.json_field_names(::var"#core".Type{Type})
 end
 PB.register_message_type("google.protobuf.Type", Type)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Type}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Type}, _endpos::Int=0, _group::Bool=false)
     name = ""
     fields = PB.BufferedVector{Field}()
-    oneofs = PB.BufferedVector{var"#base".String}()
+    oneofs = PB.BufferedVector{String}()
     options = PB.BufferedVector{Option}()
     source_context = Ref{Union{Nothing,SourceContext}}(nothing)
     syntax = Syntax.PROTO2
@@ -201,7 +200,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Type}, _end
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, fields)
         elseif field_number == 3
@@ -245,12 +244,12 @@ function PB._encoded_size(_x::Type)
 end
 @batteries Type typesalt=0xdb0aa5f887dce70f kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{Type})
-    return (;name = "", fields = Vector{Field}(), oneofs = Vector{var"#base".String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
+    return (;name = "", fields = Vector{Field}(), oneofs = Vector{String}(), options = Vector{Option}(), source_context = nothing, syntax = Syntax.PROTO2, var"#unknown_fields" = UInt8[])
 end
 
 struct EnumValue <: PB.AbstractProtoBufMessage
-    name::var"#base".String
-    number::var"#base".Int32
+    name::String
+    number::Int32
     options::Vector{Option}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -262,17 +261,17 @@ function PB.json_field_names(::var"#core".Type{EnumValue})
 end
 PB.register_message_type("google.protobuf.EnumValue", EnumValue)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValue}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:EnumValue}, _endpos::Int=0, _group::Bool=false)
     name = ""
-    number = zero(var"#base".Int32)
+    number = zero(Int32)
     options = PB.BufferedVector{Option}()
     _unknown_fields = UInt8[]
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
-            number = PB._decode(_d, var"#base".Int32)
+            number = PB._decode(_d, Int32)
         elseif field_number == 3
             PB._decode!(_d, options)
         else
@@ -285,7 +284,7 @@ end
 function PB._encode(_e::PB.AbstractProtoEncoder, _x::EnumValue)
     initpos = position(_e.io)
     !isempty(_x.name) && PB._encode(_e, 1, _x.name)
-    _x.number != zero(var"#base".Int32) && PB._encode(_e, 2, _x.number)
+    _x.number != zero(Int32) && PB._encode(_e, 2, _x.number)
     !isempty(_x.options) && PB._encode(_e, 3, _x.options)
     if !isempty(_x.var"#unknown_fields")
         write(_e.io, _x.var"#unknown_fields")
@@ -295,18 +294,18 @@ end
 function PB._encoded_size(_x::EnumValue)
     encoded_size = 0
     !isempty(_x.name) && (encoded_size += PB._encoded_size(_x.name, 1))
-    _x.number != zero(var"#base".Int32) && (encoded_size += PB._encoded_size(_x.number, 2))
+    _x.number != zero(Int32) && (encoded_size += PB._encoded_size(_x.number, 2))
     !isempty(_x.options) && (encoded_size += PB._encoded_size(_x.options, 3))
     encoded_size += length(_x.var"#unknown_fields")
     return encoded_size
 end
 @batteries EnumValue typesalt=0xc6816b2e038e7b7f kwconstructor=true kwshow=true
 function PB.StructHelpers.default_keywords(::var"#core".Type{EnumValue})
-    return (;name = "", number = zero(var"#base".Int32), options = Vector{Option}(), var"#unknown_fields" = UInt8[])
+    return (;name = "", number = zero(Int32), options = Vector{Option}(), var"#unknown_fields" = UInt8[])
 end
 
 struct Enum <: PB.AbstractProtoBufMessage
-    name::var"#base".String
+    name::String
     enumvalue::Vector{EnumValue}
     options::Vector{Option}
     source_context::Union{Nothing,SourceContext}
@@ -321,7 +320,7 @@ function PB.json_field_names(::var"#core".Type{Enum})
 end
 PB.register_message_type("google.protobuf.Enum", Enum)
 
-function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Enum}, _endpos::var"#base".Int=0, _group::var"#base".Bool=false)
+function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Enum}, _endpos::Int=0, _group::Bool=false)
     name = ""
     enumvalue = PB.BufferedVector{EnumValue}()
     options = PB.BufferedVector{Option}()
@@ -331,7 +330,7 @@ function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:Enum}, _end
     while !PB.message_done(_d, _endpos, _group)
         field_number, wire_type = PB.decode_tag(_d)
         if field_number == 1
-            name = PB._decode(_d, var"#base".String)
+            name = PB._decode(_d, String)
         elseif field_number == 2
             PB._decode!(_d, enumvalue)
         elseif field_number == 3

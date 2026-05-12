@@ -13,15 +13,15 @@ include("setup.jl")
     @test occursin("struct Inner", f.content)
     @test occursin("struct Outer", f.content)
     @test occursin("nested::Union{Nothing,Inner}", f.content)
-    # Scalar refs are emitted through the `var"#base"` alias defined
-    # at the top of every generated file, so a user proto declaring
-    # a message named e.g. `Bool` cannot shadow the codegen's scalar
-    # type annotations.
-    @test occursin("packed_ints::Vector{var\"#base\".Int64}", f.content)
-    @test occursin(
-        "choice::Union{Nothing,OneOf{<:Union{var\"#base\".Int32,var\"#base\".String}}}",
-        f.content,
-    )
+    # `sample.proto` has no top-level message/enum name that collides
+    # with a built-in identifier (Bool, String, Int32, …), so codegen
+    # emits scalar refs bare. Shadowing fallback to `var"#base".<N>`
+    # is exercised by the `shadow.proto` test below.
+    @test occursin("packed_ints::Vector{Int64}", f.content)
+    @test occursin("choice::Union{Nothing,OneOf{<:Union{Int32,String}}}", f.content)
+    # No alias preamble for a clean-safe file.
+    @test !occursin("const var\"#core\"", f.content)
+    @test !occursin("const var\"#base\"", f.content)
 
     # Eval the generated module and verify a round-trip.
     sample_mod = eval_generated(f.content, :GeneratedSample)
@@ -131,10 +131,11 @@ end
     f = response.file[1]
 
     # Maps surface as OrderedDict{K,V}; the synthetic *Entry messages stay invisible.
-    # Scalar refs go through the `var"#base"` alias for shadow-immunity.
-    @test occursin("counts::OrderedDict{var\"#base\".String,var\"#base\".Int32}", f.content)
-    @test occursin("labels::OrderedDict{var\"#base\".Int32,var\"#base\".String}", f.content)
-    @test occursin("items::OrderedDict{var\"#base\".String,Item}", f.content)
+    # `maps.proto`'s top-level names don't collide with built-in identifiers,
+    # so scalar refs render bare (shadowing fallback is covered separately).
+    @test occursin("counts::OrderedDict{String,Int32}", f.content)
+    @test occursin("labels::OrderedDict{Int32,String}", f.content)
+    @test occursin("items::OrderedDict{String,Item}", f.content)
     @test !occursin("CountsEntry", f.content)
     @test !occursin("LabelsEntry", f.content)
     @test !occursin("ItemsEntry", f.content)
@@ -226,6 +227,17 @@ end
     @test length(response.file) == 2
     @test response.file[2].name == "_pb_includes.jl"
     f = first(response.file)
+
+    # Per-identifier shielding: `Bool` is shadowed → the field type
+    # falls back to `var"#base".Bool`. `Int32` is NOT shadowed and
+    # renders bare (`v::Int32` on the `Core` message). `Type` and
+    # `Core` are shadowed → `Type{T}` qualifies as `var"#core".Type{T}`
+    # in every metadata overload, and the alias preamble appears.
+    @test occursin("const var\"#core\" = Core", f.content)
+    @test occursin("const var\"#base\" = Base", f.content)
+    @test occursin("flag::var\"#base\".Bool", f.content)
+    @test occursin("v::Int32", f.content)
+    @test occursin("var\"#core\".Type{Core}", f.content)
 
     # Eval the file in a fresh anonymous module; this is where the
     # macro-expansion-time shadowing would bite if it weren't fixed.
