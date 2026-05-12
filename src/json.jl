@@ -31,23 +31,62 @@ const _MESSAGE_REGISTRY = Dict{String,Type}()
 
 Associate `fqn` (e.g. `"google.protobuf.Timestamp"`) with the Julia type
 `T`. Called from generated `*_pb.jl` files at module-load time; user code
-typically doesn't need to call this directly. Re-registration is a no-op
-if the existing entry already matches.
+typically doesn't need to call this directly.
+
+Re-registering the same `(fqn, T)` pair is a silent no-op (covers Revise
+edits and re-`using` a precompiled package). Re-registering the same `fqn`
+to a *different* Julia type throws — that means two distinct proto
+definitions share an FQN and the global registry can't represent both.
+Callers that need to round-trip both must pass a per-call `registry`
+argument to `encode_json` / `decode_json` instead of relying on the
+global table.
 """
 function register_message_type(fqn::AbstractString, ::Type{T}) where {T}
-    _MESSAGE_REGISTRY[String(fqn)] = T
+    key = String(fqn)
+    existing = get(_MESSAGE_REGISTRY, key, nothing)
+    if existing === T
+        return nothing
+    elseif existing !== nothing
+        throw(
+            ArgumentError(
+                """
+                protobuf FQN $(repr(key)) is already registered to $(existing); refusing to overwrite with $(T).
+                Two distinct proto definitions share this FQN — pass a per-call `registry` to encode_json/decode_json to disambiguate.""",
+            ),
+        )
+    end
+    _MESSAGE_REGISTRY[key] = T
     return nothing
 end
 
 """
-    lookup_message_type(fqn) -> Union{Type,Nothing}
+    unregister_message_type(fqn) -> Bool
+
+Drop `fqn` from the global registry; returns `true` if the entry existed.
+Intended for test/dev workflows that need to re-bind an FQN to a different
+Julia type (e.g., when re-`eval`'ing codegen output into a fresh anonymous
+module). Production code shouldn't need this.
+"""
+function unregister_message_type(fqn::AbstractString)
+    return pop!(_MESSAGE_REGISTRY, String(fqn), nothing) !== nothing
+end
+
+"""
+    lookup_message_type(fqn; registry=nothing) -> Union{Type,Nothing}
 
 Reverse of `register_message_type`. Returns `nothing` if no type was
 registered under that FQN — typically because the user hasn't loaded
 the proto module that defines it.
+
+If `registry` is non-`nothing`, *only* that table is consulted (no
+fallback to the global registry). This matches Go's resolver semantics
+and lets callers fully control FQN → type resolution when they need to.
 """
-function lookup_message_type(fqn::AbstractString)
-    return get(_MESSAGE_REGISTRY, String(fqn), nothing)
+function lookup_message_type(
+    fqn::AbstractString;
+    registry::Union{Nothing,AbstractDict} = nothing,
+)
+    return get(something(registry, _MESSAGE_REGISTRY), String(fqn), nothing)
 end
 
 # Per-enum metadata: the proto wire-side prefix that codegen stripped from
@@ -66,28 +105,39 @@ end
 # -----------------------------------------------------------------------------
 
 """
-    encode_json([io,] msg) -> Union{Nothing,String}
+    encode_json([io,] msg; registry=nothing) -> Union{Nothing,String}
 
 Serialize `msg` to its protobuf-JSON representation. With an `IO`
 argument, writes to it and returns `nothing`; without one, returns a
 `String`.
+
+`registry`, if non-`nothing`, is used to resolve FQN → Julia type for
+any embedded `google.protobuf.Any` values encountered during the walk
+instead of the global registry. See [`lookup_message_type`](@ref).
 """
-function encode_json(io::IO, msg::AbstractProtoBufMessage)
+function encode_json(
+    io::IO,
+    msg::AbstractProtoBufMessage;
+    registry::Union{Nothing,AbstractDict} = nothing,
+)
     # Route through `_encode_json_value` so WKT specializations
     # (wrappers, Timestamp, Duration, …) that override the value form
     # also work when called at the top level.
-    _encode_json_value(io, msg)
+    _encode_json_value(io, msg; registry = registry)
     return nothing
 end
 
-function encode_json(msg::AbstractProtoBufMessage)
+function encode_json(
+    msg::AbstractProtoBufMessage;
+    registry::Union{Nothing,AbstractDict} = nothing,
+)
     io = IOBuffer()
-    encode_json(io, msg)
+    encode_json(io, msg; registry = registry)
     return String(take!(io))
 end
 
 """
-    decode_json(::Type{T}, source; ignore_unknown_fields = false) -> T
+    decode_json(::Type{T}, source; ignore_unknown_fields = false, registry=nothing) -> T
 
 Parse a protobuf-JSON document into a `T <: AbstractProtoBufMessage`.
 `source` may be an `AbstractString`, an `IO`, or an already-parsed
@@ -98,16 +148,22 @@ nested message type) raises `ArgumentError`, matching the spec's
 strict default. Pass `ignore_unknown_fields = true` to silently drop
 them (this is what conformance JSON_IGNORE_UNKNOWN_PARSING_TEST asks
 for).
+
+`registry`, if non-`nothing`, replaces the global FQN → type table for
+any `google.protobuf.Any` values seen during the walk. See
+[`lookup_message_type`](@ref).
 """
 function decode_json(
     ::Type{T},
     src::AbstractString;
     ignore_unknown_fields::Bool = false,
+    registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
     return _decode_json_value(
         T,
         JSON.parse(src);
         ignore_unknown_fields = ignore_unknown_fields,
+        registry = registry,
     )
 end
 
@@ -115,11 +171,13 @@ function decode_json(
     ::Type{T},
     src::IO;
     ignore_unknown_fields::Bool = false,
+    registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
     return _decode_json_value(
         T,
         JSON.parse(src);
         ignore_unknown_fields = ignore_unknown_fields,
+        registry = registry,
     )
 end
 
@@ -130,15 +188,21 @@ function decode_json(
     ::Type{T},
     json;
     ignore_unknown_fields::Bool = false,
+    registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
-    return _decode_json_value(T, json; ignore_unknown_fields = ignore_unknown_fields)
+    return _decode_json_value(
+        T,
+        json;
+        ignore_unknown_fields = ignore_unknown_fields,
+        registry = registry,
+    )
 end
 
 # -----------------------------------------------------------------------------
 # Encode side — message walker
 # -----------------------------------------------------------------------------
 
-function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
+function _encode_json_message(io::IO, msg::T; kw...) where {T<:AbstractProtoBufMessage}
     keys = json_field_names(T)
     oneofs = oneof_field_types(T)
     print(io, '{')
@@ -162,7 +226,7 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
             first = false
             JSON.print(io, json_key)
             print(io, ':')
-            _encode_json_value(io, o.value)
+            _encode_json_value(io, o.value; kw...)
             continue
         end
         # Default-skip applies to plain proto3 scalars (typed bare).
@@ -179,7 +243,7 @@ function _encode_json_message(io::IO, msg::T) where {T<:AbstractProtoBufMessage}
         first = false
         JSON.print(io, json_key)
         print(io, ':')
-        _encode_json_value(io, v)
+        _encode_json_value(io, v; kw...)
     end
     print(io, '}')
     return nothing
@@ -225,25 +289,25 @@ end
 # Encode side — value dispatch
 # -----------------------------------------------------------------------------
 
-function _encode_json_value(io::IO, v::Bool)
+function _encode_json_value(io::IO, v::Bool; kw...)
     print(io, v ? "true" : "false")
     return nothing
 end
 
 # 32-bit integers (and smaller) → JSON number.
-function _encode_json_value(io::IO, v::Union{Int8,Int16,Int32,UInt8,UInt16,UInt32})
+function _encode_json_value(io::IO, v::Union{Int8,Int16,Int32,UInt8,UInt16,UInt32}; kw...)
     print(io, v)
     return nothing
 end
 
 # 64-bit integers → JSON string. JS numbers can't represent the full
 # int64/uint64 range, so the spec mandates string form.
-function _encode_json_value(io::IO, v::Union{Int64,UInt64})
+function _encode_json_value(io::IO, v::Union{Int64,UInt64}; kw...)
     print(io, '"', v, '"')
     return nothing
 end
 
-function _encode_json_value(io::IO, v::AbstractFloat)
+function _encode_json_value(io::IO, v::AbstractFloat; kw...)
     if isnan(v)
         print(io, "\"NaN\"")
     elseif !isfinite(v)
@@ -263,13 +327,13 @@ function _encode_json_value(io::IO, v::AbstractFloat)
     return nothing
 end
 
-function _encode_json_value(io::IO, s::AbstractString)
+function _encode_json_value(io::IO, s::AbstractString; kw...)
     JSON.print(io, s)
     return nothing
 end
 
 # bytes → base64 JSON string.
-function _encode_json_value(io::IO, b::Vector{UInt8})
+function _encode_json_value(io::IO, b::Vector{UInt8}; kw...)
     print(io, '"', Base64.base64encode(b), '"')
     return nothing
 end
@@ -284,7 +348,7 @@ end
 # codegen; reattach it via `_enum_proto_prefix(typeof(v))` so the JSON wire
 # form stays canonical (`"FEATURE_TYPE_FOO"`, not `"FOO"`). For verbatim
 # enums the prefix is "" and this collapses to the prior behavior.
-function _encode_json_value(io::IO, v::Base.Enum)
+function _encode_json_value(io::IO, v::Base.Enum; kw...)
     name = try
         Symbol(v)
     catch
@@ -299,28 +363,28 @@ function _encode_json_value(io::IO, v::Base.Enum)
 end
 
 # Repeated.
-function _encode_json_value(io::IO, v::AbstractVector)
+function _encode_json_value(io::IO, v::AbstractVector; kw...)
     print(io, '[')
     first = true
     for elt in v
         first || print(io, ',')
         first = false
-        _encode_json_value(io, elt)
+        _encode_json_value(io, elt; kw...)
     end
     print(io, ']')
     return nothing
 end
 
 # Nested submessage.
-function _encode_json_value(io::IO, v::AbstractProtoBufMessage)
-    _encode_json_message(io, v)
+function _encode_json_value(io::IO, v::AbstractProtoBufMessage; kw...)
+    _encode_json_message(io, v; kw...)
     return nothing
 end
 
 # Map. Per spec, map keys are stringified regardless of underlying type
 # (bool → "true"/"false", any integer → decimal). Values use the regular
 # value dispatch.
-function _encode_json_value(io::IO, d::AbstractDict)
+function _encode_json_value(io::IO, d::AbstractDict; kw...)
     print(io, '{')
     first = true
     for (k, v) in d
@@ -328,7 +392,7 @@ function _encode_json_value(io::IO, d::AbstractDict)
         first = false
         _emit_map_key(io, k)
         print(io, ':')
-        _encode_json_value(io, v)
+        _encode_json_value(io, v; kw...)
     end
     print(io, '}')
     return nothing
@@ -355,6 +419,7 @@ function _decode_json_message(
     ::Type{T},
     json::AbstractDict;
     ignore_unknown_fields::Bool = false,
+    registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
     keys = json_field_names(T)
     oneofs = oneof_field_types(T)
@@ -427,6 +492,7 @@ function _decode_json_message(
                     FT,
                     nothing;
                     ignore_unknown_fields = ignore_unknown_fields,
+                    registry = registry,
                 )
                 if member !== nothing
                     parent = member[1]
@@ -458,6 +524,7 @@ function _decode_json_message(
                 FT,
                 json_val;
                 ignore_unknown_fields = ignore_unknown_fields,
+                registry = registry,
             )
             vals[parent] = OneOf(jl_name, decoded)
         else
@@ -467,6 +534,7 @@ function _decode_json_message(
                 FT,
                 json_val;
                 ignore_unknown_fields = ignore_unknown_fields,
+                registry = registry,
             )
         end
     end

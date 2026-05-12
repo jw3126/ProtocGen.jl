@@ -457,6 +457,58 @@ end
               _G.FileDescriptorProto
         @test ProtocGen.lookup_message_type("nonexistent.Foo") === nothing
     end
+
+    @testset "register_message_type: same-type re-registration is a no-op" begin
+        # Re-registering an existing FQN to the same Julia type must not
+        # throw — covers Revise reloads and `using` of a precompiled
+        # package that ran register at load time.
+        ProtocGen.register_message_type("google.protobuf.Timestamp", _G.Timestamp)
+        @test ProtocGen.lookup_message_type("google.protobuf.Timestamp") === _G.Timestamp
+    end
+
+    @testset "register_message_type: different-type re-registration throws" begin
+        # Two distinct proto definitions colliding on FQN must surface
+        # at load time rather than silently corrupting Any round-trips.
+        @test_throws ArgumentError ProtocGen.register_message_type(
+            "google.protobuf.Timestamp",
+            _G.Duration,
+        )
+    end
+
+    @testset "per-call registry: resolves Any using a local table only" begin
+        # Encode Any whose type_url is NOT in the global registry, but
+        # IS in a caller-supplied table. The local registry maps a
+        # bespoke FQN to SourceContext.
+        local_fqn = "test.AliasedSourceContext"
+        local_registry = Dict{String,Type}(local_fqn => _G.SourceContext)
+        sc = pb_make(_G.SourceContext, "foo.proto")
+        a = pb_make(_G.var"Any", "type.googleapis.com/" * local_fqn, ProtocGen.encode(sc))
+        # Global registry doesn't know about the alias — without the
+        # override, encode_json must error.
+        @test_throws ArgumentError encode_json(a)
+        # With override, encoding/decoding succeed.
+        out = encode_json(a; registry = local_registry)
+        d = JSON.parse(out)
+        @test d["@type"] == "type.googleapis.com/" * local_fqn
+        @test d["fileName"] == "foo.proto"
+        back = decode_json(_G.var"Any", out; registry = local_registry)
+        back_sc = ProtocGen.decode(back.value, _G.SourceContext)
+        @test back_sc.file_name == "foo.proto"
+    end
+
+    @testset "per-call registry: no fallback to global" begin
+        # When a registry is supplied, the global table is bypassed.
+        # Even though "google.protobuf.SourceContext" is in the global
+        # registry, an empty local registry must cause Any decode to
+        # error rather than silently consulting the global.
+        json = """
+        {"@type": "type.googleapis.com/google.protobuf.SourceContext", "fileName": "x.proto"}
+        """
+        empty_reg = Dict{String,Type}()
+        @test_throws ArgumentError decode_json(_G.var"Any", json; registry = empty_reg)
+        # Sanity check: without the override it works.
+        @test decode_json(_G.var"Any", json) isa _G.var"Any"
+    end
 end
 
 end # module
