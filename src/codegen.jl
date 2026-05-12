@@ -127,43 +127,28 @@ end
 # clean. `needs_{base,core}_alias` drive whether the matching
 # `const var"#<x>" = X` preamble line is emitted.
 # ----------------------------------------------------------------------------
-const NameMap = @NamedTuple{
-    bool::String,
-    string::String,
-    int::String,
-    int32::String,
-    int64::String,
-    uint8::String,
-    uint32::String,
-    uint64::String,
-    float32::String,
-    float64::String,
-    vector::String,
-    type::String,
-    core::String,
-    needs_base_alias::Bool,
-    needs_core_alias::Bool,
-}
-
-# Default NameMap: every identifier resolves bare. Used as a fallback
-# when callers don't supply one (e.g. unit tests on individual helpers).
-const _BARE_NAMEMAP = (
-    bool = "Bool",
-    string = "String",
-    int = "Int",
-    int32 = "Int32",
-    int64 = "Int64",
-    uint8 = "UInt8",
-    uint32 = "UInt32",
-    uint64 = "UInt64",
-    float32 = "Float32",
-    float64 = "Float64",
-    vector = "Vector",
-    type = "Type",
-    core = "Core",
-    needs_base_alias = false,
-    needs_core_alias = false,
-)::NameMap
+Base.@kwdef struct NameMap
+    Bool::String = "Bool"
+    String::String = "String"
+    Int::String = "Int"
+    Int32::String = "Int32"
+    Int64::String = "Int64"
+    UInt8::String = "UInt8"
+    UInt32::String = "UInt32"
+    UInt64::String = "UInt64"
+    Float32::String = "Float32"
+    Float64::String = "Float64"
+    Vector::String = "Vector"
+    Type::String = "Type"
+    Core::String = "Core"
+    Base::String = "Base"
+end
+function needs_base_alias(nm::NameMap)::Bool
+    nm.Base != "Base"
+end
+function needs_core_alias(nm::NameMap)::Bool
+    nm.Core != "Core"
+end
 
 # ----------------------------------------------------------------------------
 # Type translation. Each scalar proto type maps to (julia_type, wire_annotation).
@@ -171,7 +156,7 @@ const _BARE_NAMEMAP = (
 # non-default wire encodings ("", "Val{:fixed}", "Val{:zigzag}").
 # ----------------------------------------------------------------------------
 
-function _scalar_jl_type_and_wire(t, nm::NameMap = _BARE_NAMEMAP)
+function _scalar_jl_type_and_wire(t, nm::NameMap)
     T = var"FieldDescriptorProto.Type"
     # Scalar Julia types reach the generated file as `nm.<scalar>` —
     # either the bare identifier (`Float64`, `String`, …) or the
@@ -180,47 +165,47 @@ function _scalar_jl_type_and_wire(t, nm::NameMap = _BARE_NAMEMAP)
     # at the top of every shielded output makes the qualified form
     # robust even when `Base` itself is shadowed.
     if t === T.DOUBLE
-        return (nm.float64, "")
+        return (nm.Float64, "")
     elseif t === T.FLOAT
-        return (nm.float32, "")
+        return (nm.Float32, "")
     elseif t === T.INT64
-        return (nm.int64, "")
+        return (nm.Int64, "")
     elseif t === T.UINT64
-        return (nm.uint64, "")
+        return (nm.UInt64, "")
     elseif t === T.INT32
-        return (nm.int32, "")
+        return (nm.Int32, "")
     elseif t === T.FIXED64
-        return (nm.uint64, "Val{:fixed}")
+        return (nm.UInt64, "Val{:fixed}")
     elseif t === T.FIXED32
-        return (nm.uint32, "Val{:fixed}")
+        return (nm.UInt32, "Val{:fixed}")
     elseif t === T.BOOL
-        return (nm.bool, "")
+        return (nm.Bool, "")
     elseif t === T.STRING
-        return (nm.string, "")
+        return (nm.String, "")
     elseif t === T.BYTES
-        return ("$(nm.vector){$(nm.uint8)}", "")
+        return ("$(nm.Vector){$(nm.UInt8)}", "")
     elseif t === T.UINT32
-        return (nm.uint32, "")
+        return (nm.UInt32, "")
     elseif t === T.SFIXED32
-        return (nm.int32, "Val{:fixed}")
+        return (nm.Int32, "Val{:fixed}")
     elseif t === T.SFIXED64
-        return (nm.int64, "Val{:fixed}")
+        return (nm.Int64, "Val{:fixed}")
     elseif t === T.SINT32
-        return (nm.int32, "Val{:zigzag}")
+        return (nm.Int32, "Val{:zigzag}")
     elseif t === T.SINT64
-        return (nm.int64, "Val{:zigzag}")
+        return (nm.Int64, "Val{:zigzag}")
     end
     error("scalar mapping not defined for $t")
 end
 
-function _scalar_zero(jl_type::String, nm::NameMap = _BARE_NAMEMAP)
+function _scalar_zero(jl_type::String, nm::NameMap)
     # `jl_type` strings come from `_scalar_jl_type_and_wire`. The
     # trailing-name pattern matches whether the rendering is bare
     # (`String`) or shielded (`var"#base".String`).
     if _scalar_is_string(jl_type)
         return "\"\""
     elseif _scalar_is_bytes(jl_type)
-        return "$(nm.uint8)[]"
+        return "$(nm.UInt8)[]"
     elseif _scalar_is_bool(jl_type)
         return "false"
     else
@@ -330,7 +315,7 @@ Base.@kwdef struct LocalNames
     package_of::Dict{String,String}  # FQN -> proto package
     cycle::Set{String} = Set{String}()  # message FQNs in a recursion cycle
     strip_enum_prefix::Bool = true  # strip <UPPER_SNAKE>_ from enum value names
-    nm::NameMap = _BARE_NAMEMAP     # per-identifier rendering (see NameMap)
+    nm::NameMap                     # per-identifier rendering (see NameMap)
 end
 
 function _is_map_entry(msg::DescriptorProto)
@@ -429,33 +414,46 @@ function _make_namemap(file::FileDescriptorProto, universe::Universe)
     function base_scalar(n::String)
         return n in shadowed ? "var\"#base\".$n" : n
     end
-    type_str = "Type" in shadowed ? "var\"#core\".Type" : "Type"
-    core_str = "Core" in shadowed ? "var\"#core\"" : "Core"
 
+    # `nm.Base` / `nm.Core` double as the renderer for the module name
+    # itself *and* the trigger for the matching alias preamble line —
+    # `needs_base_alias` / `needs_core_alias` derive directly from them.
+    # So we set them to the qualified form whenever some other field
+    # routes through that alias, even if `Base` / `Core` aren't
+    # themselves in `shadowed`.
     scalar_ids = (
-        "Bool", "String", "Int", "Int32", "Int64",
-        "UInt8", "UInt32", "UInt64", "Float32", "Float64", "Vector",
+        "Bool",
+        "String",
+        "Int",
+        "Int32",
+        "Int64",
+        "UInt8",
+        "UInt32",
+        "UInt64",
+        "Float32",
+        "Float64",
+        "Vector",
     )
-    needs_base_alias = any(n -> n in shadowed, scalar_ids)
-    needs_core_alias = ("Core" in shadowed) || ("Type" in shadowed)
+    any_scalar_shadowed = any(n -> n in shadowed, scalar_ids)
+    type_shadowed = "Type" in shadowed
+    core_shadowed = "Core" in shadowed
 
-    return (
-        bool = base_scalar("Bool"),
-        string = base_scalar("String"),
-        int = base_scalar("Int"),
-        int32 = base_scalar("Int32"),
-        int64 = base_scalar("Int64"),
-        uint8 = base_scalar("UInt8"),
-        uint32 = base_scalar("UInt32"),
-        uint64 = base_scalar("UInt64"),
-        float32 = base_scalar("Float32"),
-        float64 = base_scalar("Float64"),
-        vector = base_scalar("Vector"),
-        type = type_str,
-        core = core_str,
-        needs_base_alias = needs_base_alias,
-        needs_core_alias = needs_core_alias,
-    )::NameMap
+    return NameMap(;
+        Bool = base_scalar("Bool"),
+        String = base_scalar("String"),
+        Int = base_scalar("Int"),
+        Int32 = base_scalar("Int32"),
+        Int64 = base_scalar("Int64"),
+        UInt8 = base_scalar("UInt8"),
+        UInt32 = base_scalar("UInt32"),
+        UInt64 = base_scalar("UInt64"),
+        Float32 = base_scalar("Float32"),
+        Float64 = base_scalar("Float64"),
+        Vector = base_scalar("Vector"),
+        Type = type_shadowed ? "var\"#core\".Type" : "Type",
+        Core = (core_shadowed || type_shadowed) ? "var\"#core\"" : "Core",
+        Base = any_scalar_shadowed ? "var\"#base\"" : "Base",
+    )
 end
 
 # Per-file view. Tables are shared references with the universe; `package`
@@ -661,9 +659,9 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         end
         elem = _resolve_typename(ref_name, names)
         if is_repeated
-            jl_type = "$(names.nm.vector){$(elem)}"
+            jl_type = "$(names.nm.Vector){$(elem)}"
             init_val = "PB.BufferedVector{$(elem)}()"
-            default = "$(names.nm.vector){$(elem)}()"
+            default = "$(names.nm.Vector){$(elem)}()"
             skip = "!isempty(_x.$(jl_fieldname))"
         elseif is_required
             # proto2 required submessage. Field is non-nullable; the decode
@@ -697,9 +695,9 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
         elem = _resolve_typename(something(field.type_name, ""), names)
         elem_t = "$(elem).T"
         if is_repeated
-            jl_type = "$(names.nm.vector){$(elem_t)}"
+            jl_type = "$(names.nm.Vector){$(elem_t)}"
             init_val = "PB.BufferedVector{$(elem_t)}()"
-            default = "$(names.nm.vector){$(elem_t)}()"
+            default = "$(names.nm.Vector){$(elem_t)}()"
             skip = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
             # proto2 `optional` and proto3 explicit `optional` enums carry
@@ -739,9 +737,9 @@ function _model_field(field::FieldDescriptorProto, names::LocalNames)
     else
         scalar_jl, wire = _scalar_jl_type_and_wire(ftype, names.nm)
         if is_repeated
-            jl_type = "$(names.nm.vector){$(scalar_jl)}"
+            jl_type = "$(names.nm.Vector){$(scalar_jl)}"
             init_val = "PB.BufferedVector{$(scalar_jl)}()"
-            default = "$(names.nm.vector){$(scalar_jl)}()"
+            default = "$(names.nm.Vector){$(scalar_jl)}()"
             skip = "!isempty(_x.$(jl_fieldname))"
         elseif _wants_scalar_presence(field, names)
             # proto3 explicit `optional` and proto2 `optional`
@@ -988,9 +986,9 @@ function _emit_message(
     # bare identifier or its `var"#core".X`/`var"#base".X` shielded form,
     # set by `_make_namemap` based on which user-proto names collide with
     # the corresponding built-in identifier.
-    type_q = names.nm.type
-    int_q = names.nm.int
-    bool_q = names.nm.bool
+    type_q = names.nm.Type
+    int_q = names.nm.Int
+    bool_q = names.nm.Bool
 
     # Emit nested enums and nested messages first so they're defined before
     # this struct (which references them). Skip synthetic map_entry messages —
@@ -1000,11 +998,11 @@ function _emit_message(
         _emit_enum(
             io,
             e,
-            jl_name_plain;
+            jl_name_plain,
+            names.nm;
             parent_proto = proto_fqn,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
-            nm = names.nm,
         )
     end
     for nested in msg.nested_type
@@ -1063,7 +1061,7 @@ function _emit_message(
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
-    println(io, "    var\"#unknown_fields\"::", names.nm.vector, "{", names.nm.uint8, "}")
+    println(io, "    var\"#unknown_fields\"::", names.nm.Vector, "{", names.nm.UInt8, "}")
     push!(param_names, "var\"#unknown_fields\"")
     # No explicit inner ctor: the @batteries kwconstructor=true call
     # below pairs with `default_keywords` to give users a kwarg ctor
@@ -1146,7 +1144,7 @@ function _emit_message(
     for o in real_oneofs
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o), " = nothing")
     end
-    println(io, "    _unknown_fields = ", names.nm.uint8, "[]")
+    println(io, "    _unknown_fields = ", names.nm.UInt8, "[]")
     println(io, "    while !PB.message_done(_d, _endpos, _group)")
     println(io, "        field_number, wire_type = PB.decode_tag(_d)")
     first_branch = true
@@ -1291,14 +1289,7 @@ function _emit_message(
     # submessages have no sane default (their codegen placeholder is a
     # `Ref{T}()`), so we omit them — kwarg construction then errors
     # with `UndefKeywordError` if the user doesn't pass one.
-    println(
-        io,
-        "function PB.StructHelpers.default_keywords(::",
-        type_q,
-        "{",
-        jl_name,
-        "})",
-    )
+    println(io, "function PB.StructHelpers.default_keywords(::", type_q, "{", jl_name, "})")
     pieces = String[]
     for f in plain_fields
         if f.is_required && f.is_message
@@ -1309,7 +1300,7 @@ function _emit_message(
     for o in real_oneofs
         push!(pieces, "$(o.jl_fieldname) = nothing")
     end
-    push!(pieces, "var\"#unknown_fields\" = $(names.nm.uint8)[]")
+    push!(pieces, "var\"#unknown_fields\" = $(names.nm.UInt8)[]")
     println(io, "    return (;", join(pieces, ", "), ")")
     println(io, "end")
 
@@ -1618,19 +1609,19 @@ end
 function _emit_enum(
     io::IO,
     e::EnumDescriptorProto,
-    parent_jl::String;
+    parent_jl::String,
+    nm::NameMap;
     parent_proto::String = "",
     enumbatteries_kw::String = "",
     strip_enum_prefix::Bool = true,
-    nm::NameMap = _BARE_NAMEMAP,
 )
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
     jl_name = occursin('.', jl_name_plain) ? "var\"$(jl_name_plain)\"" : jl_name_plain
     proto_fqn = string(parent_proto, ".", name)
     salt_kw = _format_typesalt_kw(proto_fqn)
-    core_q = nm.core   # used for `Core.eval(...)` in the alias path
-    type_q = nm.type   # used for `Type{<EnumName>.T}` in metadata overloads
+    core_q = nm.Core   # used for `Core.eval(...)` in the alias path
+    type_q = nm.Type   # used for `Type{<EnumName>.T}` in metadata overloads
 
     # Detect the per-enum prefix to strip from each value's Julia identifier.
     # Driven by the leaf type name only (not the qualified `Outer.Inner` form),
@@ -1695,17 +1686,7 @@ function _emit_enum(
     # builds the enum module as a `baremodule`, which doesn't import
     # `Base.eval`.
     for (alias, canonical) in aliases
-        println(
-            io,
-            core_q,
-            ".eval(",
-            jl_name,
-            ", :(const ",
-            alias,
-            " = ",
-            canonical,
-            "))",
-        )
+        println(io, core_q, ".eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
     end
     println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
     _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
@@ -2014,10 +1995,10 @@ function codegen(
     # everywhere (`Float64` instead of `var"#base".Float64`, etc.).
     # Per-identifier, so a proto that only shadows `Type` still keeps
     # `Float64`/`String`/… bare.
-    if names.nm.needs_core_alias
+    if needs_core_alias(names.nm)
         println(io, "const var\"#core\" = Core")
     end
-    if names.nm.needs_base_alias
+    if needs_base_alias(names.nm)
         println(io, "const var\"#base\" = Base")
     end
 
@@ -2069,11 +2050,11 @@ function codegen(
         _emit_enum(
             io,
             e,
-            "";
+            "",
+            names.nm;
             parent_proto = file_parent_proto,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
-            nm = names.nm,
         )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
@@ -2124,9 +2105,9 @@ function codegen(
     # is `OrderedDict{String,AbstractValue}` and the JSON walker has to
     # land on `Value` to reconstruct.
     if !isempty(cycle_participants)
-        type_q = names.nm.type
-        int_q = names.nm.int
-        bool_q = names.nm.bool
+        type_q = names.nm.Type
+        int_q = names.nm.Int
+        bool_q = names.nm.Bool
         for fqn in sort!(collect(cycle_participants))
             jl_plain = names.jl_names[fqn]
             jl = occursin('.', jl_plain) ? "var\"$(jl_plain)\"" : jl_plain
