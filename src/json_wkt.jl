@@ -39,32 +39,32 @@ const _UInt64Value = _G.UInt64Value
 # -----------------------------------------------------------------------------
 
 # Encode side: each wrapper passes through to its wrapped value.
-function _encode_json_value(io::IO, v::_BoolValue)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_BoolValue; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_BytesValue)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_BytesValue; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_DoubleValue)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_DoubleValue; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_FloatValue)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_FloatValue; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_Int32Value)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_Int32Value; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_Int64Value)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_Int64Value; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_StringValue)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_StringValue; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_UInt32Value)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_UInt32Value; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
-function _encode_json_value(io::IO, v::_UInt64Value)
-    _encode_json_value(io, v.value)
+function _encode_json_value(io::IO, v::_UInt64Value; kw...)
+    _encode_json_value(io, v.value; kw...)
 end
 
 # Decode side: the JSON value is a scalar (or scalar-string), reconstruct
@@ -135,7 +135,7 @@ end
 const _TIMESTAMP_MIN_SECONDS = Int64(-62135596800)   # 0001-01-01T00:00:00Z
 const _TIMESTAMP_MAX_SECONDS = Int64(253402300799)   # 9999-12-31T23:59:59Z
 
-function _encode_json_value(io::IO, ts::_Timestamp)
+function _encode_json_value(io::IO, ts::_Timestamp; kw...)
     if ts.seconds < _TIMESTAMP_MIN_SECONDS || ts.seconds > _TIMESTAMP_MAX_SECONDS
         throw(
             ArgumentError(
@@ -211,7 +211,7 @@ end
 
 const _DURATION_MAX_SECONDS = Int64(315576000000)
 
-function _encode_json_value(io::IO, d::_Duration)
+function _encode_json_value(io::IO, d::_Duration; kw...)
     if d.seconds > _DURATION_MAX_SECONDS || d.seconds < -_DURATION_MAX_SECONDS
         throw(
             ArgumentError(
@@ -262,7 +262,7 @@ end
 # is lower_snake → lowerCamel within each path component.
 # -----------------------------------------------------------------------------
 
-function _encode_json_value(io::IO, fm::_FieldMask)
+function _encode_json_value(io::IO, fm::_FieldMask; kw...)
     print(io, '"')
     first = true
     for p in fm.paths
@@ -322,7 +322,7 @@ const _AbstractStruct = _G.AbstractStruct
 const _AbstractListValue = _G.AbstractListValue
 
 # Value: emit whatever JSON value the active oneof member calls for.
-function _encode_json_value(io::IO, v::_Value)
+function _encode_json_value(io::IO, v::_Value; kw...)
     if v.kind === nothing
         print(io, "null")
         return nothing
@@ -331,7 +331,7 @@ function _encode_json_value(io::IO, v::_Value)
     if o.name === :null_value
         print(io, "null")
     else
-        _encode_json_value(io, o.value)
+        _encode_json_value(io, o.value; kw...)
     end
     return nothing
 end
@@ -359,8 +359,8 @@ function _decode_json_value(::Type{_Value}, v::AbstractVector; kw...)
 end
 
 # Struct: emit the fields dict as a bare JSON object.
-function _encode_json_value(io::IO, s::_Struct)
-    _encode_json_value(io, s.fields)
+function _encode_json_value(io::IO, s::_Struct; kw...)
+    _encode_json_value(io, s.fields; kw...)
     return nothing
 end
 
@@ -375,8 +375,8 @@ function _decode_json_value(::Type{_Struct}, v::AbstractDict; kw...)
 end
 
 # ListValue: emit the values vector as a bare JSON array.
-function _encode_json_value(io::IO, lv::_ListValue)
-    _encode_json_value(io, lv.values)
+function _encode_json_value(io::IO, lv::_ListValue; kw...)
+    _encode_json_value(io, lv.values; kw...)
     return nothing
 end
 
@@ -461,13 +461,18 @@ function _any_extract_fqn(type_url::AbstractString)
     return String(type_url[idx+1:end])
 end
 
-function _encode_json_value(io::IO, a::_Any_)
+function _encode_json_value(
+    io::IO,
+    a::_Any_;
+    registry::Union{Nothing,AbstractDict} = nothing,
+    kw...,
+)
     fqn = _any_extract_fqn(a.type_url)
-    T = lookup_message_type(fqn)
+    T = lookup_message_type(fqn; registry = registry)
     T === nothing && throw(
         ArgumentError(
-            "Any: no message type registered for $(repr(fqn)); " *
-            "load the proto module that defines it (or call ProtocGen.register_message_type)",
+            """
+            Any: no message type registered for $(repr(fqn)); load the proto module that defines it (or call ProtocGen.register_message_type, or pass a per-call `registry`).""",
         ),
     )
     # Decode the embedded binary payload into the concrete type.
@@ -478,7 +483,7 @@ function _encode_json_value(io::IO, a::_Any_)
         print(io, "{\"@type\":")
         JSON.print(io, a.type_url)
         print(io, ",\"value\":")
-        _encode_json_value(io, msg)
+        _encode_json_value(io, msg; registry = registry, kw...)
         print(io, '}')
     else
         # Ordinary message: emit fields like a normal message but inject
@@ -488,7 +493,7 @@ function _encode_json_value(io::IO, a::_Any_)
         # to an already-open object.
         print(io, "{\"@type\":")
         JSON.print(io, a.type_url)
-        _encode_json_message_after_at_type(io, msg)
+        _encode_json_message_after_at_type(io, msg; registry = registry, kw...)
         print(io, '}')
     end
     return nothing
@@ -499,7 +504,8 @@ end
 # `,` (since `@type` already populated the object).
 function _encode_json_message_after_at_type(
     io::IO,
-    msg::T,
+    msg::T;
+    kw...,
 ) where {T<:AbstractProtoBufMessage}
     keys = json_field_names(T)
     oneofs = oneof_field_types(T)
@@ -513,7 +519,7 @@ function _encode_json_message_after_at_type(
             print(io, ',')
             JSON.print(io, json_key)
             print(io, ':')
-            _encode_json_value(io, o.value)
+            _encode_json_value(io, o.value; kw...)
             continue
         end
         _is_json_default(v) && continue
@@ -521,25 +527,30 @@ function _encode_json_message_after_at_type(
         print(io, ',')
         JSON.print(io, json_key)
         print(io, ':')
-        _encode_json_value(io, v)
+        _encode_json_value(io, v; kw...)
     end
     return nothing
 end
 
-function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
+function _decode_json_value(
+    ::Type{_Any_},
+    json::AbstractDict;
+    registry::Union{Nothing,AbstractDict} = nothing,
+    kw...,
+)
     type_url = get(json, "@type", nothing)
     type_url === nothing && throw(ArgumentError("Any JSON object missing '@type'"))
     type_url isa AbstractString || throw(ArgumentError("Any '@type' is not a string"))
 
     fqn = _any_extract_fqn(type_url)
-    T = lookup_message_type(fqn)
+    T = lookup_message_type(fqn; registry = registry)
     T === nothing &&
         throw(ArgumentError("Any: no message type registered for $(repr(fqn))"))
 
     msg = if fqn in _WKT_VALUE_FORM
         haskey(json, "value") ||
             throw(ArgumentError("Any wrapping $(fqn) requires a 'value' field"))
-        _decode_json_value(T, json["value"]; kw...)
+        _decode_json_value(T, json["value"]; registry = registry, kw...)
     else
         # Strip @type and pass the rest to the message walker.
         rest = Dict{String,Any}()
@@ -547,7 +558,7 @@ function _decode_json_value(::Type{_Any_}, json::AbstractDict; kw...)
             k == "@type" && continue
             rest[k] = v
         end
-        _decode_json_message(T, rest; kw...)
+        _decode_json_message(T, rest; registry = registry, kw...)
     end
 
     # Re-encode to bytes for the Any wire form.
@@ -560,7 +571,7 @@ end
 
 # When emitted standalone (rare — typically as a oneof member in Value),
 # always render as JSON null.
-function _encode_json_value(io::IO, ::_NullValue.T)
+function _encode_json_value(io::IO, ::_NullValue.T; kw...)
     print(io, "null")
     return nothing
 end

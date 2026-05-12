@@ -46,8 +46,19 @@ end
 Eval generated codegen source (the `.content` of a CodeGeneratorResponse.File)
 into a fresh anonymous module so test files don't bleed names into each
 other. `name` is just a label that shows up in stacktraces.
+
+The codegen output emits `PB.register_message_type(fqn, T)` per message;
+those entries live in a process-global table keyed by FQN. Running this
+helper repeatedly against the same proto (e.g., once in `test_codegen.jl`
+and again in `test_presence.jl`) would otherwise trip the registry's
+duplicate-FQN guard, since each call binds the same FQN to a different
+anonymous-module type. Pre-unregister any FQN about to be re-emitted so
+the fresh module wins.
 """
 function eval_generated(content::AbstractString, name::Symbol = :Generated)
+    for m in eachmatch(r"PB\.register_message_type\(\"([^\"]+)\"", content)
+        ProtocGen.unregister_message_type(m.captures[1])
+    end
     m = Module(name)
     Core.eval(m, Meta.parseall(content))
     return m
