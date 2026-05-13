@@ -201,6 +201,50 @@ end
         @test decoded_v.kind.value == "hello"
     end
 
+    @testset "Timestamp constructors" begin
+        import Dates
+
+        # DateTime → Timestamp: ms-precision input round-trips to the
+        # same DateTime; nanos is always a multiple of 1_000_000.
+        dt = Dates.DateTime(2024, 5, 8, 15, 30, 0, 123)
+        ts = WKT.Timestamp(dt)
+        @test ts.seconds == 1715182200
+        @test ts.nanos == Int32(123_000_000)
+        @test Dates.DateTime(ts) == dt
+
+        # Sub-second precision survives DateTime → Timestamp → DateTime
+        # only down to milliseconds; sub-ms nanos truncate on the way
+        # back. Document both directions.
+        ts_ns = pb_make(WKT.Timestamp, Int64(1715182200), Int32(123_456_789))
+        @test Dates.DateTime(ts_ns) == Dates.DateTime(2024, 5, 8, 15, 30, 0, 123)
+
+        # Negative-second edge: -0.5s relative to epoch must encode as
+        # seconds = -1, nanos = 500_000_000 (spec: 0 ≤ nanos < 1e9).
+        dt_neg = Dates.DateTime(1969, 12, 31, 23, 59, 59, 500)
+        ts_neg = WKT.Timestamp(dt_neg)
+        @test ts_neg.seconds == -1
+        @test ts_neg.nanos == Int32(500_000_000)
+        @test Dates.DateTime(ts_neg) == dt_neg
+
+        # Real-valued unix seconds: fractional part lands in nanos. Use
+        # an integer so the test stays exact across float rounding.
+        @test WKT.Timestamp(0).seconds == 0
+        @test WKT.Timestamp(0).nanos == 0
+        ts_frac = WKT.Timestamp(1.5)
+        @test ts_frac.seconds == 1
+        @test ts_frac.nanos == Int32(500_000_000)
+        # Negative fractional: spec representation also splits across
+        # the second boundary.
+        ts_negfrac = WKT.Timestamp(-0.25)
+        @test ts_negfrac.seconds == -1
+        @test ts_negfrac.nanos == Int32(750_000_000)
+
+        # Range validation. Both ctor flavors guard against the
+        # spec-invalid range so a downstream JSON encode never has to.
+        @test_throws ArgumentError WKT.Timestamp(Dates.DateTime(10_000, 1, 1))
+        @test_throws ArgumentError WKT.Timestamp(typemax(Int64))
+    end
+
     @testset "Wrappers — every variant" begin
         wrappers = [
             (WKT.DoubleValue, 3.14),
