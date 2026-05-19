@@ -72,6 +72,11 @@ const DESCRIPTOR_SETS = [
     "test_messages_proto3.proto",
     "unittest_well_known_types.proto",
     "shadow.proto",
+    # MWE for the `_pb_includes.jl` namespace-fragmentation bug.
+    # `driver_cycle_a2.proto` transitively imports `driver_cycle_b.proto`
+    # and `driver_cycle_a1.proto`; protoc's `--include_imports` pulls all
+    # three into the FileDescriptorSet.
+    "driver_cycle_a2.proto",
 ]
 
 function find_protoc()

@@ -85,4 +85,75 @@ end
     @test encode_latest(bag) == maps_sample_pb
 end
 
+@testset "regression: driver namespace fragmentation when packages interleave" begin
+    # Schema: fixtures/proto/driver_cycle_a{1,2}.proto + driver_cycle_b.proto.
+    #     a1.proto: package driver_cycle.a; message Leaf
+    #     b.proto:  package driver_cycle.b; import a1; message Mid { ...a.Leaf }
+    #     a2.proto: package driver_cycle.a; import b; message Top {
+    #                   ...b.Mid mid; Leaf leaf;   # Leaf is same-package
+    #               }
+    # Topo order (a1, b, a2) forces `driver_cycle.a` to appear in two
+    # `module driver_cycle a … end` blocks in the generated
+    # `_pb_includes.jl` — `b` slots between them because `Top` needs `Mid`.
+    #
+    # Bug: Julia's `module Name … end` source syntax always creates a
+    # FRESH module (it does not "reopen" an existing one — that's a
+    # REPL/`Base.eval` thing). So the second `module driver_cycle.a`
+    # block shadows the first; `Top`'s unqualified reference to `Leaf`
+    # then hits an empty namespace and fails with `UndefVarError`.
+    #
+    # Fix: the driver forward-declares every package's nested module
+    # skeleton once, then emits `<pkg>.include("<file>")` calls in topo
+    # order. Each `include` evaluates in the right pre-existing module,
+    # so same-package refs see prior includes and cross-package refs
+    # see sibling modules.
+
+    response = run_codegen(
+        "driver_cycle_a2.pb",
+        ["driver_cycle_a1.proto", "driver_cycle_b.proto", "driver_cycle_a2.proto"],
+    )
+    @test response.error === nothing
+
+    driver = only(f for f in response.file if f.name == "_pb_includes.jl")
+
+    # Materialize every emitted file on disk so the driver's relative
+    # `include`s resolve. Then eval the driver in a fresh module under a
+    # scoped `REGISTRY` so the per-file `PB.register_message_type` calls
+    # land in a throwaway table — without this, re-running the test (or
+    # any other test that touches the same FQNs) trips the
+    # duplicate-FQN guard.
+    dir = mktempdir()
+    for f in response.file
+        path = joinpath(dir, f.name)
+        mkpath(dirname(path))
+        write(path, f.content)
+    end
+
+    pkg_mod = Module(:DriverCycleTest)
+    Core.eval(pkg_mod, :(import ProtocGen))
+    Base.ScopedValues.with(ProtocGen.REGISTRY => Dict{String,Type}()) do
+        # `Base.include` (vs the driver's own `include` keyword) makes
+        # path resolution explicit: evaluate the driver source as if it
+        # were the `_pb_includes.jl` file living in `dir`, so its
+        # relative `include`s land on the sibling `*_pb.jl` files.
+        Base.include(pkg_mod, joinpath(dir, "_pb_includes.jl"))
+    end
+
+    a_mod = pkg_mod.driver_cycle.a
+    b_mod = pkg_mod.driver_cycle.b
+    @test isdefined(a_mod, :Leaf)
+    @test isdefined(a_mod, :Top)
+    @test isdefined(b_mod, :Mid)
+
+    # End-to-end: build a `Top` carrying both a cross-package `Mid` and a
+    # same-package `Leaf`. If the second-block bug fires, `Top` either
+    # doesn't exist or carries a `Leaf` from a different (empty) module.
+    leaf = Base.invokelatest(a_mod.Leaf; x = Int32(7))
+    mid = Base.invokelatest(b_mod.Mid; leaf)
+    top = Base.invokelatest(a_mod.Top; mid, leaf)
+    @test top isa a_mod.Top
+    @test top.leaf isa a_mod.Leaf
+    @test top.mid isa b_mod.Mid
+end
+
 end  # module TestCodegenBugs

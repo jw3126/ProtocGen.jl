@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+// See driver_cycle_a1.proto for the MWE scenario.
+//
+// Package `driver_cycle.a` reopens here after `driver_cycle.b` slots in
+// between. `Top` references `Leaf` unqualified — the test for the
+// `_pb_includes.jl` driver bug specifically asserts this resolves.
+
+package driver_cycle.a;
+
+import "driver_cycle_a1.proto";
+import "driver_cycle_b.proto";
+
+message Top {
+  driver_cycle.b.Mid mid = 1;
+  Leaf leaf = 2;
+}
