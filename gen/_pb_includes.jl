@@ -8,21 +8,22 @@ using ProtocGen: encode, decode, encode_json, decode_json
 
 module google
     module protobuf
-        include("google/protobuf/any_pb.jl")
-        include("google/protobuf/descriptor_pb.jl")
-        include("google/protobuf/duration_pb.jl")
-        include("google/protobuf/empty_pb.jl")
-        include("google/protobuf/field_mask_pb.jl")
-        include("google/protobuf/source_context_pb.jl")
-        include("google/protobuf/struct_pb.jl")
-        include("google/protobuf/timestamp_pb.jl")
-        include("google/protobuf/wrappers_pb.jl")
         module compiler
-            include("google/protobuf/compiler/plugin_pb.jl")
         end # module compiler
-        include("google/protobuf/type_pb.jl")
-        include("google/protobuf/api_pb.jl")
     end # module protobuf
 end # module google
+
+google.protobuf.include("google/protobuf/any_pb.jl")
+google.protobuf.include("google/protobuf/descriptor_pb.jl")
+google.protobuf.include("google/protobuf/duration_pb.jl")
+google.protobuf.include("google/protobuf/empty_pb.jl")
+google.protobuf.include("google/protobuf/field_mask_pb.jl")
+google.protobuf.include("google/protobuf/source_context_pb.jl")
+google.protobuf.include("google/protobuf/struct_pb.jl")
+google.protobuf.include("google/protobuf/timestamp_pb.jl")
+google.protobuf.include("google/protobuf/wrappers_pb.jl")
+google.protobuf.compiler.include("google/protobuf/compiler/plugin_pb.jl")
+google.protobuf.include("google/protobuf/type_pb.jl")
+google.protobuf.include("google/protobuf/api_pb.jl")
 
 #! format: on
