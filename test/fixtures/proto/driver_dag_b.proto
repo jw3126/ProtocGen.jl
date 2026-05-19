@@ -1,0 +1,10 @@
+syntax = "proto3";
+package driver_dag.b;
+
+// Leaf message in package `driver_dag.b`. No imports — the file is a
+// round-1 candidate alongside `driver_dag_a1.proto` (also no deps), so
+// the old alphabetical-batched topo sort would emit it BETWEEN the two
+// `driver_dag.a` files. See test_codegen_bugs.jl.
+message Leaf {
+  int32 x = 1;
+}

@@ -115,6 +115,12 @@ end
     @test response.error === nothing
 
     driver = only(f for f in response.file if f.name == "_pb_includes.jl")
+    # Two-phase form is the canonical signal that the package-aware
+    # topo couldn't find a contiguous order — qualified
+    # `<pkg>.include(...)` calls are emitted at top level, so the
+    # skeleton can be referenced after it's been opened-then-closed.
+    @test occursin("driver_cycle.a.include", driver.content)
+    @test occursin("driver_cycle.b.include", driver.content)
 
     # Materialize every emitted file on disk so the driver's relative
     # `include`s resolve. Then eval the driver in a fresh module under a
@@ -154,6 +160,64 @@ end
     @test top isa a_mod.Top
     @test top.leaf isa a_mod.Leaf
     @test top.mid isa b_mod.Mid
+end
+
+@testset "driver: package-aware topo prefers contiguous (inline) emit" begin
+    # Schema: fixtures/proto/driver_dag_{a1,a2,b}.proto.
+    #     a1.proto: package driver_dag.a; message Spare  (no deps)
+    #     b.proto:  package driver_dag.b; message Leaf   (no deps)
+    #     a2.proto: package driver_dag.a; import b; message Top { ...b.Leaf }
+    #
+    # Package-level dep graph: `driver_dag.a → driver_dag.b` (acyclic).
+    # The OLD batched-alphabetical file-topo would emit
+    # [a1, b, a2] — pkg `driver_dag.a` split across positions 1 and 3.
+    # The package-aware sort topo-sorts packages first (b before a),
+    # then drains each in turn, producing [b, a1, a2] — pkg
+    # `driver_dag.a` lands at positions 2,3, contiguous.
+    response = run_codegen(
+        "driver_dag_a2.pb",
+        ["driver_dag_a1.proto", "driver_dag_b.proto", "driver_dag_a2.proto"],
+    )
+    @test response.error === nothing
+
+    driver = only(f for f in response.file if f.name == "_pb_includes.jl")
+    # Inline form is detectable structurally: the includes for pkg `a`
+    # live inside the `module a … end` block, not at top level as
+    # `driver_dag.a.include(...)` calls. Asserting on either side is
+    # equivalent; pick the absence of the qualified form as the
+    # canonical signal that we took the inline path.
+    @test !occursin("driver_dag.a.include", driver.content)
+    @test !occursin("driver_dag.b.include", driver.content)
+    # And the inline-form module structure is present.
+    @test occursin("module driver_dag", driver.content)
+
+    # End-to-end: materialize every emitted file on disk and eval the
+    # driver. With contiguous packages the inline form should produce a
+    # working namespace — `Top` carrying a `Leaf` from the sibling pkg.
+    dir = mktempdir()
+    for f in response.file
+        path = joinpath(dir, f.name)
+        mkpath(dirname(path))
+        write(path, f.content)
+    end
+
+    pkg_mod = Module(:DriverDagTest)
+    Core.eval(pkg_mod, :(import ProtocGen))
+    Base.ScopedValues.with(ProtocGen.REGISTRY => Dict{String,Type}()) do
+        Base.include(pkg_mod, joinpath(dir, "_pb_includes.jl"))
+    end
+
+    a_mod = pkg_mod.driver_dag.a
+    b_mod = pkg_mod.driver_dag.b
+    @test isdefined(a_mod, :Spare)
+    @test isdefined(a_mod, :Top)
+    @test isdefined(b_mod, :Leaf)
+
+    leaf = Base.invokelatest(b_mod.Leaf; x = Int32(11))
+    top = Base.invokelatest(a_mod.Top; leaf)
+    @test top isa a_mod.Top
+    @test top.leaf isa b_mod.Leaf
+    @test top.leaf.x == 11
 end
 
 end  # module TestCodegenBugs
