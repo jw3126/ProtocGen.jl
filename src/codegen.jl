@@ -2176,7 +2176,9 @@ function codegen_driver(
         f = by_name[path]
         deps[path] = [d for d in f.dependency if d in in_set]
     end
-    pkg_of(p) = something(by_name[p].package, "")
+    function pkg_of(p)
+        something(by_name[p].package, "")
+    end
 
     # Try the package-aware order first: topo-sort PACKAGES, then files
     # within each package. When the package-level dependency graph is a
@@ -2219,10 +2221,7 @@ end
 # Package-aware topo sort: returns a file ordering where each package
 # occupies a contiguous run, or `nothing` if the package-level
 # dependency graph has a cycle (in which case no such ordering exists).
-function _try_package_topo_sort(
-    deps::Dict{String,Vector{String}},
-    pkg_of::Function,
-)
+function _try_package_topo_sort(deps::Dict{String,Vector{String}}, pkg_of::Function)
     # Build the per-package dependency set from cross-package file imports.
     files_by_pkg = Dict{String,Vector{String}}()
     pkg_deps = Dict{String,Set{String}}()
