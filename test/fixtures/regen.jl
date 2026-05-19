@@ -77,6 +77,11 @@ const DESCRIPTOR_SETS = [
     # and `driver_cycle_a1.proto`; protoc's `--include_imports` pulls all
     # three into the FileDescriptorSet.
     "driver_cycle_a2.proto",
+    # MWE for the package-aware topo sort: cross-package DAG that the
+    # old alphabetical-batched sort would have interleaved. The a2 file
+    # transitively imports both a1 and b, so `--include_imports` pulls
+    # the full triple into the FileDescriptorSet.
+    "driver_dag_a2.proto",
 ]
 
 function find_protoc()

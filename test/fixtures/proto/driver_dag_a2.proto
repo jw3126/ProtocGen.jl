@@ -1,0 +1,14 @@
+syntax = "proto3";
+package driver_dag.a;
+import "driver_dag_a1.proto";  // pulls a1 into the fixture FileDescriptorSet via --include_imports
+import "driver_dag_b.proto";
+
+// Pulls in pkg `driver_dag.b` from across the package boundary, so the
+// file-level topo sort can only emit this file after `driver_dag_b.proto`.
+// Combined with the same-package leaf in `driver_dag_a1.proto` (no
+// deps), the old algorithm interleaved the two packages; the
+// package-aware sort drains pkg `driver_dag.b` first so pkg
+// `driver_dag.a` lands contiguous.
+message Top {
+  driver_dag.b.Leaf leaf = 1;
+}
