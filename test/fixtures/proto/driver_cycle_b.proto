@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+// See driver_cycle_a1.proto for the MWE scenario.
+
+package driver_cycle.b;
+
+import "driver_cycle_a1.proto";
+
+message Mid {
+  driver_cycle.a.Leaf leaf = 1;
+}

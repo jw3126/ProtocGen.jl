@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+// MWE for the `_pb_includes.jl` driver namespace-fragmentation bug.
+//
+// Three files arranged so the topological sort emits them as
+// (a1, b) → (a2): package `driver_cycle.a` is fragmented across two
+// driver blocks because `b` has to slot between them.
+//
+// `Top` (in a2) references both `driver_cycle.b.Mid` (cross-package,
+// needs the second block to come after `b`) and `Leaf` (same package,
+// unqualified, defined in the first block). The bug — `module
+// driver_cycle.a` opened a second time in Julia source creates a fresh
+// module rather than reopening — manifests as a `Leaf not defined`
+// load error when the driver is evaluated.
+
+package driver_cycle.a;
+
+message Leaf {
+  int32 x = 1;
+}

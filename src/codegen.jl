@@ -2198,35 +2198,60 @@ function codegen_driver(
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io)
 
-    # Walk the topo order, transitioning between module paths by closing
-    # back to the lowest common ancestor and opening down to the new
-    # target. `include(...)` is then plain Julia: relative to this driver
-    # file and evaluated in the enclosing `module`. Reopening a module
-    # later in the same file is fine — Julia merges the contents.
-    current_path = String[]
+    # Two-phase emit:
+    # 1. Forward-declare every proto package as an empty nested module.
+    # 2. Emit `<pkg>.include("file_pb.jl")` for each file in topo order.
+    #
+    # Why not interleave `module X … include … end` blocks? Julia's
+    # source `module Name … end` ALWAYS creates a fresh module — there
+    # is no reopen-merge here (that's a REPL/`Base.eval` trick). When
+    # the topo order forces a single package to appear in more than one
+    # block (e.g. `a, b, a` where `b` depends on `a` and a later `a`
+    # file depends on `b`), the second `module a` block shadows the
+    # first; any same-package reference inside it fails with
+    # `UndefVarError`. Skeleton-first sidesteps that by giving every
+    # package exactly one module instance — every include lands in the
+    # same one regardless of when in the topo order it runs.
+    pkg_paths = Set{NTuple{N,String} where N}()
+    for path in order
+        pkg = something(by_name[path].package, "")
+        push!(pkg_paths, isempty(pkg) ? () : Tuple(String.(split(pkg, '.'))))
+    end
+    # The trie: parent path → set of child segment names. Every prefix
+    # of every package path needs a node, otherwise nested children
+    # would miss their parent module.
+    skeleton = Dict{Tuple{Vararg{String}},Set{String}}()
+    skeleton[()] = Set{String}()
+    for ppath in pkg_paths
+        for i in 1:length(ppath)
+            parent = Tuple(ppath[1:i-1])
+            push!(get!(skeleton, parent, Set{String}()), ppath[i])
+        end
+    end
+    function _emit_skel(parent::Tuple, depth::Int)
+        for name in sort!(collect(get(skeleton, parent, Set{String}())))
+            println(io, "    "^depth, "module ", name)
+            _emit_skel((parent..., name), depth + 1)
+            println(io, "    "^depth, "end # module ", name)
+        end
+    end
+    _emit_skel((), 0)
+
+    # Phase 2: `<pkg>.include("file_pb.jl")` in topo order. Each include
+    # lands inside the pre-declared module, so same-package references
+    # resolve against prior includes' definitions and cross-package
+    # imports (`import ..other_pkg`) resolve against the sibling
+    # skeleton module — present (though possibly empty of types) by the
+    # time any code in `other_pkg` actually runs.
+    if !isempty(order)
+        println(io)
+    end
     for path in order
         f = by_name[path]
         pkg = something(f.package, "")
-        target_path = isempty(pkg) ? String[] : String.(split(pkg, '.'))
         out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
-
-        lca = 0
-        while lca < length(current_path) &&
-                  lca < length(target_path) &&
-                  current_path[lca+1] == target_path[lca+1]
-            lca += 1
-        end
-        for d in length(current_path):-1:(lca+1)
-            println(io, "    "^(d - 1), "end # module ", current_path[d])
-        end
-        for d in (lca+1):length(target_path)
-            println(io, "    "^(d - 1), "module ", target_path[d])
-        end
-        current_path = target_path
-        println(io, "    "^length(current_path), "include(", repr(out_name), ")")
-    end
-    for d in length(current_path):-1:1
-        println(io, "    "^(d - 1), "end # module ", current_path[d])
+        prefix = isempty(pkg) ? "" : "$(pkg)."
+        println(io, prefix, "include(", repr(out_name), ")")
     end
 
     println(io)
