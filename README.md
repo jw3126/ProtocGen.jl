@@ -59,6 +59,7 @@ message Person {
 message AddressBook {
     repeated Person people = 1;
 }
+```
 
 This generates `out/addressbook_pb.jl`. It depends on the
 `ProtocGen.jl` package:
