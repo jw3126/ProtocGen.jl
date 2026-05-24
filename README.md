@@ -28,6 +28,8 @@ mkdir out
 protoc --julia_out=out addressbook.proto
 ```
 
+where
+
 ```proto
 // addressbook.proto
 syntax = "proto3";
