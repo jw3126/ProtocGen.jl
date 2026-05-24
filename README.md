@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the official required proto2 and proto3 [conformance test suites](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) using binary + JSON.
+Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for binary + JSON.
 
 ## Install
 
@@ -28,8 +28,8 @@ mkdir out
 protoc --julia_out=out addressbook.proto
 ```
 
-````proto
-# addressbook.proto
+```proto
+// addressbook.proto
 syntax = "proto3";
 
 package tutorial;
@@ -87,7 +87,7 @@ js = encode_json(person)
 # {"name":"Alice","id":42,"email":"alice@example.com",
 #  "phones":[…],"lastUpdated":"2024-05-06T12:53:20Z"}
 @assert decode_json(Person, js) == person
-````
+```
 
 ## Alternatives
 
