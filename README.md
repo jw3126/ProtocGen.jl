@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for binary + JSON.
+Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for both binary and JSON.
 
 ## Install
 
