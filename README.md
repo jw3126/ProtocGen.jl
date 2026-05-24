@@ -1,4 +1,4 @@
-# ProtocGen.jl
+# [ProtocGen.jl](https://github.com/jw3126/ProtocGen.jl)
 
 <p align="center">
   <img src="docs/src/assets/logo.png" alt="ProtocGen.jl" width="320">
@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the required proto2 and proto3 conformance test suites using binary + JSON.
+Passes the official required proto2 and proto3 conformance test suites using binary + JSON.
 
 ## Install
 
