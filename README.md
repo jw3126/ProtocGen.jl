@@ -1,4 +1,4 @@
-# ProtocGen.jl
+# [ProtocGen.jl](https://github.com/jw3126/ProtocGen.jl)
 
 <p align="center">
   <img src="docs/src/assets/logo.png" alt="ProtocGen.jl" width="320">
@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the required proto2 and proto3 conformance test suites using binary + JSON.
+Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for both binary and JSON.
 
 ## Install
 
@@ -25,17 +25,46 @@ pkg> app add ProtocGen
 cd examples
 mkdir out
 
-protoc \
-    --julia_out=out \
-    addressbook.proto
+protoc --julia_out=out addressbook.proto
 ```
 
-`addressbook.proto` imports `google/protobuf/timestamp.proto`; standard
-protoc installations ship the well-known-type protos on their default
-include path, so no extra `--proto_path` is needed.
+where
+
+```proto
+// addressbook.proto
+syntax = "proto3";
+
+package tutorial;
+
+import "google/protobuf/timestamp.proto";
+
+enum PhoneType {
+    PHONE_TYPE_UNSPECIFIED = 0;
+    PHONE_TYPE_MOBILE = 1;
+    PHONE_TYPE_HOME = 2;
+    PHONE_TYPE_WORK = 3;
+}
+
+message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2;
+}
+
+message Person {
+    string name = 1;
+    int32 id = 2;
+    optional string email = 3;
+    repeated PhoneNumber phones = 4;
+    google.protobuf.Timestamp last_updated = 5;
+}
+
+message AddressBook {
+    repeated Person people = 1;
+}
+```
 
 This generates `out/addressbook_pb.jl`. It depends on the
-`ProtocGen.jl` package.
+`ProtocGen.jl` package:
 
 ```julia
 include("out/addressbook_pb.jl")
