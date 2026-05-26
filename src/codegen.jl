@@ -1308,7 +1308,11 @@ function _emit_message(
 end
 
 function _oneof_jl_type(o::OneofModel)
-    elem_union = join((m.elem_jl_type for m in o.members), ",")
+    # `unique` over the rendered type strings keeps the first occurrence
+    # of each arm in source order — so a oneof with two arms of the same
+    # message type collapses to `Union{T}` instead of `Union{T,T}`. See
+    # https://github.com/jw3126/ProtocGen.jl/issues/14.
+    elem_union = join(unique(m.elem_jl_type for m in o.members), ",")
     return "Union{Nothing,OneOf{<:Union{$(elem_union)}}}"
 end
 

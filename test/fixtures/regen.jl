@@ -82,6 +82,9 @@ const DESCRIPTOR_SETS = [
     # transitively imports both a1 and b, so `--include_imports` pulls
     # the full triple into the FileDescriptorSet.
     "driver_dag_a2.proto",
+    # MWE for issue #14: a oneof with multiple arms sharing the same
+    # message type. The generated `Union{...}` must deduplicate.
+    "oneof_dup.proto",
 ]
 
 function find_protoc()
