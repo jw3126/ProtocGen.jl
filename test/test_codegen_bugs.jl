@@ -220,4 +220,40 @@ end
     @test top.leaf.x == 11
 end
 
+@testset "regression: oneof Union deduplicates shared message types (#14)" begin
+    # Schema: fixtures/proto/oneof_dup.proto
+    #     message Outer {
+    #       oneof choice {
+    #         Inner first  = 1;
+    #         Inner second = 2;
+    #         Other third  = 3;
+    #         Inner fourth = 4;
+    #       }
+    #     }
+    # Bug: `_oneof_jl_type` joined `elem_jl_type` for every arm, so two
+    # `Inner` arms produced `Union{Inner,Inner}`. Fix: dedup the rendered
+    # strings while preserving source order. `Union{T,T} === T` so the
+    # old output was benign at runtime, but noisy and surprising.
+    response = run_codegen("oneof_dup.pb", ["oneof_dup.proto"])
+    @test response.error === nothing
+    f = only(file for file in response.file if file.name == "oneof_dup_pb.jl")
+
+    # Deduplicated, order preserved: Inner appears once, Other appears
+    # once, Inner does not reappear.
+    @test occursin("choice::Union{Nothing,OneOf{<:Union{Inner,Other}}}", f.content)
+    @test !occursin("Union{Inner,Inner", f.content)
+
+    # Sanity: the generated module still evaluates and round-trips a
+    # value picked from a duplicated-type arm.
+    od_mod = eval_generated(f.content, :GeneratedOneofDup)
+    outer = pb_make(
+        od_mod.Outer;
+        choice = ProtocGen.OneOf(:fourth, pb_make(od_mod.Inner; value = "hi")),
+    )
+    decoded = decode_latest(od_mod.Outer, encode_latest(outer))
+    @test decoded.choice !== nothing
+    @test decoded.choice.name === :fourth
+    @test decoded.choice.value.value == "hi"
+end
+
 end  # module TestCodegenBugs
