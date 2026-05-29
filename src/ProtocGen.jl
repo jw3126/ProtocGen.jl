@@ -4,6 +4,7 @@ import EnumX
 import BufferedStreams
 import OrderedCollections: OrderedDict
 import StructHelpers
+const SH = StructHelpers
 using TOML
 
 const PACKAGE_VERSION = let
@@ -15,6 +16,7 @@ struct OneOf{T}
     name::Symbol
     value::T
 end
+SH.@batteries OneOf typesalt = 0x354681b8d92379e3
 
 """
     DecodeError(msg)
