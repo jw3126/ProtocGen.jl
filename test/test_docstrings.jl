@@ -16,10 +16,11 @@ end
 @testset "docstrings: emitted text" begin
     src = gen_docs(; docstrings = true)
 
-    # Message comment -> struct docstring, with a `# Fields` section.
+    # Message comment -> struct docstring; field comment -> leading `#` comment
+    # above the struct field (no `# Fields` section in the docstring).
     @test occursin("A single book in the catalog.", src)
-    @test occursin("# Fields", src)
-    @test occursin("- `isbn::String`: International Standard Book Number", src)
+    @test !occursin("# Fields", src)
+    @test occursin("    # International Standard Book Number", src)
 
     # Enum comment -> docstring above @enumx; value comments -> queryable
     # doc-attach lines AFTER the declaration.
@@ -31,12 +32,12 @@ end
     @test occursin("The genre a book belongs to.", src)
     @test occursin("Used for shelving and search filters.", src)
 
-    # Oneof comment -> union field doc; members listed as sub-bullets.
-    @test occursin("- `availability::", src)
+    # Oneof comment -> leading field comment; members listed as `#` bullets.
     @test occursin("How the book can currently be obtained.", src)
     @test occursin("Number of physical copies on the shelf.", src)
-    # oneof-member sub-bullet: continuation line indented under the sub-bullet.
-    @test occursin("\n    Second line, to exercise sub-bullet continuation", src)
+    # oneof-member bullet: continuation line indented under the bullet, still
+    # inside the leading `#` comment block.
+    @test occursin("\n    #   Second line, to exercise sub-bullet continuation", src)
 
     # Escaping: `$` and `"` in a comment survive into a valid literal.
     @test occursin("\\\$variable", src)
@@ -59,9 +60,11 @@ end
     mod = eval_generated(src, :GeneratedDocs)
     docof(expr) = string(Core.eval(mod, :(@doc $expr)))
 
-    # Struct docstring + field reference.
+    # Struct docstring carries the message comment. Field comments are plain
+    # leading `#` comments on the struct fields, not part of the docstring, so
+    # they are intentionally absent from `@doc Book`.
     @test occursin("A single book in the catalog.", docof(:Book))
-    @test occursin("International Standard Book Number", docof(:Book))
+    @test !occursin("International Standard Book Number", docof(:Book))
 
     # Enum + enum value docs are individually queryable.
     @test occursin("The genre a book belongs to.", docof(:(var"Book.Genre")))

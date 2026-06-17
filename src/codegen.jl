@@ -48,9 +48,9 @@ end
 # Docstring retention. Opt-in via `[codegen] docstrings = true`. When enabled,
 # `.proto` comments captured by protoc in `FileDescriptorProto.source_code_info`
 # are carried into the generated Julia as docstrings: message comment → struct
-# docstring (with a `# Fields` section so `?T` lists fields with no extra
-# dependency), enum comment → docstring above `@enumx`, enum-value comment →
-# queryable doc attached after the declaration.
+# docstring, field comment → leading `#` comment above the struct field, enum
+# comment → docstring above `@enumx`, enum-value comment → queryable doc
+# attached after the declaration.
 # ----------------------------------------------------------------------------
 
 # Read `[codegen] docstrings = …`; default false so the feature is opt-in and
@@ -1104,57 +1104,57 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
-# One `# Fields` bullet. Continuation lines of a multi-line comment are indented
-# by `pad` so they render under the bullet rather than as a new list item — two
-# spaces for a top-level bullet, four for an indented oneof-member sub-bullet.
-function _field_bullet(decl, comment; pad = "  ")
-    isempty(comment) ? string("- `", decl, "`") :
-    string("- `", decl, "`: ", replace(comment, "\n" => string("\n", pad)))
-end
-
-# Build and emit the struct docstring (opt-in; a no-op when `doc_index` has no
-# entry for this message or any of its fields). The message comment becomes the
-# lead paragraph; every plain field and oneof is listed in a `# Fields` section
-# — with its comment when present — so `?T` shows the full field reference
-# without the generated module needing to depend on DocStringExtensions.
-function _emit_struct_docstring(io, doc_index, fqn, plain_fields, real_oneofs)
+# Emit the message comment as the struct's docstring (opt-in; a no-op when the
+# message carries no comment). Field comments are NOT folded in here — they are
+# emitted as leading `#` comments above each field by `_emit_field_comment`.
+function _emit_struct_docstring(io, doc_index, fqn)
     isempty(doc_index) && return
     msg_doc = get(doc_index, fqn, "")
-    comments = String[]               # every comment, to test if any is present
-    fieldlines = String["# Fields"]
-    for f in plain_fields
-        c = get(doc_index, string("f:", fqn, ".", f.proto_name), "")
-        push!(comments, c)
-        push!(fieldlines, _field_bullet(string(f.jl_fieldname, "::", f.jl_type), c))
+    isempty(msg_doc) && return
+    println(io, _doc_literal(msg_doc))
+    return
+end
+
+# Look up a plain-field / oneof-member comment by its proto key; "" when absent.
+function _field_doc(doc_index, fqn, proto_name)
+    get(doc_index, string("f:", fqn, ".", proto_name), "")
+end
+
+# Emit `comment` as `#`-prefixed lines indented into the struct body, so it sits
+# directly above the field declaration. Each source line keeps its own `#`;
+# blank continuation lines (multi-paragraph comments) stay bare `#`. No-op for
+# an empty comment.
+function _emit_field_comment(io, comment)
+    isempty(comment) && return
+    for ln in split(comment, '\n')
+        println(io, isempty(ln) ? "    #" : string("    # ", ln))
     end
-    for o in real_oneofs
-        c = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
-        push!(comments, c)
-        push!(fieldlines, _field_bullet(string(o.jl_fieldname, "::", _oneof_jl_type(o)), c))
-        # oneof members are folded into the union field; list them as sub-bullets.
-        for m in o.members
-            mc = get(doc_index, string("f:", fqn, ".", m.proto_name), "")
-            push!(comments, mc)
-            push!(
-                fieldlines,
-                string(
-                    "  ",
-                    _field_bullet(
-                        string(m.jl_fieldname, "::", m.elem_jl_type),
-                        mc;
-                        pad = "    ",
-                    ),
-                ),
-            )
+    return
+end
+
+# Build the leading comment for a real-oneof field. The oneof's own comment
+# leads; each member is then listed as a `- name::Type: comment` bullet (members
+# have no struct line of their own, so their docs would otherwise be lost).
+# Continuation lines of a multi-line member comment are indented under the
+# bullet. Returns "" when neither the oneof nor any member carries a comment.
+function _oneof_field_comment(doc_index, fqn, o)
+    lines = String[]
+    oc = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+    isempty(oc) || append!(lines, split(oc, '\n'))
+    for m in o.members
+        decl = string(m.jl_fieldname, "::", m.elem_jl_type)
+        mc = _field_doc(doc_index, fqn, m.proto_name)
+        if isempty(mc)
+            push!(lines, string("- ", decl))
+        else
+            mclines = split(mc, '\n')
+            push!(lines, string("- ", decl, ": ", mclines[1]))
+            for cont in mclines[2:end]
+                push!(lines, string("  ", cont))
+            end
         end
     end
-    any_field_doc = any(!isempty, comments)
-    (isempty(msg_doc) && !any_field_doc) && return
-    parts = String[]
-    isempty(msg_doc) || push!(parts, msg_doc)
-    push!(parts, join(fieldlines, "\n"))
-    println(io, _doc_literal(join(parts, "\n\n")))
-    return
+    return join(lines, "\n")
 end
 
 function _emit_message(
@@ -1240,7 +1240,7 @@ function _emit_message(
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
-    _emit_struct_docstring(io, doc_index, proto_fqn, plain_fields, real_oneofs)
+    _emit_struct_docstring(io, doc_index, proto_fqn)
     println(
         io,
         is_cycle_participant ? "struct $(jl_name) <: $(_abstract_name(jl_name))" :
@@ -1248,10 +1248,12 @@ function _emit_message(
     )
     param_names = String[]
     for f in plain_fields
+        _emit_field_comment(io, _field_doc(doc_index, proto_fqn, f.proto_name))
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
         push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
+        _emit_field_comment(io, _oneof_field_comment(doc_index, proto_fqn, o))
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
