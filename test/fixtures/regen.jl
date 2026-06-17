@@ -91,9 +91,7 @@ const DESCRIPTOR_SETS = [
 # carries the `//` comments protoc otherwise strips. These back the docstring-
 # retention tests. The sets above stay source-info-free to keep their bytes
 # minimal and their golden output stable.
-const DESCRIPTOR_SETS_WITH_SOURCE_INFO = [
-    "docs.proto",
-]
+const DESCRIPTOR_SETS_WITH_SOURCE_INFO = ["docs.proto"]
 
 function find_protoc()
     p = Sys.which("protoc")

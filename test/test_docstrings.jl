@@ -14,7 +14,7 @@ function gen_docs(; docstrings::Bool)
 end
 
 @testset "docstrings: emitted text" begin
-    src = gen_docs(docstrings = true)
+    src = gen_docs(; docstrings = true)
 
     # Message comment -> struct docstring, with a `# Fields` section.
     @test occursin("A single book in the catalog.", src)
@@ -44,8 +44,8 @@ end
 end
 
 @testset "docstrings: default off is byte-stable" begin
-    on = gen_docs(docstrings = true)
-    off = gen_docs(docstrings = false)
+    on = gen_docs(; docstrings = true)
+    off = gen_docs(; docstrings = false)
     @test on != off
     # No comment text at all leaks into the default (docstrings-off) output.
     @test !occursin("A single book in the catalog.", off)
@@ -55,7 +55,7 @@ end
 end
 
 @testset "docstrings: queryable after eval" begin
-    src = gen_docs(docstrings = true)
+    src = gen_docs(; docstrings = true)
     mod = eval_generated(src, :GeneratedDocs)
     docof(expr) = string(Core.eval(mod, :(@doc $expr)))
 
