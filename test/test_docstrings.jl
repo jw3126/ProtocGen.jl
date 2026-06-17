@@ -35,6 +35,8 @@ end
     @test occursin("- `availability::", src)
     @test occursin("How the book can currently be obtained.", src)
     @test occursin("Number of physical copies on the shelf.", src)
+    # oneof-member sub-bullet: continuation line indented under the sub-bullet.
+    @test occursin("\n    Second line, to exercise sub-bullet continuation", src)
 
     # Escaping: `$` and `"` in a comment survive into a valid literal.
     @test occursin("\\\$variable", src)

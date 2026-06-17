@@ -1084,10 +1084,11 @@ end
 # ----------------------------------------------------------------------------
 
 # One `# Fields` bullet. Continuation lines of a multi-line comment are indented
-# so they render under the bullet rather than as a new list item.
-_field_bullet(decl, comment) =
+# by `pad` so they render under the bullet rather than as a new list item — two
+# spaces for a top-level bullet, four for an indented oneof-member sub-bullet.
+_field_bullet(decl, comment; pad = "  ") =
     isempty(comment) ? string("- `", decl, "`") :
-    string("- `", decl, "`: ", replace(comment, "\n" => "\n  "))
+    string("- `", decl, "`: ", replace(comment, "\n" => string("\n", pad)))
 
 # Build and emit the struct docstring (opt-in; a no-op when `doc_index` has no
 # entry for this message or any of its fields). The message comment becomes the
@@ -1112,7 +1113,7 @@ function _emit_struct_docstring(io, doc_index, fqn, plain_fields, real_oneofs)
         for m in o.members
             mc = get(doc_index, string("f:", fqn, ".", m.proto_name), "")
             push!(comments, mc)
-            push!(fieldlines, string("  ", _field_bullet(string(m.jl_fieldname, "::", m.elem_jl_type), mc)))
+            push!(fieldlines, string("  ", _field_bullet(string(m.jl_fieldname, "::", m.elem_jl_type), mc; pad = "    ")))
         end
     end
     any_field_doc = any(!isempty, comments)

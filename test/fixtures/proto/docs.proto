@@ -42,6 +42,7 @@ message Book {
   // How the book can currently be obtained.
   oneof availability {
     // Number of physical copies on the shelf.
+    // Second line, to exercise sub-bullet continuation indentation.
     int32 copies_on_shelf = 4;
     // URL to the e-book, if this is a digital-only title.
     string ebook_url = 5;
