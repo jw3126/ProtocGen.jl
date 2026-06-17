@@ -44,6 +44,122 @@ function _strip_enum_prefix_enabled(config::AbstractDict)
     return get(cg, "strip_enum_prefix", true) === true
 end
 
+# ----------------------------------------------------------------------------
+# Docstring retention. Opt-in via `[codegen] docstrings = true`. When enabled,
+# `.proto` comments captured by protoc in `FileDescriptorProto.source_code_info`
+# are carried into the generated Julia as docstrings: message comment → struct
+# docstring (with a `# Fields` section so `?T` lists fields with no extra
+# dependency), enum comment → docstring above `@enumx`, enum-value comment →
+# queryable doc attached after the declaration.
+# ----------------------------------------------------------------------------
+
+# Read `[codegen] docstrings = …`; default false so the feature is opt-in and
+# the default generated output stays byte-for-byte unchanged.
+function _docstrings_enabled(config::AbstractDict)
+    cg = get(config, "codegen", nothing)
+    cg isa AbstractDict || return false
+    return get(cg, "docstrings", false) === true
+end
+
+# Descriptor field numbers, used to walk SourceCodeInfo location paths. A path
+# is the field-number trail from the file root to an element; e.g. message i is
+# `[4, i]`, its field j is `[4, i, 2, j]`. See descriptor.proto's SourceCodeInfo.
+const _PATH_FILE_MESSAGE = Int32(4)   # FileDescriptorProto.message_type
+const _PATH_FILE_ENUM = Int32(5)      # FileDescriptorProto.enum_type
+const _PATH_MSG_FIELD = Int32(2)      # DescriptorProto.field
+const _PATH_MSG_NESTED = Int32(3)     # DescriptorProto.nested_type
+const _PATH_MSG_ENUM = Int32(4)       # DescriptorProto.enum_type
+const _PATH_MSG_ONEOF = Int32(8)      # DescriptorProto.oneof_decl
+const _PATH_ENUM_VALUE = Int32(2)     # EnumDescriptorProto.value
+
+# protoc stores `leading_comments` with `//` / `/* */` markers removed but each
+# line keeping its single leading space, and the block bracketed by newlines.
+# Strip one leading space per line and trim surrounding whitespace.
+function _clean_comment(s::AbstractString)
+    lines = split(s, '\n')
+    cleaned = map(ln -> startswith(ln, ' ') ? ln[2:end] : ln, lines)
+    return String(strip(join(cleaned, '\n')))
+end
+
+# Render `comment` as a Julia docstring literal. Single-line comments use a
+# plain `"..."` literal (via `repr`, which escapes `\`, `$`, `"`); multi-line
+# comments use a triple-quoted block with `\`, `$`, and any `\"\"\"` escaped.
+# Returns "" for an empty comment so callers can skip emission.
+function _doc_literal(comment::AbstractString)
+    isempty(comment) && return ""
+    occursin('\n', comment) || return repr(comment)
+    esc = replace(comment, "\\" => "\\\\")
+    esc = replace(esc, "\$" => "\\\$")
+    esc = replace(esc, "\"\"\"" => "\\\"\\\"\\\"")
+    return string("\"\"\"\n", esc, "\n\"\"\"")
+end
+
+# Walk the descriptor tree alongside source_code_info, building a lookup from a
+# stable key to the cleaned comment. Keys: bare proto FQN for a message/enum
+# type, `f:<msgfqn>.<field>` for a field, `o:<msgfqn>.<oneof>` for a oneof,
+# `v:<enumfqn>.<value>` for an enum value. The emitters already compute these
+# FQNs, so no path threading through the emit recursion is needed.
+function _build_doc_index(file::FileDescriptorProto)
+    index = Dict{String,String}()
+    sci = file.source_code_info
+    sci === nothing && return index
+    by_path = Dict{Vector{Int32},String}()
+    for loc in sci.location
+        lead = loc.leading_comments
+        trail = loc.trailing_comments
+        raw = if lead !== nothing && !isempty(strip(lead))
+            lead
+        elseif trail !== nothing && !isempty(strip(trail))
+            trail
+        else
+            continue
+        end
+        c = _clean_comment(raw)
+        isempty(c) && continue
+        by_path[copy(loc.path)] = c
+    end
+    isempty(by_path) && return index
+    pkg = something(file.package, "")
+    base_fqn = isempty(pkg) ? "" : string(".", pkg)
+    for (i, m) in pairs(file.message_type)
+        _index_message!(index, by_path, m, base_fqn, Int32[_PATH_FILE_MESSAGE, Int32(i - 1)])
+    end
+    for (i, e) in pairs(file.enum_type)
+        _index_enum!(index, by_path, e, base_fqn, Int32[_PATH_FILE_ENUM, Int32(i - 1)])
+    end
+    return index
+end
+
+function _index_message!(index, by_path, m::DescriptorProto, parent_fqn, path)
+    fqn = string(parent_fqn, ".", something(m.name, ""))
+    haskey(by_path, path) && (index[fqn] = by_path[path])
+    for (i, f) in pairs(m.field)
+        fp = vcat(path, Int32[_PATH_MSG_FIELD, Int32(i - 1)])
+        haskey(by_path, fp) && (index[string("f:", fqn, ".", something(f.name, ""))] = by_path[fp])
+    end
+    for (i, o) in pairs(m.oneof_decl)
+        op = vcat(path, Int32[_PATH_MSG_ONEOF, Int32(i - 1)])
+        haskey(by_path, op) && (index[string("o:", fqn, ".", something(o.name, ""))] = by_path[op])
+    end
+    for (i, e) in pairs(m.enum_type)
+        _index_enum!(index, by_path, e, fqn, vcat(path, Int32[_PATH_MSG_ENUM, Int32(i - 1)]))
+    end
+    for (i, n) in pairs(m.nested_type)
+        _index_message!(index, by_path, n, fqn, vcat(path, Int32[_PATH_MSG_NESTED, Int32(i - 1)]))
+    end
+    return index
+end
+
+function _index_enum!(index, by_path, e::EnumDescriptorProto, parent_fqn, path)
+    fqn = string(parent_fqn, ".", something(e.name, ""))
+    haskey(by_path, path) && (index[fqn] = by_path[path])
+    for (i, v) in pairs(e.value)
+        vp = vcat(path, Int32[_PATH_ENUM_VALUE, Int32(i - 1)])
+        haskey(by_path, vp) && (index[string("v:", fqn, ".", something(v.name, ""))] = by_path[vp])
+    end
+    return index
+end
+
 # "FeatureType" → "FEATURE_TYPE", "JSType" → "JS_TYPE", "Url" → "URL".
 # Insert an underscore before any uppercase letter that follows a lowercase or
 # digit, OR before any uppercase letter that's followed by a lowercase letter
@@ -967,6 +1083,47 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
+# One `# Fields` bullet. Continuation lines of a multi-line comment are indented
+# so they render under the bullet rather than as a new list item.
+_field_bullet(decl, comment) =
+    isempty(comment) ? string("- `", decl, "`") :
+    string("- `", decl, "`: ", replace(comment, "\n" => "\n  "))
+
+# Build and emit the struct docstring (opt-in; a no-op when `doc_index` has no
+# entry for this message or any of its fields). The message comment becomes the
+# lead paragraph; every plain field and oneof is listed in a `# Fields` section
+# — with its comment when present — so `?T` shows the full field reference
+# without the generated module needing to depend on DocStringExtensions.
+function _emit_struct_docstring(io, doc_index, fqn, plain_fields, real_oneofs)
+    isempty(doc_index) && return
+    msg_doc = get(doc_index, fqn, "")
+    comments = String[]               # every comment, to test if any is present
+    fieldlines = String["# Fields"]
+    for f in plain_fields
+        c = get(doc_index, string("f:", fqn, ".", f.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(f.jl_fieldname, "::", f.jl_type), c))
+    end
+    for o in real_oneofs
+        c = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(o.jl_fieldname, "::", _oneof_jl_type(o)), c))
+        # oneof members are folded into the union field; list them as sub-bullets.
+        for m in o.members
+            mc = get(doc_index, string("f:", fqn, ".", m.proto_name), "")
+            push!(comments, mc)
+            push!(fieldlines, string("  ", _field_bullet(string(m.jl_fieldname, "::", m.elem_jl_type), mc)))
+        end
+    end
+    any_field_doc = any(!isempty, comments)
+    (isempty(msg_doc) && !any_field_doc) && return
+    parts = String[]
+    isempty(msg_doc) || push!(parts, msg_doc)
+    push!(parts, join(fieldlines, "\n"))
+    println(io, _doc_literal(join(parts, "\n\n")))
+    return
+end
+
 function _emit_message(
     io::IO,
     msg::DescriptorProto,
@@ -975,6 +1132,7 @@ function _emit_message(
     parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
     batteries_kw::String = "",
     enumbatteries_kw::String = "",
+    doc_index::AbstractDict = Dict{String,String}(),
 )
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1003,6 +1161,7 @@ function _emit_message(
             parent_proto = proto_fqn,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
+            doc_index = doc_index,
         )
     end
     for nested in msg.nested_type
@@ -1015,6 +1174,7 @@ function _emit_message(
             proto_fqn;
             batteries_kw = batteries_kw,
             enumbatteries_kw = enumbatteries_kw,
+            doc_index = doc_index,
         )
     end
 
@@ -1047,6 +1207,7 @@ function _emit_message(
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
+    _emit_struct_docstring(io, doc_index, proto_fqn, plain_fields, real_oneofs)
     println(
         io,
         is_cycle_participant ? "struct $(jl_name) <: $(_abstract_name(jl_name))" :
@@ -1609,6 +1770,30 @@ function _emit_encoded_size_field(io::IO, f::FieldModel)
     end
 end
 
+# Emit the enum's leading comment as a docstring above `@enumx` (it binds to
+# the EnumX baremodule, so `?MyEnum` resolves). No-op when not enabled / absent.
+function _emit_enum_docstring(io, doc_index, fqn)
+    isempty(doc_index) && return
+    lit = _doc_literal(get(doc_index, fqn, ""))
+    isempty(lit) || println(io, lit)
+    return
+end
+
+# Attach each value's comment as a real, queryable docstring AFTER the
+# declaration (`"comment" MyEnum.VALUE`) — a docstring inside the `@enumx`
+# block is rejected by the macro, but attaching afterwards makes
+# `?MyEnum.VALUE` resolve. Uses the prefix-stripped value identifier.
+function _emit_enum_value_docs(io, doc_index, fqn, jl_name, e, strip_value)
+    isempty(doc_index) && return
+    for v in e.value
+        vname = something(v.name, "")
+        lit = _doc_literal(get(doc_index, string("v:", fqn, ".", vname), ""))
+        isempty(lit) && continue
+        println(io, lit, " ", jl_name, ".", strip_value(vname))
+    end
+    return
+end
+
 function _emit_enum(
     io::IO,
     e::EnumDescriptorProto,
@@ -1617,6 +1802,7 @@ function _emit_enum(
     parent_proto::String = "",
     enumbatteries_kw::String = "",
     strip_enum_prefix::Bool = true,
+    doc_index::AbstractDict = Dict{String,String}(),
 )
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1652,7 +1838,9 @@ function _emit_enum(
             ),
             " ",
         )
+        _emit_enum_docstring(io, doc_index, proto_fqn)
         println(io, "@enumx ", jl_name, " ", members)
+        _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
@@ -1684,6 +1872,7 @@ function _emit_enum(
         end
     end
     members = join((string(n, "=", num) for (n, num) in canonicals), " ")
+    _emit_enum_docstring(io, doc_index, proto_fqn)
     println(io, "@enumx ", jl_name, " ", members)
     # `Core.eval(Mod, expr)` rather than `Mod.eval(expr)` because EnumX
     # builds the enum module as a `baremodule`, which doesn't import
@@ -1691,6 +1880,7 @@ function _emit_enum(
     for (alias, canonical) in aliases
         println(io, core_q, ".eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
     end
+    _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
     println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
     _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
     println(io)
@@ -1968,6 +2158,11 @@ function codegen(
     batteries_kw = _config_kw_table(config, "batteries")
     enumbatteries_kw = _config_kw_table(config, "enumbatteries")
 
+    # `.proto` comment retention (opt-in). Empty index when disabled or when
+    # protoc sent no source_code_info, in which case every emitter is a no-op.
+    doc_index =
+        _docstrings_enabled(config) ? _build_doc_index(file) : Dict{String,String}()
+
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
     println(io, "#! format: off")
@@ -2058,6 +2253,7 @@ function codegen(
             parent_proto = file_parent_proto,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
+            doc_index = doc_index,
         )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
@@ -2100,6 +2296,7 @@ function codegen(
             cycle_names;
             batteries_kw = batteries_kw,
             enumbatteries_kw = enumbatteries_kw,
+            doc_index = doc_index,
         )
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}

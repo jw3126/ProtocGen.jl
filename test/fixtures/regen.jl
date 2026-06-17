@@ -87,6 +87,14 @@ const DESCRIPTOR_SETS = [
     "oneof_dup.proto",
 ]
 
+# .proto files captured WITH `--include_source_info`, so the FileDescriptorSet
+# carries the `//` comments protoc otherwise strips. These back the docstring-
+# retention tests. The sets above stay source-info-free to keep their bytes
+# minimal and their golden output stable.
+const DESCRIPTOR_SETS_WITH_SOURCE_INFO = [
+    "docs.proto",
+]
+
 function find_protoc()
     p = Sys.which("protoc")
     p === nothing && error("regen: `protoc` not found on PATH; install protobuf-compiler.")
@@ -104,6 +112,15 @@ function main()
         out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
         run(
             `$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --descriptor_set_out=$out $proto`,
+        )
+        println("wrote $(relpath(out, HERE))")
+    end
+
+    # Same as above but `--include_source_info` retains the comments.
+    for proto in DESCRIPTOR_SETS_WITH_SOURCE_INFO
+        out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
+        run(
+            `$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --include_source_info --descriptor_set_out=$out $proto`,
         )
         println("wrote $(relpath(out, HERE))")
     end

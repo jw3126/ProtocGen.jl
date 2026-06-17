@@ -91,6 +91,55 @@ js = encode_json(person)
 @assert decode_json(Person, js) == person
 ```
 
+## Docstring retention
+
+Comments in your `.proto` can be carried into the generated Julia as
+docstrings. It is opt-in via a TOML config file passed to the plugin:
+
+```toml
+# protocgen.toml
+[codegen]
+docstrings = true
+```
+
+```sh
+protoc --julia_out=out --julia_opt=config=protocgen.toml addressbook.proto
+```
+
+With it enabled:
+
+- A comment above a **message** becomes the struct docstring, and every
+  field is listed in a `# Fields` section so `?MyMessage` shows them
+  (no dependency on DocStringExtensions).
+- A comment above an **enum** becomes its docstring, and a comment above
+  an **enum value** becomes a queryable docstring — `?MyEnum.VALUE` works.
+- A comment above a **oneof** documents the generated union field, with
+  its members listed as sub-bullets.
+
+```proto
+// A single book in the catalog.
+message Book {
+    // International Standard Book Number, 13-digit form.
+    string isbn = 1;
+}
+```
+
+```julia
+"""
+A single book in the catalog.
+
+# Fields
+- `isbn::String`: International Standard Book Number, 13-digit form.
+"""
+struct Book <: PB.AbstractProtoBufMessage
+    isbn::String
+    var"#unknown_fields"::Vector{UInt8}
+end
+```
+
+Leaving the flag unset (the default) generates byte-for-byte the same
+output as before. See `examples/docstrings/` for a fuller example.
+
 ## Alternatives
 
 [ProtoBuf.jl](https://github.com/JuliaIO/ProtoBuf.jl) is a good alternative.

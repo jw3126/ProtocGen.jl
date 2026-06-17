@@ -1,0 +1,71 @@
+syntax = "proto3";
+
+package docs;
+
+// A library branch: catalogs books and the members who borrow them.
+//
+// Top-level container for the whole system.
+message Library {
+  // Human-readable name of the library branch.
+  string name = 1;
+
+  // Every book currently in the catalog.
+  repeated Book books = 2;
+
+  // Registered members, keyed by their member id.
+  map<string, Member> members_by_id = 3;
+}
+
+// A single book in the catalog.
+message Book {
+  // The genre a book belongs to.
+  //
+  // Used for shelving and search filters.
+  enum Genre {
+    // Genre was never set (proto3 zero value).
+    GENRE_UNSPECIFIED = 0;
+    // Made-up stories. Includes a $variable and "quotes" to exercise escaping.
+    GENRE_FICTION = 1;
+    // Factual works.
+    GENRE_NONFICTION = 2;
+  }
+
+  // International Standard Book Number, 13-digit form.
+  string isbn = 1;
+
+  // Full title as printed on the cover.
+  string title = 2;
+
+  // Primary genre of the book.
+  Genre genre = 3;
+
+  // How the book can currently be obtained.
+  oneof availability {
+    // Number of physical copies on the shelf.
+    int32 copies_on_shelf = 4;
+    // URL to the e-book, if this is a digital-only title.
+    string ebook_url = 5;
+  }
+}
+
+// Subscription tier of a member.
+enum Membership {
+  // No tier selected.
+  MEMBERSHIP_UNSPECIFIED = 0;
+  // Standard borrowing limits.
+  MEMBERSHIP_BASIC = 1;
+  // Extended limits and early access.
+  MEMBERSHIP_PREMIUM = 2;
+}
+
+// A person who can borrow books.
+message Member {
+  // Stable unique identifier.
+  string id = 1;
+
+  // Display name shown on the membership card.
+  string name = 2;
+
+  // The member's subscription tier.
+  Membership tier = 3;
+}
