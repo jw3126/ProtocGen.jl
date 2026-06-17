@@ -1138,12 +1138,16 @@ end
 # Continuation lines of a multi-line member comment are indented under the
 # bullet. Returns "" when neither the oneof nor any member carries a comment.
 function _oneof_field_comment(doc_index, fqn, o)
-    lines = String[]
     oc = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+    member_docs = [(_field_doc(doc_index, fqn, m.proto_name), m) for m in o.members]
+    # Emit nothing when neither the oneof nor any member carries a comment —
+    # this keeps the docstrings-off path (empty `doc_index`) byte-stable, and
+    # avoids bare member bullets for an entirely uncommented oneof.
+    isempty(oc) && all(isempty(first(md)) for md in member_docs) && return ""
+    lines = String[]
     isempty(oc) || append!(lines, split(oc, '\n'))
-    for m in o.members
+    for (mc, m) in member_docs
         decl = string(m.jl_fieldname, "::", m.elem_jl_type)
-        mc = _field_doc(doc_index, fqn, m.proto_name)
         if isempty(mc)
             push!(lines, string("- ", decl))
         else

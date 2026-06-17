@@ -53,6 +53,9 @@ end
     @test !occursin("# Fields", off)
     @test !occursin("International Standard Book Number", off)
     @test !occursin("Subscription tier of a member.", off)
+    # Not even the bare leading `#` comment lines (incl. oneof member bullets)
+    # leak in — the off path must stay byte-identical to the pre-feature output.
+    @test !occursin("\n    # ", off)
 end
 
 @testset "docstrings: queryable after eval" begin
