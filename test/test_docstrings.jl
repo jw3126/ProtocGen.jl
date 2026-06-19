@@ -2,6 +2,8 @@ module TestDocstrings
 
 include("setup.jl")
 
+import Markdown
+
 # Drive codegen directly (not through the plugin protocol) so we can flip the
 # `[codegen] docstrings` config on and off. `docs.pb` is the only fixture
 # captured WITH `--include_source_info`, so it carries the `//` comments.
@@ -36,7 +38,7 @@ end
 
     # Oneof comment -> field docstring; members listed as `-` bullets inside it.
     @test occursin("How the book can currently be obtained.", src)
-    @test occursin("Number of physical copies on the shelf.", src)
+    @test occursin("Number of physical copies on the shelf", src)
     # oneof-member bullet: continuation line indented under the bullet, still
     # inside the triple-quoted field docstring block.
     @test occursin("\n      Second line, to exercise sub-bullet continuation", src)
@@ -47,6 +49,15 @@ end
         src,
     )
     @test occursin("  - `copies_on_shelf::Int32`: Number of physical copies", src)
+
+    # Markdown escaping: bare `snake_case` and `*asterisks*` in comment prose get
+    # their emphasis chars backslash-escaped (`\\_`, `\\*`) so they render
+    # verbatim. Existing inline-code spans (`` `ebook_url` ``) are left untouched.
+    @test occursin("copies\\\\_on\\\\_shelf", src)
+    @test occursin("snake\\\\_case", src)
+    @test occursin("\\\\*excludes\\\\*", src)
+    @test occursin("`ebook_url`", src)            # already-quoted: not double-escaped
+    @test !occursin("`ebook\\\\_url`", src)
 
     # Escaping: `$` and `"` in a comment survive into a valid literal.
     @test occursin("\\\$variable", src)
@@ -71,12 +82,27 @@ end
     src = gen_docs(; docstrings = true)
     mod = eval_generated(src, :GeneratedDocs)
     docof(expr) = string(Core.eval(mod, :(@doc $expr)))
+    # Render the docstring the way `?T` does, so we test the user-facing output
+    # after Markdown parsing — this is where unescaped `snake_case` would mangle.
+    function rendered(expr)
+        d = Core.eval(mod, :(@doc $expr))
+        return repr(MIME("text/plain"), Markdown.parse(join(collect(d.text))))
+    end
 
     # Struct docstring carries the message comment plus a `# Fields` section, so
     # both the message text and every field comment surface through `@doc Book`.
     @test occursin("A single book in the catalog.", docof(:Book))
     @test occursin("# Fields", docof(:Book))
     @test occursin("International Standard Book Number", docof(:Book))
+
+    # Escaping pays off here: in the *rendered* doc, `snake_case` identifiers and
+    # `*asterisks*` survive verbatim instead of being eaten as Markdown emphasis.
+    book = rendered(:Book)
+    @test occursin("copies_on_shelf", book)
+    @test !occursin("copiesonshelf", book)
+    @test occursin("snake_case", book)
+    @test occursin("*excludes*", book)
+    @test !occursin("excludes reserved holds", book)   # would mean `*` was eaten
 
     # Enum + enum value docs are individually queryable.
     @test occursin("The genre a book belongs to.", docof(:(var"Book.Genre")))

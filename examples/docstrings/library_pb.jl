@@ -37,8 +37,11 @@ A single book in the catalog.
 - `isbn::String`: International Standard Book Number, 13-digit form.
 - `title::String`: Full title as printed on the cover.
 - `genre::var"Book.Genre".T`: Primary genre of the book.
-- `availability::Union{Nothing,OneOf{<:Union{Int32,String}}}`: How the book can currently be obtained.
-  - `copies_on_shelf::Int32`: Number of physical copies on the shelf.
+- `availability::Union{Nothing,OneOf{<:Union{Int32,String}}}`: How the book can currently be obtained. Set copies\\_on\\_shelf for physical
+  stock or `ebook_url` for digital titles: bare snake\\_case like
+  copies\\_on\\_shelf is auto-escaped so it renders verbatim, while the
+  already-quoted `ebook_url` is left untouched.
+  - `copies_on_shelf::Int32`: Number of physical copies on the shelf; \\*excludes\\* reserved holds.
   - `ebook_url::String`: URL to the e-book, if this is a digital-only title.
 """
 struct Book <: PB.AbstractProtoBufMessage
@@ -49,8 +52,11 @@ struct Book <: PB.AbstractProtoBufMessage
     "Primary genre of the book."
     genre::var"Book.Genre".T
     """
-    How the book can currently be obtained.
-    - copies_on_shelf::Int32: Number of physical copies on the shelf.
+    How the book can currently be obtained. Set copies\\_on\\_shelf for physical
+    stock or `ebook_url` for digital titles: bare snake\\_case like
+    copies\\_on\\_shelf is auto-escaped so it renders verbatim, while the
+    already-quoted `ebook_url` is left untouched.
+    - copies_on_shelf::Int32: Number of physical copies on the shelf; \\*excludes\\* reserved holds.
     - ebook_url::String: URL to the e-book, if this is a digital-only title.
     """
     availability::Union{Nothing,OneOf{<:Union{Int32,String}}}
@@ -206,7 +212,7 @@ end
 """
 A library branch: catalogs books and the members who borrow them.
 
-This is the top-level container for the whole system. Leading_detached
+This is the top-level container for the whole system. Leading\\_detached
 comments (separated by a blank line) are dropped; this paragraph and the
 one above form the message's leading comment.
 

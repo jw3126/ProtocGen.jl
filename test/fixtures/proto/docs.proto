@@ -39,9 +39,11 @@ message Book {
   // Primary genre of the book.
   Genre genre = 3;
 
-  // How the book can currently be obtained.
+  // How the book can currently be obtained. Set copies_on_shelf for physical
+  // stock or `ebook_url` for digital titles: bare snake_case is auto-escaped so
+  // it renders verbatim, while the already-quoted `ebook_url` is left as-is.
   oneof availability {
-    // Number of physical copies on the shelf.
+    // Number of physical copies on the shelf; *excludes* reserved holds.
     // Second line, to exercise sub-bullet continuation indentation.
     int32 copies_on_shelf = 4;
     // URL to the e-book, if this is a digital-only title.
