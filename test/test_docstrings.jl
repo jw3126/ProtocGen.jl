@@ -16,11 +16,12 @@ end
 @testset "docstrings: emitted text" begin
     src = gen_docs(; docstrings = true)
 
-    # Message comment -> struct docstring; field comment -> per-field docstring
-    # (string literal above the struct field, not a `#` comment or `# Fields`
-    # section).
+    # Message comment -> struct docstring lead paragraph, followed by a `# Fields`
+    # section that lists each field's comment. Field comments are ALSO emitted as
+    # per-field docstrings (string literals above the struct field).
     @test occursin("A single book in the catalog.", src)
-    @test !occursin("# Fields", src)
+    @test occursin("# Fields", src)
+    @test occursin("- `isbn::String`: International Standard Book Number", src)
     @test occursin("    \"International Standard Book Number", src)
 
     # Enum comment -> docstring above @enumx; value comments -> queryable
@@ -39,6 +40,13 @@ end
     # oneof-member bullet: continuation line indented under the bullet, still
     # inside the triple-quoted field docstring block.
     @test occursin("\n      Second line, to exercise sub-bullet continuation", src)
+    # In the `# Fields` section the oneof is one bullet with its members as
+    # indented sub-bullets.
+    @test occursin(
+        "- `availability::Union{Nothing,OneOf{<:Union{Int32,String}}}`: How the book",
+        src,
+    )
+    @test occursin("  - `copies_on_shelf::Int32`: Number of physical copies", src)
 
     # Escaping: `$` and `"` in a comment survive into a valid literal.
     @test occursin("\\\$variable", src)
@@ -64,9 +72,10 @@ end
     mod = eval_generated(src, :GeneratedDocs)
     docof(expr) = string(Core.eval(mod, :(@doc $expr)))
 
-    # Struct docstring carries the message comment, and each field comment is a
-    # real per-field docstring, so both surface through `@doc Book`.
+    # Struct docstring carries the message comment plus a `# Fields` section, so
+    # both the message text and every field comment surface through `@doc Book`.
     @test occursin("A single book in the catalog.", docof(:Book))
+    @test occursin("# Fields", docof(:Book))
     @test occursin("International Standard Book Number", docof(:Book))
 
     # Enum + enum value docs are individually queryable.

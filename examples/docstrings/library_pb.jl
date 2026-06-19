@@ -30,7 +30,17 @@ Used for shelving and search filters.
 @enumbatteries var"Book.Genre".T typesalt=0x7f1943791a07523a
 PB._enum_proto_prefix(::Type{var"Book.Genre".T}) = "GENRE_"
 
-"A single book in the catalog."
+"""
+A single book in the catalog.
+
+# Fields
+- `isbn::String`: International Standard Book Number, 13-digit form.
+- `title::String`: Full title as printed on the cover.
+- `genre::var"Book.Genre".T`: Primary genre of the book.
+- `availability::Union{Nothing,OneOf{<:Union{Int32,String}}}`: How the book can currently be obtained.
+  - `copies_on_shelf::Int32`: Number of physical copies on the shelf.
+  - `ebook_url::String`: URL to the e-book, if this is a digital-only title.
+"""
 struct Book <: PB.AbstractProtoBufMessage
     "International Standard Book Number, 13-digit form."
     isbn::String
@@ -125,7 +135,14 @@ function PB.StructHelpers.default_keywords(::Type{Book})
     return (;isbn = "", title = "", genre = var"Book.Genre".UNSPECIFIED, availability = nothing, var"#unknown_fields" = UInt8[])
 end
 
-"A person who can borrow books."
+"""
+A person who can borrow books.
+
+# Fields
+- `id::String`: Stable unique identifier.
+- `name::String`: Display name shown on the membership card.
+- `tier::Membership.T`: The member's subscription tier.
+"""
 struct Member <: PB.AbstractProtoBufMessage
     "Stable unique identifier."
     id::String
@@ -192,6 +209,11 @@ A library branch: catalogs books and the members who borrow them.
 This is the top-level container for the whole system. Leading_detached
 comments (separated by a blank line) are dropped; this paragraph and the
 one above form the message's leading comment.
+
+# Fields
+- `name::String`: Human-readable name of the library branch.
+- `books::Vector{Book}`: Every book currently in the catalog, in no particular order.
+- `members_by_id::OrderedDict{String,Member}`: Registered members, keyed by their member id.
 """
 struct Library <: PB.AbstractProtoBufMessage
     "Human-readable name of the library branch."

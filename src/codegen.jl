@@ -48,7 +48,8 @@ end
 # Docstring retention. Opt-in via `[codegen] docstrings = true`. When enabled,
 # `.proto` comments captured by protoc in `FileDescriptorProto.source_code_info`
 # are carried into the generated Julia as docstrings: message comment → struct
-# docstring, field comment → field docstring (string literal above the field), enum
+# docstring (with a `# Fields` section listing each field's comment), field
+# comment → field docstring (string literal above the field) as well, enum
 # comment → docstring above `@enumx`, enum-value comment → queryable doc
 # attached after the declaration.
 # ----------------------------------------------------------------------------
@@ -1104,14 +1105,58 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
-# Emit the message comment as the struct's docstring (opt-in; a no-op when the
-# message carries no comment). Field comments are NOT folded in here — they are
-# emitted as per-field docstrings above each field by `_emit_field_comment`.
-function _emit_struct_docstring(io, doc_index, fqn)
+# One `# Fields` bullet. Continuation lines of a multi-line comment are indented
+# by `pad` so they render under the bullet rather than as a new list item — two
+# spaces for a top-level bullet, four for an indented oneof-member sub-bullet.
+function _field_bullet(decl, comment; pad = "  ")
+    isempty(comment) ? string("- `", decl, "`") :
+    string("- `", decl, "`: ", replace(comment, "\n" => string("\n", pad)))
+end
+
+# Emit the struct's docstring (opt-in; a no-op when nothing is documented). The
+# message comment is the lead paragraph; every plain field and oneof is then
+# listed in a `# Fields` section — with its comment when present — so `?T` shows
+# the full field reference without the generated module needing to depend on
+# DocStringExtensions. Field comments are ALSO emitted as per-field docstrings
+# above each field by `_emit_field_comment`; this section is what surfaces them
+# in `@doc T`, since Julia does not fold field docstrings into the type's doc.
+function _emit_struct_docstring(io, doc_index, fqn, plain_fields, real_oneofs)
     isempty(doc_index) && return
     msg_doc = get(doc_index, fqn, "")
-    isempty(msg_doc) && return
-    println(io, _doc_literal(msg_doc))
+    comments = String[]               # every comment, to test if any is present
+    fieldlines = String["# Fields"]
+    for f in plain_fields
+        c = get(doc_index, string("f:", fqn, ".", f.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(f.jl_fieldname, "::", f.jl_type), c))
+    end
+    for o in real_oneofs
+        c = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(o.jl_fieldname, "::", _oneof_jl_type(o)), c))
+        # oneof members are folded into the union field; list them as sub-bullets.
+        for m in o.members
+            mc = get(doc_index, string("f:", fqn, ".", m.proto_name), "")
+            push!(comments, mc)
+            push!(
+                fieldlines,
+                string(
+                    "  ",
+                    _field_bullet(
+                        string(m.jl_fieldname, "::", m.elem_jl_type),
+                        mc;
+                        pad = "    ",
+                    ),
+                ),
+            )
+        end
+    end
+    any_field_doc = any(!isempty, comments)
+    (isempty(msg_doc) && !any_field_doc) && return
+    parts = String[]
+    isempty(msg_doc) || push!(parts, msg_doc)
+    push!(parts, join(fieldlines, "\n"))
+    println(io, _doc_literal(join(parts, "\n\n")))
     return
 end
 
@@ -1122,11 +1167,13 @@ end
 
 # Emit `comment` as a real Julia field docstring: a string literal indented into
 # the struct body, directly above the field declaration. Julia attaches such a
-# literal to the following field as a queryable docstring (and folds it into the
-# struct's own docs), unlike a `#` comment which is dropped. Each emitted line is
-# indented by 4 spaces; the triple-quoted form's common indent is stripped back
-# off by Julia's docstring dedent, leaving the original comment text. No-op for
-# an empty comment.
+# literal to the following field as a queryable docstring (reachable via
+# `Docs.fielddoc`), unlike a `#` comment which is dropped. The same text is also
+# folded into the struct docstring's `# Fields` section by `_emit_struct_docstring`,
+# since Julia does not surface field docstrings in `@doc T` on its own. Each
+# emitted line is indented by 4 spaces; the triple-quoted form's common indent is
+# stripped back off by Julia's docstring dedent, leaving the original comment
+# text. No-op for an empty comment.
 function _emit_field_comment(io, comment)
     isempty(comment) && return
     lit = _doc_literal(comment)
@@ -1248,7 +1295,7 @@ function _emit_message(
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
-    _emit_struct_docstring(io, doc_index, proto_fqn)
+    _emit_struct_docstring(io, doc_index, proto_fqn, plain_fields, real_oneofs)
     println(
         io,
         is_cycle_participant ? "struct $(jl_name) <: $(_abstract_name(jl_name))" :
