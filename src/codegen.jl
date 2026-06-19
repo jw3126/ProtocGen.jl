@@ -51,8 +51,9 @@ end
 # docstring (with a `# Fields` section listing each field's comment), field
 # comment → field docstring (string literal above the field) as well, enum
 # comment → docstring above `@enumx`, enum-value comment → queryable doc
-# attached after the declaration. Markdown emphasis chars (`_`, `*`) in comment
-# prose are escaped so `snake_case` identifiers render verbatim (`_md_escape`).
+# attached after the declaration. Field/oneof-member declarations are wrapped in
+# backticks (as DocStringExtensions does) so their `snake_case` survives Markdown
+# rendering; comment prose is passed through verbatim and is the author's to format.
 # ----------------------------------------------------------------------------
 
 # Read `[codegen] docstrings = …`; default false so the feature is opt-in and
@@ -81,31 +82,6 @@ function _clean_comment(s::AbstractString)
     lines = split(s, '\n')
     cleaned = map(ln -> startswith(ln, ' ') ? ln[2:end] : ln, lines)
     return String(strip(join(cleaned, '\n')))
-end
-
-# Escape the Markdown emphasis metacharacters `_` and `*` in comment prose so
-# `snake_case` identifiers and literal asterisks render verbatim in `?T` instead
-# of being parsed as italics (Julia's Markdown treats intraword `_`/`*` pairs as
-# emphasis, e.g. `copies_on_shelf` → `copiesonshelf`). Text already inside an
-# inline-code span (single backticks) is left untouched — escaping there would
-# surface literal backslashes — so a comment that already writes `code` keeps
-# working. `.proto` comments are plain text, so this never drops intended
-# formatting. Assumes single-backtick code spans (the norm in proto comments);
-# multi-backtick delimiters are not tracked.
-function _md_escape(s::AbstractString)
-    out = IOBuffer()
-    in_code = false
-    for c in s
-        if c == '`'
-            in_code = !in_code
-            print(out, c)
-        elseif !in_code && (c == '_' || c == '*')
-            print(out, '\\', c)
-        else
-            print(out, c)
-        end
-    end
-    return String(take!(out))
 end
 
 # Render `comment` as a Julia docstring literal. Single-line comments use a
@@ -143,10 +119,7 @@ function _build_doc_index(file::FileDescriptorProto)
         end
         c = _clean_comment(raw)
         isempty(c) && continue
-        # Escape Markdown metacharacters once, here at the single point every
-        # comment enters the index, so message/field/oneof/enum docs are all
-        # rendered verbatim downstream.
-        by_path[copy(loc.path)] = _md_escape(c)
+        by_path[copy(loc.path)] = c
     end
     isempty(by_path) && return index
     pkg = something(file.package, "")

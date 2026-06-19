@@ -50,15 +50,6 @@ end
     )
     @test occursin("  - `copies_on_shelf::Int32`: Number of physical copies", src)
 
-    # Markdown escaping: bare `snake_case` and `*asterisks*` in comment prose get
-    # their emphasis chars backslash-escaped (`\\_`, `\\*`) so they render
-    # verbatim. Existing inline-code spans (`` `ebook_url` ``) are left untouched.
-    @test occursin("copies\\\\_on\\\\_shelf", src)
-    @test occursin("snake\\\\_case", src)
-    @test occursin("\\\\*excludes\\\\*", src)
-    @test occursin("`ebook_url`", src)            # already-quoted: not double-escaped
-    @test !occursin("`ebook\\\\_url`", src)
-
     # Escaping: `$` and `"` in a comment survive into a valid literal.
     @test occursin("\\\$variable", src)
     @test occursin("\\\"quotes\\\"", src)
@@ -82,12 +73,6 @@ end
     src = gen_docs(; docstrings = true)
     mod = eval_generated(src, :GeneratedDocs)
     docof(expr) = string(Core.eval(mod, :(@doc $expr)))
-    # Render the docstring the way `?T` does, so we test the user-facing output
-    # after Markdown parsing — this is where unescaped `snake_case` would mangle.
-    function rendered(expr)
-        d = Core.eval(mod, :(@doc $expr))
-        return repr(MIME("text/plain"), Markdown.parse(join(collect(d.text))))
-    end
 
     # Struct docstring carries the message comment plus a `# Fields` section, so
     # both the message text and every field comment surface through `@doc Book`.
@@ -95,18 +80,11 @@ end
     @test occursin("# Fields", docof(:Book))
     @test occursin("International Standard Book Number", docof(:Book))
 
-    # Escaping pays off here: in the *rendered* doc, `snake_case` identifiers and
-    # `*asterisks*` survive verbatim instead of being eaten as Markdown emphasis.
-    book = rendered(:Book)
-    @test occursin("copies_on_shelf", book)
-    @test !occursin("copiesonshelf", book)
-    @test occursin("snake_case", book)
-    @test occursin("*excludes*", book)
-    @test !occursin("excludes reserved holds", book)   # would mean `*` was eaten
-
     # The per-field oneof docstring (`?Book.availability`) lists members as
-    # `` - `name::Type` `` bullets; the backticked decl must keep the member's
-    # `snake_case` name intact when rendered, not just the prose.
+    # `` - `name::Type` `` bullets; the backticked decl keeps the member's
+    # `snake_case` name intact when rendered as Markdown (as DSE does for field
+    # names) — without the backticks `copies_on_shelf` would mangle to
+    # `copiesonshelf`.
     fields =
         first(values(Base.Docs.meta(mod)[Base.Docs.Binding(mod, :Book)].docs)).data[:fields]
     avail = repr(MIME("text/plain"), Markdown.parse(fields[:availability]))
