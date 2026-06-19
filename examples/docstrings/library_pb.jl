@@ -32,15 +32,17 @@ PB._enum_proto_prefix(::Type{var"Book.Genre".T}) = "GENRE_"
 
 "A single book in the catalog."
 struct Book <: PB.AbstractProtoBufMessage
-    # International Standard Book Number, 13-digit form.
+    "International Standard Book Number, 13-digit form."
     isbn::String
-    # Full title as printed on the cover.
+    "Full title as printed on the cover."
     title::String
-    # Primary genre of the book.
+    "Primary genre of the book."
     genre::var"Book.Genre".T
-    # How the book can currently be obtained.
-    # - copies_on_shelf::Int32: Number of physical copies on the shelf.
-    # - ebook_url::String: URL to the e-book, if this is a digital-only title.
+    """
+    How the book can currently be obtained.
+    - copies_on_shelf::Int32: Number of physical copies on the shelf.
+    - ebook_url::String: URL to the e-book, if this is a digital-only title.
+    """
     availability::Union{Nothing,OneOf{<:Union{Int32,String}}}
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -125,11 +127,11 @@ end
 
 "A person who can borrow books."
 struct Member <: PB.AbstractProtoBufMessage
-    # Stable unique identifier.
+    "Stable unique identifier."
     id::String
-    # Display name shown on the membership card.
+    "Display name shown on the membership card."
     name::String
-    # The member's subscription tier.
+    "The member's subscription tier."
     tier::Membership.T
     var"#unknown_fields"::Vector{UInt8}
 end
@@ -192,11 +194,11 @@ comments (separated by a blank line) are dropped; this paragraph and the
 one above form the message's leading comment.
 """
 struct Library <: PB.AbstractProtoBufMessage
-    # Human-readable name of the library branch.
+    "Human-readable name of the library branch."
     name::String
-    # Every book currently in the catalog, in no particular order.
+    "Every book currently in the catalog, in no particular order."
     books::Vector{Book}
-    # Registered members, keyed by their member id.
+    "Registered members, keyed by their member id."
     members_by_id::OrderedDict{String,Member}
     var"#unknown_fields"::Vector{UInt8}
 end

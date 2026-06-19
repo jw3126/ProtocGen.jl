@@ -48,7 +48,7 @@ end
 # Docstring retention. Opt-in via `[codegen] docstrings = true`. When enabled,
 # `.proto` comments captured by protoc in `FileDescriptorProto.source_code_info`
 # are carried into the generated Julia as docstrings: message comment → struct
-# docstring, field comment → leading `#` comment above the struct field, enum
+# docstring, field comment → field docstring (string literal above the field), enum
 # comment → docstring above `@enumx`, enum-value comment → queryable doc
 # attached after the declaration.
 # ----------------------------------------------------------------------------
@@ -1106,7 +1106,7 @@ end
 
 # Emit the message comment as the struct's docstring (opt-in; a no-op when the
 # message carries no comment). Field comments are NOT folded in here — they are
-# emitted as leading `#` comments above each field by `_emit_field_comment`.
+# emitted as per-field docstrings above each field by `_emit_field_comment`.
 function _emit_struct_docstring(io, doc_index, fqn)
     isempty(doc_index) && return
     msg_doc = get(doc_index, fqn, "")
@@ -1120,14 +1120,18 @@ function _field_doc(doc_index, fqn, proto_name)
     get(doc_index, string("f:", fqn, ".", proto_name), "")
 end
 
-# Emit `comment` as `#`-prefixed lines indented into the struct body, so it sits
-# directly above the field declaration. Each source line keeps its own `#`;
-# blank continuation lines (multi-paragraph comments) stay bare `#`. No-op for
+# Emit `comment` as a real Julia field docstring: a string literal indented into
+# the struct body, directly above the field declaration. Julia attaches such a
+# literal to the following field as a queryable docstring (and folds it into the
+# struct's own docs), unlike a `#` comment which is dropped. Each emitted line is
+# indented by 4 spaces; the triple-quoted form's common indent is stripped back
+# off by Julia's docstring dedent, leaving the original comment text. No-op for
 # an empty comment.
 function _emit_field_comment(io, comment)
     isempty(comment) && return
-    for ln in split(comment, '\n')
-        println(io, isempty(ln) ? "    #" : string("    # ", ln))
+    lit = _doc_literal(comment)
+    for ln in split(lit, '\n')
+        println(io, string("    ", ln))
     end
     return
 end
