@@ -56,8 +56,8 @@ struct Book <: PB.AbstractProtoBufMessage
     stock or `ebook_url` for digital titles: bare snake\\_case like
     copies\\_on\\_shelf is auto-escaped so it renders verbatim, while the
     already-quoted `ebook_url` is left untouched.
-    - copies_on_shelf::Int32: Number of physical copies on the shelf; \\*excludes\\* reserved holds.
-    - ebook_url::String: URL to the e-book, if this is a digital-only title.
+    - `copies_on_shelf::Int32`: Number of physical copies on the shelf; \\*excludes\\* reserved holds.
+    - `ebook_url::String`: URL to the e-book, if this is a digital-only title.
     """
     availability::Union{Nothing,OneOf{<:Union{Int32,String}}}
     var"#unknown_fields"::Vector{UInt8}

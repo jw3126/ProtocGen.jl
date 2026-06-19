@@ -1213,8 +1213,10 @@ function _emit_field_comment(io, comment)
 end
 
 # Build the leading comment for a real-oneof field. The oneof's own comment
-# leads; each member is then listed as a `- name::Type: comment` bullet (members
-# have no struct line of their own, so their docs would otherwise be lost).
+# leads; each member is then listed as a `` - `name::Type`: comment `` bullet
+# (members have no struct line of their own, so their docs would otherwise be
+# lost). The `name::Type` decl is wrapped in backticks so its `snake_case`
+# survives Markdown rendering verbatim (same as the `# Fields` section and DSE).
 # Continuation lines of a multi-line member comment are indented under the
 # bullet. Returns "" when neither the oneof nor any member carries a comment.
 function _oneof_field_comment(doc_index, fqn, o)
@@ -1227,7 +1229,7 @@ function _oneof_field_comment(doc_index, fqn, o)
     lines = String[]
     isempty(oc) || append!(lines, split(oc, '\n'))
     for (mc, m) in member_docs
-        decl = string(m.jl_fieldname, "::", m.elem_jl_type)
+        decl = string("`", m.jl_fieldname, "::", m.elem_jl_type, "`")
         if isempty(mc)
             push!(lines, string("- ", decl))
         else

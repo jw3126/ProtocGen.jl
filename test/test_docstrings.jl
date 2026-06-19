@@ -104,6 +104,15 @@ end
     @test occursin("*excludes*", book)
     @test !occursin("excludes reserved holds", book)   # would mean `*` was eaten
 
+    # The per-field oneof docstring (`?Book.availability`) lists members as
+    # `` - `name::Type` `` bullets; the backticked decl must keep the member's
+    # `snake_case` name intact when rendered, not just the prose.
+    fields =
+        first(values(Base.Docs.meta(mod)[Base.Docs.Binding(mod, :Book)].docs)).data[:fields]
+    avail = repr(MIME("text/plain"), Markdown.parse(fields[:availability]))
+    @test occursin("copies_on_shelf::Int32", avail)
+    @test !occursin("copiesonshelf", avail)
+
     # Enum + enum value docs are individually queryable.
     @test occursin("The genre a book belongs to.", docof(:(var"Book.Genre")))
     @test occursin("Made-up stories.", docof(:(var"Book.Genre".FICTION)))
