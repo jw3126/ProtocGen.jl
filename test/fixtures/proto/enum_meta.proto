@@ -19,3 +19,12 @@ enum Color {
   COLOR_GREEN = 2 [(color_hex) = "00ff00", (priority) = 2, (experimental) = true];
   COLOR_BLUE = 3 [(color_hex) = "0000ff"];
 }
+
+// An enum that sets none of the custom options above. With the universe-wide
+// schema non-empty (because `Color` uses it), this enum still gets an
+// `enum_metadata` accessor — but one that returns an empty NamedTuple.
+enum Shade {
+  SHADE_UNSPECIFIED = 0;
+  SHADE_LIGHT = 1;
+  SHADE_DARK = 2;
+}

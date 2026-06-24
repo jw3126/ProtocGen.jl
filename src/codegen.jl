@@ -2078,6 +2078,23 @@ function _emit_enum_metadata(
 )
     isempty(schema) && return
     by_number = Dict{Int32,EnumMetaField}(f.number => f for f in schema)
+    # The schema is universe-wide: it's non-empty as soon as *any* proto file
+    # declares a scalar `EnumValueOptions` extension. An enum whose values set
+    # none of those options carries no metadata of its own — emit an empty,
+    # type-stable `(;)` accessor rather than a NamedTuple of bare defaults, so
+    # `enum_metadata` answers uniformly across every enum in a module that
+    # exposes the feature without inventing metadata the enum doesn't have.
+    if !any(v -> !isempty(_decode_enum_metadata(v.options, by_number)), e.value)
+        println(
+            io,
+            "function PB.enum_metadata(x::",
+            jl_name,
+            ".T)::NamedTuple{(), Tuple{}}",
+        )
+        println(io, "    return (;)")
+        println(io, "end")
+        return
+    end
     n = length(schema)
     names_tuple =
         n == 1 ? string("(:", schema[1].name, ",)") :
