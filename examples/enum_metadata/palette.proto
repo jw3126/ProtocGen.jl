@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package palette;
+
+import "google/protobuf/descriptor.proto";
+
+// Presentation metadata attached to individual enum values via custom
+// options. Field numbers live in the user-extension range (>= 50000).
+//
+// With `[codegen] enum_metadata = true`, ProtocGen surfaces these as a
+// type-stable `enum_metadata(value)::NamedTuple` accessor in the generated
+// Julia (see palette_pb.jl). Only scalar options are supported.
+extend google.protobuf.EnumValueOptions {
+  // Hex RGB string a UI can render the swatch with.
+  string hex = 50001;
+  // Sort order in a color picker.
+  int32 sort_order = 50002;
+  // Hide the value from default pickers.
+  bool hidden = 50003;
+}
+
+// A named color carrying display metadata on each value.
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1 [(hex) = "ff0000", (sort_order) = 1];
+  COLOR_GREEN = 2 [(hex) = "00ff00", (sort_order) = 2];
+  COLOR_BLUE = 3 [(hex) = "0000ff", (sort_order) = 3, (hidden) = true];
+}

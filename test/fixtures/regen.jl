@@ -85,6 +85,9 @@ const DESCRIPTOR_SETS = [
     # MWE for issue #14: a oneof with multiple arms sharing the same
     # message type. The generated `Union{...}` must deduplicate.
     "oneof_dup.proto",
+    # Scalar `extend google.protobuf.EnumValueOptions` custom options on
+    # enum values, backing the opt-in `enum_metadata` feature.
+    "enum_meta.proto",
 ]
 
 # .proto files captured WITH `--include_source_info`, so the FileDescriptorSet

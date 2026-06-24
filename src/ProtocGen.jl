@@ -128,7 +128,23 @@ include("wkt.jl")
 include("json_wkt.jl")
 include("testing.jl")
 
+"""
+    enum_metadata(x) -> NamedTuple
+
+Return the custom protobuf options attached to enum value `x` as a `NamedTuple`.
+
+Methods are generated (one per enum) only when codegen runs with
+`[codegen] enum_metadata = true` *and* the proto tree declares at least one
+scalar `extend google.protobuf.EnumValueOptions { … }` field. The returned
+`NamedTuple` has a fixed, type-stable shape: one entry per declared option,
+filled with the value set on `x` or that option's default when unset. Calling
+this on an enum for which no methods were generated is a `MethodError` by
+design — there is no empty-tuple fallback.
+"""
+function enum_metadata end
+
 export encode, decode, encode_json, decode_json
+export enum_metadata
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields,
     extendable_field_numbers, oneof_field_types, field_numbers, json_field_names

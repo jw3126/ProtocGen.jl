@@ -64,6 +64,16 @@ function _docstrings_enabled(config::AbstractDict)
     return get(cg, "docstrings", false) === true
 end
 
+# Read `[codegen] enum_metadata = …`; default false so the feature is opt-in and
+# the default generated output stays byte-for-byte unchanged. When enabled and
+# the proto tree declares scalar `extend google.protobuf.EnumValueOptions`
+# fields, codegen emits a `PB.enum_metadata(::SomeEnum.T)` method per enum.
+function _enum_metadata_enabled(config::AbstractDict)
+    cg = get(config, "codegen", nothing)
+    cg isa AbstractDict || return false
+    return get(cg, "enum_metadata", false) === true
+end
+
 # Descriptor field numbers, used to walk SourceCodeInfo location paths. A path
 # is the field-number trail from the file root to an element; e.g. message i is
 # `[4, i]`, its field j is `[4, i, 2, j]`. See descriptor.proto's SourceCodeInfo.
@@ -381,6 +391,74 @@ end
 # the bootstrap convention.
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Enum-value custom-option metadata (opt-in `enum_metadata`). Users declare
+# `extend google.protobuf.EnumValueOptions { … }` and set the options on enum
+# values (`RED = 0 [(my_meta) = "ff0000"];`). protoc resolves those into the
+# *unknown fields* of each value's `EnumValueOptions` (the generated descriptor
+# struct has no typed field for them), so we recover them by decoding the raw
+# bytes against the extension schema collected here. One `EnumMetaField` per
+# scalar extension; message/group/enum-valued options are skipped (see below).
+# ----------------------------------------------------------------------------
+struct EnumMetaField
+    number::Int32
+    name::String                              # NamedTuple key / extension short name
+    proto_type::var"FieldDescriptorProto.Type".T
+    default_value::Union{Nothing,String}      # proto2 `default = …`; nothing → type zero
+end
+
+# Scan every input file for `extend google.protobuf.EnumValueOptions` fields
+# (top-level and nested in messages) and build the global, ordered schema that
+# every value's metadata NamedTuple shares. Non-scalar options can't be baked
+# into a literal without recursive type resolution, so they're skipped with a
+# warning (message/group/enum support is a follow-up). Duplicate option names
+# across packages collide on the NamedTuple key, so we error on a name reused
+# with a different field number.
+function _collect_enum_metadata_schema(files)
+    T = var"FieldDescriptorProto.Type"
+    fields = EnumMetaField[]
+    by_name = Dict{String,EnumMetaField}()
+    function consider(ext::FieldDescriptorProto)
+        something(ext.extendee, "") == ".google.protobuf.EnumValueOptions" || return
+        t = ext.type
+        name = something(ext.name, "")
+        num = something(ext.number, Int32(0))
+        if t === nothing || t === T.MESSAGE || t === T.GROUP || t === T.ENUM
+            @warn "enum_metadata: skipping non-scalar custom option (only scalar options are supported)" option =
+                name type = t
+            return
+        end
+        if haskey(by_name, name)
+            by_name[name].number == num || error(
+                "enum_metadata: option name `$name` declared with conflicting field numbers " *
+                "($(by_name[name].number) and $num)",
+            )
+            return
+        end
+        fld = EnumMetaField(num, name, t, ext.default_value)
+        by_name[name] = fld
+        push!(fields, fld)
+    end
+    function walk_msg(m::DescriptorProto)
+        for ext in m.extension
+            consider(ext)
+        end
+        for n in m.nested_type
+            walk_msg(n)
+        end
+    end
+    for f in files
+        for ext in f.extension
+            consider(ext)
+        end
+        for m in f.message_type
+            walk_msg(m)
+        end
+    end
+    sort!(fields; by = x -> x.number)
+    return fields
+end
+
 Base.@kwdef struct Universe
     messages::Set{String}        # fully-qualified names like ".sample.Outer.Inner"
     enums::Set{String}           # fully-qualified names like ".sample.MyEnum"
@@ -388,6 +466,9 @@ Base.@kwdef struct Universe
     enum_defs::Dict{String,EnumDescriptorProto}  # FQN -> the enum's descriptor
     map_entries::Dict{String,DescriptorProto}    # FQN -> map_entry synthetic message
     package_of::Dict{String,String}              # FQN -> proto package ("google.protobuf")
+    # Global scalar `EnumValueOptions` extension schema; empty unless the proto
+    # tree declares such extensions. Drives `enum_metadata` emission.
+    enum_metadata_schema::Vector{EnumMetaField} = EnumMetaField[]
 end
 
 # Map from proto package name to Julia module path. Cross-package references
@@ -519,6 +600,7 @@ function gather_universe(files)
         enum_defs = Dict{String,EnumDescriptorProto}(),
         map_entries = Dict{String,DescriptorProto}(),
         package_of = Dict{String,String}(),
+        enum_metadata_schema = _collect_enum_metadata_schema(files),
     )
     for f in files
         _add_file_to_universe!(u, f)
@@ -1225,6 +1307,7 @@ function _emit_message(
     batteries_kw::String = "",
     enumbatteries_kw::String = "",
     doc_index::AbstractDict = Dict{String,String}(),
+    enum_metadata_schema::AbstractVector{EnumMetaField} = EnumMetaField[],
 )
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1254,6 +1337,7 @@ function _emit_message(
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
             doc_index = doc_index,
+            enum_metadata_schema = enum_metadata_schema,
         )
     end
     for nested in msg.nested_type
@@ -1888,6 +1972,148 @@ function _emit_enum_value_docs(io, doc_index, fqn, jl_name, e, strip_value)
     return
 end
 
+# Decode one scalar custom option from the wire, given its proto type. Mirrors
+# the per-type dispatch the generated message decoders use; runs at codegen
+# time over the captured option bytes (not in generated code).
+function _decode_meta_scalar(d, t)
+    T = var"FieldDescriptorProto.Type"
+    t === T.DOUBLE && return ProtocGen._decode(d, Float64)
+    t === T.FLOAT && return ProtocGen._decode(d, Float32)
+    t === T.INT64 && return ProtocGen._decode(d, Int64)
+    t === T.UINT64 && return ProtocGen._decode(d, UInt64)
+    t === T.INT32 && return ProtocGen._decode(d, Int32)
+    t === T.FIXED64 && return ProtocGen._decode(d, UInt64, Val{:fixed})
+    t === T.FIXED32 && return ProtocGen._decode(d, UInt32, Val{:fixed})
+    t === T.BOOL && return ProtocGen._decode(d, Bool)
+    t === T.STRING && return ProtocGen._decode(d, String)
+    t === T.BYTES && return ProtocGen._decode(d, Vector{UInt8})
+    t === T.UINT32 && return ProtocGen._decode(d, UInt32)
+    t === T.SFIXED32 && return ProtocGen._decode(d, Int32, Val{:fixed})
+    t === T.SFIXED64 && return ProtocGen._decode(d, Int64, Val{:fixed})
+    t === T.SINT32 && return ProtocGen._decode(d, Int32, Val{:zigzag})
+    t === T.SINT64 && return ProtocGen._decode(d, Int64, Val{:zigzag})
+    error("enum_metadata: unsupported option wire type $t")
+end
+
+# Decode the custom options set on one enum value into `number -> value`. The
+# options live in `EnumValueOptions.#unknown_fields` (protoc serializes
+# resolved extensions there); we walk the raw bytes, decode field numbers in
+# the schema, and skip everything else. Returns an empty dict when no options.
+function _decode_enum_metadata(options, by_number::AbstractDict)
+    vals = Dict{Int32,Any}()
+    options === nothing && return vals
+    bytes = options.var"#unknown_fields"
+    isempty(bytes) && return vals
+    d = ProtocGen.ProtoDecoder(IOBuffer(bytes))
+    while !ProtocGen.message_done(d, 0, false)
+        fnum, wtype = ProtocGen.decode_tag(d)
+        f = get(by_number, fnum, nothing)
+        if f === nothing
+            Base.skip(d, wtype)
+        else
+            vals[fnum] = _decode_meta_scalar(d, f.proto_type)
+        end
+    end
+    return vals
+end
+
+# Render a `Vector{UInt8}` as a Julia byte-array literal (`UInt8[0x01, 0x02]`).
+function _render_bytes_literal(bytes, nm::NameMap)
+    isempty(bytes) && return string(nm.UInt8, "[]")
+    elems = join((string("0x", string(b; base = 16, pad = 2)) for b in bytes), ", ")
+    return string(nm.UInt8, "[", elems, "]")
+end
+
+# Render a decoded option value as a Julia literal whose type matches the
+# NamedTuple field type exactly (e.g. `Int32(3)`, `Float32(1.5)`, `"x"`), so
+# every branch of the generated `if`/`elseif` chain is type-identical.
+function _render_meta_value(value, f::EnumMetaField, nm::NameMap)
+    T = var"FieldDescriptorProto.Type"
+    t = f.proto_type
+    if t === T.STRING
+        return repr(value)
+    elseif t === T.BYTES
+        return _render_bytes_literal(value, nm)
+    elseif t === T.BOOL
+        return value ? "true" : "false"
+    else
+        jl, _ = _scalar_jl_type_and_wire(t, nm)
+        return string(jl, "(", value, ")")
+    end
+end
+
+# Render the default literal for an option not set on a value: the proto2
+# `default = …` parsed to the field type, else the type's zero. Keeps the
+# NamedTuple shape uniform and type-stable across all values.
+function _render_meta_default(f::EnumMetaField, nm::NameMap)
+    T = var"FieldDescriptorProto.Type"
+    t = f.proto_type
+    jl, _ = _scalar_jl_type_and_wire(t, nm)
+    dv = f.default_value
+    dv === nothing && return _scalar_zero(jl, nm)
+    if t === T.STRING
+        return repr(dv)
+    elseif t === T.BOOL
+        return dv == "true" ? "true" : "false"
+    elseif t === T.BYTES
+        # proto2 bytes defaults are C-escaped strings; not worth decoding here.
+        return _scalar_zero(jl, nm)
+    else
+        return string(jl, "(", dv, ")")
+    end
+end
+
+# Emit the per-enum `enum_metadata` method: long-form, return-type annotated,
+# one `if`/`elseif` arm per distinct enum value (defaults filled for options it
+# doesn't set), and a final `else` that errors — unreachable because every
+# value is listed. No-op when the schema is empty (no methods generated, so a
+# call is a loud MethodError rather than a silent empty tuple).
+function _emit_enum_metadata(
+    io::IO,
+    e::EnumDescriptorProto,
+    jl_name::AbstractString,
+    strip_value,
+    schema::AbstractVector{EnumMetaField},
+    nm::NameMap,
+)
+    isempty(schema) && return
+    by_number = Dict{Int32,EnumMetaField}(f.number => f for f in schema)
+    n = length(schema)
+    names_tuple =
+        n == 1 ? string("(:", schema[1].name, ",)") :
+        string("(", join((string(":", f.name) for f in schema), ", "), ")")
+    types_tuple =
+        string("Tuple{", join((_scalar_jl_type_and_wire(f.proto_type, nm)[1] for f in schema), ", "), "}")
+    nt_type = string("NamedTuple{", names_tuple, ", ", types_tuple, "}")
+
+    println(io, "function PB.enum_metadata(x::", jl_name, ".T)::", nt_type)
+    seen = Set{Int}()
+    first = true
+    for v in e.value
+        vnum = Int(something(v.number, Int32(0)))
+        vnum in seen && continue   # alias: same instance as the canonical, already listed
+        push!(seen, vnum)
+        vname = strip_value(something(v.name, ""))
+        decoded = _decode_enum_metadata(v.options, by_number)
+        parts = String[]
+        for f in schema
+            lit =
+                haskey(decoded, f.number) ? _render_meta_value(decoded[f.number], f, nm) :
+                _render_meta_default(f, nm)
+            push!(parts, string(f.name, " = ", lit))
+        end
+        trailing = n == 1 ? "," : ""
+        println(io, "    ", first ? "if" : "elseif", " x == ", jl_name, ".", vname)
+        println(io, "        return (", join(parts, ", "), trailing, ")")
+        first = false
+    end
+    println(io, "    else")
+    println(io, "        error(\"enum_metadata: unreachable enum variant: \$x\")")
+    println(io, "    end")
+    println(io, "end")
+    return
+end
+
 function _emit_enum(
     io::IO,
     e::EnumDescriptorProto,
@@ -1897,6 +2123,7 @@ function _emit_enum(
     enumbatteries_kw::String = "",
     strip_enum_prefix::Bool = true,
     doc_index::AbstractDict = Dict{String,String}(),
+    enum_metadata_schema::AbstractVector{EnumMetaField} = EnumMetaField[],
 )
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1940,6 +2167,7 @@ function _emit_enum(
         # is what `@enumbatteries` operates on.
         println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
         _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
+        _emit_enum_metadata(io, e, jl_name, strip_value, enum_metadata_schema, nm)
         println(io)
         return
     end
@@ -1977,6 +2205,7 @@ function _emit_enum(
     _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
     println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
     _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
+    _emit_enum_metadata(io, e, jl_name, strip_value, enum_metadata_schema, nm)
     println(io)
 end
 
@@ -2256,6 +2485,12 @@ function codegen(
     # protoc sent no source_code_info, in which case every emitter is a no-op.
     doc_index = _docstrings_enabled(config) ? _build_doc_index(file) : Dict{String,String}()
 
+    # Enum-value custom-option metadata (opt-in). Empty schema when disabled or
+    # when no `extend google.protobuf.EnumValueOptions` fields exist, in which
+    # case `_emit_enum_metadata` is a no-op and the default output is unchanged.
+    meta_schema =
+        _enum_metadata_enabled(config) ? universe.enum_metadata_schema : EnumMetaField[]
+
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
     println(io, "#! format: off")
@@ -2266,6 +2501,11 @@ function codegen(
     # `encode(io, msg)` / `decode(io, T)` / `encode_json` / `decode_json`
     # work without the caller importing ProtocGen themselves.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
+    # Surface `enum_metadata` in the generated module only when methods are
+    # emitted for it, so the default preamble stays byte-for-byte unchanged.
+    if !isempty(meta_schema)
+        println(io, "using ProtocGen: enum_metadata")
+    end
     println(io, "using ProtocGen.EnumX: @enumx")
     # `@batteries` / `@enumbatteries` reach the user's namespace via
     # the ProtocGen → StructHelpers re-export, so users only need to
@@ -2331,6 +2571,9 @@ function codegen(
         _is_map_entry(msg) && continue
         push!(exports, something(msg.name, ""))
     end
+    if !isempty(meta_schema)
+        push!(exports, "enum_metadata")
+    end
     if !isempty(exports)
         println(io, "export ", join(exports, ", "))
         println(io)
@@ -2347,6 +2590,7 @@ function codegen(
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
             doc_index = doc_index,
+            enum_metadata_schema = meta_schema,
         )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
@@ -2390,6 +2634,7 @@ function codegen(
             batteries_kw = batteries_kw,
             enumbatteries_kw = enumbatteries_kw,
             doc_index = doc_index,
+            enum_metadata_schema = meta_schema,
         )
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
