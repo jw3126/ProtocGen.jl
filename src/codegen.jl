@@ -2082,8 +2082,11 @@ function _emit_enum_metadata(
     names_tuple =
         n == 1 ? string("(:", schema[1].name, ",)") :
         string("(", join((string(":", f.name) for f in schema), ", "), ")")
-    types_tuple =
-        string("Tuple{", join((_scalar_jl_type_and_wire(f.proto_type, nm)[1] for f in schema), ", "), "}")
+    types_tuple = string(
+        "Tuple{",
+        join((_scalar_jl_type_and_wire(f.proto_type, nm)[1] for f in schema), ", "),
+        "}",
+    )
     nt_type = string("NamedTuple{", names_tuple, ", ", types_tuple, "}")
 
     println(io, "function PB.enum_metadata(x::", jl_name, ".T)::", nt_type)

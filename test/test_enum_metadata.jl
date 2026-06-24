@@ -11,7 +11,8 @@ function gen_meta(; enum_metadata::Bool)
     file = only(f for f in fdset.file if something(f.name, "") == "enum_meta.proto")
     u = ProtocGen.Codegen.gather_universe(fdset.file)
     config =
-        enum_metadata ? Dict("codegen" => Dict("enum_metadata" => true)) : Dict{String,Any}()
+        enum_metadata ? Dict("codegen" => Dict("enum_metadata" => true)) :
+        Dict{String,Any}()
     return ProtocGen.Codegen.codegen(file, u; config = config)
 end
 
@@ -32,13 +33,15 @@ end
     )
     # Every variant explicit; unset options fall back to defaults.
     @test occursin("if x == Color.UNSPECIFIED", src)
-    @test occursin("return (color_hex = \"\", priority = zero(Int32), experimental = false)", src)
+    @test occursin(
+        "return (color_hex = \"\", priority = zero(Int32), experimental = false)",
+        src,
+    )
     @test occursin(
         "return (color_hex = \"ff0000\", priority = Int32(3), experimental = false)",
         src,
     )
-    @test occursin("(experimental = true)", src) ||
-          occursin("experimental = true)", src)
+    @test occursin("(experimental = true)", src) || occursin("experimental = true)", src)
     # Final else is the unreachable guard.
     @test occursin("error(\"enum_metadata: unreachable enum variant: \$x\")", src)
     # The symbol is surfaced in the generated module.
@@ -76,7 +79,8 @@ end
     rt = Base.invokelatest(Base.return_types, fn, (T,))
     @test length(rt) == 1
     @test isconcretetype(rt[1])
-    @test rt[1] == NamedTuple{(:color_hex, :priority, :experimental),Tuple{String,Int32,Bool}}
+    @test rt[1] ==
+          NamedTuple{(:color_hex, :priority, :experimental),Tuple{String,Int32,Bool}}
 end
 
 @testset "enum_metadata: no methods when schema empty" begin
