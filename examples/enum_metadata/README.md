@@ -49,5 +49,8 @@ sort!([c for c in instances(Color.T) if !enum_metadata(c).hidden];
   families, bytes). Message-, group-, and enum-valued options are skipped with
   a warning.
 - The accessor is generated only when the proto tree actually declares scalar
-  `EnumValueOptions` extensions. Calling `enum_metadata` on an enum without
-  generated methods is a `MethodError` — there is no empty-tuple fallback.
+  `EnumValueOptions` extensions. Once it does, *every* enum in the generated
+  module gets an `enum_metadata` method: enums that set options return the
+  default-filled `NamedTuple` shape, and enums that set none return the empty
+  `NamedTuple` `(;)`. Calling `enum_metadata` in a module that declares no such
+  extension at all (no methods generated) is a `MethodError`.

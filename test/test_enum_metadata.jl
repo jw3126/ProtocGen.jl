@@ -46,7 +46,29 @@ end
     @test occursin("error(\"enum_metadata: unreachable enum variant: \$x\")", src)
     # The symbol is surfaced in the generated module.
     @test occursin("using ProtocGen: enum_metadata", src)
-    @test occursin("export Color, enum_metadata", src)
+    @test occursin("export Color, Shade, enum_metadata", src)
+end
+
+@testset "enum_metadata: option-free enum gets an empty-NamedTuple accessor" begin
+    src = gen_meta(; enum_metadata = true)
+    # `Shade` sets none of the universe's options, so it gets a type-stable
+    # empty accessor rather than a NamedTuple of bare defaults.
+    @test occursin("function PB.enum_metadata(x::Shade.T)::NamedTuple{(), Tuple{}}", src)
+    @test occursin("return (;)", src)
+    # It must NOT emit the default-filled shape that `Color` carries.
+    @test !occursin("Shade.T)::NamedTuple{(:color_hex", src)
+
+    mod = eval_generated(src, :GeneratedEnumMetaShade)
+    meta = v -> Base.invokelatest(Core.eval(mod, :enum_metadata), Core.eval(mod, v))
+    @test meta(:(Shade.LIGHT)) === (;)
+    @test meta(:(Shade.UNSPECIFIED)) === (;)
+
+    # Type stability: the empty NamedTuple is the single concrete return type.
+    fn = Core.eval(mod, :enum_metadata)
+    T = typeof(Core.eval(mod, :(Shade.DARK)))
+    rt = Base.invokelatest(Base.return_types, fn, (T,))
+    @test length(rt) == 1
+    @test rt[1] == NamedTuple{(),Tuple{}}
 end
 
 @testset "enum_metadata: default off is byte-stable" begin
