@@ -6,24 +6,27 @@ include("setup.jl")
 # (the conformance corpus already shows the protoc roundtrip; this targets
 # the service-emission path specifically).
 function build_greeter_descriptor()
-    msg(name, fields...) = G.DescriptorProto(;
-        name = name,
-        field = collect(fields),
-        nested_type = G.DescriptorProto[],
-        enum_type = G.EnumDescriptorProto[],
-        extension_range = G.var"DescriptorProto.ExtensionRange"[],
-        oneof_decl = G.OneofDescriptorProto[],
-        reserved_range = G.var"DescriptorProto.ReservedRange"[],
-        reserved_name = String[],
-        extension = G.FieldDescriptorProto[],
-    )
-    fld(name, number; type = G.var"FieldDescriptorProto.Type".STRING) =
+    function msg(name, fields...)
+        G.DescriptorProto(;
+            name = name,
+            field = collect(fields),
+            nested_type = G.DescriptorProto[],
+            enum_type = G.EnumDescriptorProto[],
+            extension_range = G.var"DescriptorProto.ExtensionRange"[],
+            oneof_decl = G.OneofDescriptorProto[],
+            reserved_range = G.var"DescriptorProto.ReservedRange"[],
+            reserved_name = String[],
+            extension = G.FieldDescriptorProto[],
+        )
+    end
+    function fld(name, number; type = G.var"FieldDescriptorProto.Type".STRING)
         G.FieldDescriptorProto(;
             name = name,
             number = Int32(number),
             label = G.var"FieldDescriptorProto.Label".OPTIONAL,
             type = type,
         )
+    end
     return G.FileDescriptorProto(;
         name = "greeter.proto",
         package = "greeter",
@@ -77,10 +80,7 @@ end
     )
     @test occursin("const Greeter = (SayHello, SayHelloStream,)", src)
     # Streaming RPCs don't get a client stub yet — descriptor still present.
-    @test occursin(
-        "function PB.MethodDescriptorProto(::typeof(SayHelloStream))",
-        src,
-    )
+    @test occursin("function PB.MethodDescriptorProto(::typeof(SayHelloStream))", src)
     @test !occursin("function SayHelloStream(t::PB.AbstractRpcTransport", src)
 
     # Eval the module and exercise the trait surface. Keep the registry the
@@ -133,13 +133,13 @@ end
 
     impl = function (body)
         req = ProtocGen.decode(body, mod.HelloRequest)
-        reply = mod.HelloReply(message = "Hi $(req.name)")
+        reply = mod.HelloReply(; message = "Hi $(req.name)")
         return ProtocGen.encode(reply)
     end
     t = InMem(Dict(("greeter.Greeter", "SayHello") => impl))
 
     reply = Base.ScopedValues.with(ProtocGen.REGISTRY => registry) do
-        Base.invokelatest(SayHello, t, mod.HelloRequest(name = "Bob"))
+        Base.invokelatest(SayHello, t, mod.HelloRequest(; name = "Bob"))
     end
     @test reply.message == "Hi Bob"
 end

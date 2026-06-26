@@ -2527,8 +2527,7 @@ function _emit_service(io::IO, svc::ServiceDescriptorProto, names::LocalNames)
         cs = something(m.client_streaming, false)
         ss = something(m.server_streaming, false)
         mode_comment =
-            cs && ss ? "bidi" :
-            cs ? "client-streaming" : ss ? "server-streaming" : "unary"
+            cs && ss ? "bidi" : cs ? "client-streaming" : ss ? "server-streaming" : "unary"
 
         println(io)
         println(io, "# ", mname, " — ", mode_comment)
@@ -2546,13 +2545,7 @@ function _emit_service(io::IO, svc::ServiceDescriptorProto, names::LocalNames)
         println(io, "        server_streaming = ", ss, ",")
         println(io, "    )")
         println(io, "end")
-        println(
-            io,
-            "PB.service_fqn(::typeof(",
-            mname,
-            ")) = ",
-            repr(svc_fqn),
-        )
+        println(io, "PB.service_fqn(::typeof(", mname, ")) = ", repr(svc_fqn))
         if !cs && !ss
             println(
                 io,

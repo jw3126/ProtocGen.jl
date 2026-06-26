@@ -98,8 +98,7 @@ function service_fqn end
 function method_name(f::Function)
     desc = MethodDescriptorProto(f)
     name = desc.name
-    name === nothing &&
-        error("MethodDescriptorProto for $(f) is missing the `name` field")
+    name === nothing && error("MethodDescriptorProto for $(f) is missing the `name` field")
     return name
 end
 
@@ -162,12 +161,7 @@ function rpc_call(
     method::AbstractString,
     req_bytes::AbstractVector{UInt8},
 )
-    throw(
-        RpcError(
-            StatusCode.UNIMPLEMENTED,
-            "$(typeof(t)) does not implement rpc_call",
-        ),
-    )
+    throw(RpcError(StatusCode.UNIMPLEMENTED, "$(typeof(t)) does not implement rpc_call"))
 end
 
 # Streaming entry points — placeholders so transports that support them
@@ -197,11 +191,7 @@ to `rpc_call` (or the relevant streaming variant), and decodes the
 response per `response_type(f)`. Streaming variants will land alongside
 the matching codegen.
 """
-function rpc_invoke(
-    t::AbstractRpcTransport,
-    f::Function,
-    req::AbstractProtoBufMessage,
-)
+function rpc_invoke(t::AbstractRpcTransport, f::Function, req::AbstractProtoBufMessage)
     mode = rpc_mode(f)
     if mode === :unary
         req_bytes = encode(req)
