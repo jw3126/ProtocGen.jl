@@ -1,0 +1,4 @@
+# Pass to protoc via `--julia_opt=config=enum_metadata.toml`. The
+# `enum_metadata` feature is opt-in; see generate.sh for the full command.
+[codegen]
+enum_metadata = true

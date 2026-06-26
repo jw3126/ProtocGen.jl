@@ -1,0 +1,10 @@
+syntax = "proto3";
+package driver_dag.a;
+
+// Same package as `driver_dag_a2.proto`, no imports. With the old
+// alphabetical-batched topo this file lands at position 1 (`a1` <
+// `b`), then `driver_dag_b.proto` at position 2, then a2 at position
+// 3 — pkg `driver_dag.a` is split across positions 1 and 3.
+message Spare {
+  int32 x = 1;
+}

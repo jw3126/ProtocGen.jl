@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package enummeta;
+
+import "google/protobuf/descriptor.proto";
+
+// Custom scalar options attached to enum values, used to exercise the
+// opt-in `enum_metadata` codegen feature. Field numbers are in the
+// user-extension range (>= 50000).
+extend google.protobuf.EnumValueOptions {
+  string color_hex = 50001;
+  int32 priority = 50002;
+  bool experimental = 50003;
+}
+
+enum Color {
+  COLOR_UNSPECIFIED = 0;
+  COLOR_RED = 1 [(color_hex) = "ff0000", (priority) = 3];
+  COLOR_GREEN = 2 [(color_hex) = "00ff00", (priority) = 2, (experimental) = true];
+  COLOR_BLUE = 3 [(color_hex) = "0000ff"];
+}
+
+// An enum that sets none of the custom options above. With the universe-wide
+// schema non-empty (because `Color` uses it), this enum still gets an
+// `enum_metadata` accessor — but one that returns an empty NamedTuple.
+enum Shade {
+  SHADE_UNSPECIFIED = 0;
+  SHADE_LIGHT = 1;
+  SHADE_DARK = 2;
+}

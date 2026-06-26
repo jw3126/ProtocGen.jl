@@ -41,26 +41,31 @@ function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
 end
 
 """
-    eval_generated(content[, name=:Generated]) -> Module
+    eval_generated(content[, name=:Generated]; registry=Dict{String,Type}()) -> Module
 
 Eval generated codegen source (the `.content` of a CodeGeneratorResponse.File)
 into a fresh anonymous module so test files don't bleed names into each
 other. `name` is just a label that shows up in stacktraces.
 
-The codegen output emits `PB.register_message_type(fqn, T)` per message;
-those entries live in a process-global table keyed by FQN. Running this
-helper repeatedly against the same proto (e.g., once in `test_codegen.jl`
-and again in `test_presence.jl`) would otherwise trip the registry's
-duplicate-FQN guard, since each call binds the same FQN to a different
-anonymous-module type. Pre-unregister any FQN about to be re-emitted so
-the fresh module wins.
+The codegen output emits `PB.register_message_type(fqn, T)` per message
+into the active `ProtocGen.REGISTRY` table. We swap in a fresh table for
+the dynamic extent of the eval so the FQN-uniqueness guard doesn't fire
+when the same `.proto` is evaluated by multiple test files into
+different anonymous modules.
+
+Pass your own `registry` dict to keep that table after the eval returns —
+useful when later assertions resolve FQNs (e.g. `request_type`) and need
+to re-enter the same registry via `with(ProtocGen.REGISTRY => registry)`.
 """
-function eval_generated(content::AbstractString, name::Symbol = :Generated)
-    for m in eachmatch(r"PB\.register_message_type\(\"([^\"]+)\"", content)
-        ProtocGen.unregister_message_type(m.captures[1])
-    end
+function eval_generated(
+    content::AbstractString,
+    name::Symbol = :Generated;
+    registry::Dict{String,Type} = Dict{String,Type}(),
+)
     m = Module(name)
-    Core.eval(m, Meta.parseall(content))
+    Base.ScopedValues.with(ProtocGen.REGISTRY => registry) do
+        Core.eval(m, Meta.parseall(content))
+    end
     return m
 end
 

@@ -17,11 +17,11 @@ module google
         include("google/protobuf/struct_pb.jl")
         include("google/protobuf/timestamp_pb.jl")
         include("google/protobuf/wrappers_pb.jl")
+        include("google/protobuf/type_pb.jl")
+        include("google/protobuf/api_pb.jl")
         module compiler
             include("google/protobuf/compiler/plugin_pb.jl")
         end # module compiler
-        include("google/protobuf/type_pb.jl")
-        include("google/protobuf/api_pb.jl")
     end # module protobuf
 end # module google
 

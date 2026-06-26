@@ -16,59 +16,85 @@
 
 import JSON
 import Base64
+import Base.ScopedValues: ScopedValue, with
 
 # -----------------------------------------------------------------------------
 # Message-type registry — FQN ("google.protobuf.Timestamp") → Julia type.
 # Codegen emits a `register_message_type` call per message, populating this
 # at module-load time. `Any.type_url` carries the FQN, and `lookup_message_type`
 # is the reverse direction the JSON walker uses to decode embedded messages.
+#
+# The active table is the `REGISTRY` scoped value. Outside any `with`
+# block, `REGISTRY[]` returns the process-global default table that
+# bootstrap-time `register_message_type` calls populate during package
+# load. Tests (and any other context that needs FQN isolation) wrap a
+# block with `with(REGISTRY => build_registry())` to swap in a fresh
+# table for the dynamic extent of the eval — that sidesteps the "two
+# distinct definitions share an FQN" guard when re-`eval`-ing codegen
+# output into a fresh anonymous module.
 # -----------------------------------------------------------------------------
 
-const _MESSAGE_REGISTRY = Dict{String,Type}()
+"""
+    build_registry() -> Dict{String,Type}
+
+Allocate a fresh FQN → type table. Used to seed `REGISTRY`'s default
+and to mint isolated tables for `with(REGISTRY => build_registry()) do … end`
+blocks.
+"""
+function build_registry()
+    return Dict{String,Type}()
+end
+
+const REGISTRY = ScopedValue(build_registry())
 
 """
     register_message_type(fqn, T)
 
 Associate `fqn` (e.g. `"google.protobuf.Timestamp"`) with the Julia type
-`T`. Called from generated `*_pb.jl` files at module-load time; user code
-typically doesn't need to call this directly.
+`T` in the currently-active registry — the `with(REGISTRY => …)` overlay
+if one is in scope, otherwise the process-global default table. Called
+from generated `*_pb.jl` files at module-load time; user code typically
+doesn't need to call this directly.
 
 Re-registering the same `(fqn, T)` pair is a silent no-op (covers Revise
 edits and re-`using` a precompiled package). Re-registering the same `fqn`
 to a *different* Julia type throws — that means two distinct proto
-definitions share an FQN and the global registry can't represent both.
-Callers that need to round-trip both must pass a per-call `registry`
-argument to `encode_json` / `decode_json` instead of relying on the
-global table.
+definitions share an FQN and the active registry can't represent both.
+Callers that need to round-trip both must either (a) wrap each `eval` in
+its own `with(REGISTRY => build_registry())` scope, or (b) pass a
+per-call `registry` argument to `encode_json` / `decode_json`.
 """
 function register_message_type(fqn::AbstractString, ::Type{T}) where {T}
     key = String(fqn)
-    existing = get(_MESSAGE_REGISTRY, key, nothing)
+    registry = REGISTRY[]
+    existing = get(registry, key, nothing)
     if existing === T
         return nothing
     elseif existing !== nothing
-        throw(
-            ArgumentError(
-                """
-                protobuf FQN $(repr(key)) is already registered to $(existing); refusing to overwrite with $(T).
-                Two distinct proto definitions share this FQN — pass a per-call `registry` to encode_json/decode_json to disambiguate.""",
-            ),
-        )
+        throw(_duplicate_fqn_error(key, existing, T))
     end
-    _MESSAGE_REGISTRY[key] = T
+    registry[key] = T
     return nothing
+end
+
+function _duplicate_fqn_error(key, existing, T)
+    return ArgumentError(
+        """
+        protobuf FQN $(repr(key)) is already registered to $(existing); refusing to overwrite with $(T).
+        Two distinct proto definitions share this FQN — wrap each eval in `with(ProtocGen.REGISTRY => ProtocGen.build_registry())`, or pass a per-call `registry` to encode_json/decode_json to disambiguate.""",
+    )
 end
 
 """
     unregister_message_type(fqn) -> Bool
 
-Drop `fqn` from the global registry; returns `true` if the entry existed.
-Intended for test/dev workflows that need to re-bind an FQN to a different
-Julia type (e.g., when re-`eval`'ing codegen output into a fresh anonymous
-module). Production code shouldn't need this.
+Drop `fqn` from the currently-active registry; returns `true` if the
+entry existed. Rarely needed now that registries can be scoped per
+`with`-block — the preferred test isolation is `with(REGISTRY => build_registry())`
+around the eval, which gives the scoped table its own lifetime.
 """
 function unregister_message_type(fqn::AbstractString)
-    return pop!(_MESSAGE_REGISTRY, String(fqn), nothing) !== nothing
+    return pop!(REGISTRY[], String(fqn), nothing) !== nothing
 end
 
 """
@@ -79,14 +105,17 @@ registered under that FQN — typically because the user hasn't loaded
 the proto module that defines it.
 
 If `registry` is non-`nothing`, *only* that table is consulted (no
-fallback to the global registry). This matches Go's resolver semantics
+fallback to the active registry). This matches Go's resolver semantics
 and lets callers fully control FQN → type resolution when they need to.
+With `registry === nothing` the call reads from the active registry,
+which is the `REGISTRY[]` overlay if a `with` block is in scope and the
+process-global table otherwise.
 """
 function lookup_message_type(
     fqn::AbstractString;
     registry::Union{Nothing,AbstractDict} = nothing,
 )
-    return get(something(registry, _MESSAGE_REGISTRY), String(fqn), nothing)
+    return get(@something(registry, REGISTRY[]), String(fqn), nothing)
 end
 
 # Per-enum metadata: the proto wire-side prefix that codegen stripped from

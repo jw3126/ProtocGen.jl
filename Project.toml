@@ -3,7 +3,7 @@ uuid = "b5fc38b8-670b-4930-8529-238e2ca71835"
 keywords = ["protobuf", "protoc", "descriptor"]
 license = "MIT"
 desc = "Descriptor-driven protobuf codec and codegen for Julia"
-version = "0.2.0"
+version = "0.2.6"
 authors = ["Jan Weidner <jw3126@gmail.com>"]
 
 [deps]
@@ -24,6 +24,7 @@ BufferedStreams = "1.2"
 Dates = "1"
 EnumX = "1"
 JSON = "0.21, 1"
+Markdown = "1"
 OrderedCollections = "1"
 Scratch = "1"
 StructHelpers = "1.5.1"
@@ -37,7 +38,8 @@ submodule = "PluginApp"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+Markdown = "d6f4376e-aef5-505a-96c1-9c027394607a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Aqua", "Test"]
+test = ["Aqua", "Markdown", "Test"]

@@ -1,4 +1,4 @@
-# ProtocGen.jl
+# [ProtocGen.jl](https://github.com/jw3126/ProtocGen.jl)
 
 <p align="center">
   <img src="docs/src/assets/logo.png" alt="ProtocGen.jl" width="320">
@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the required proto2 and proto3 conformance test suites using binary + JSON.
+Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for both binary and JSON.
 
 ## Install
 
@@ -25,17 +25,46 @@ pkg> app add ProtocGen
 cd examples
 mkdir out
 
-protoc \
-    --julia_out=out \
-    addressbook.proto
+protoc --julia_out=out addressbook.proto
 ```
 
-`addressbook.proto` imports `google/protobuf/timestamp.proto`; standard
-protoc installations ship the well-known-type protos on their default
-include path, so no extra `--proto_path` is needed.
+where
+
+```proto
+// addressbook.proto
+syntax = "proto3";
+
+package tutorial;
+
+import "google/protobuf/timestamp.proto";
+
+enum PhoneType {
+    PHONE_TYPE_UNSPECIFIED = 0;
+    PHONE_TYPE_MOBILE = 1;
+    PHONE_TYPE_HOME = 2;
+    PHONE_TYPE_WORK = 3;
+}
+
+message PhoneNumber {
+    string number = 1;
+    PhoneType type = 2;
+}
+
+message Person {
+    string name = 1;
+    int32 id = 2;
+    optional string email = 3;
+    repeated PhoneNumber phones = 4;
+    google.protobuf.Timestamp last_updated = 5;
+}
+
+message AddressBook {
+    repeated Person people = 1;
+}
+```
 
 This generates `out/addressbook_pb.jl`. It depends on the
-`ProtocGen.jl` package.
+`ProtocGen.jl` package:
 
 ```julia
 include("out/addressbook_pb.jl")
@@ -61,6 +90,55 @@ js = encode_json(person)
 #  "phones":[…],"lastUpdated":"2024-05-06T12:53:20Z"}
 @assert decode_json(Person, js) == person
 ```
+
+## Docstring retention
+
+Comments in your `.proto` can be carried into the generated Julia as
+docstrings. It is opt-in via a TOML config file passed to the plugin:
+
+```toml
+# protocgen.toml
+[codegen]
+docstrings = true
+```
+
+```sh
+protoc --julia_out=out --julia_opt=config=protocgen.toml addressbook.proto
+```
+
+With it enabled:
+
+- A comment above a **message** becomes the struct docstring, and every
+  field is listed in a `# Fields` section so `?MyMessage` shows them
+  (no dependency on DocStringExtensions).
+- A comment above an **enum** becomes its docstring, and a comment above
+  an **enum value** becomes a queryable docstring — `?MyEnum.VALUE` works.
+- A comment above a **oneof** documents the generated union field, with
+  its members listed as sub-bullets.
+
+```proto
+// A single book in the catalog.
+message Book {
+    // International Standard Book Number, 13-digit form.
+    string isbn = 1;
+}
+```
+
+```julia
+"""
+A single book in the catalog.
+
+# Fields
+- `isbn::String`: International Standard Book Number, 13-digit form.
+"""
+struct Book <: PB.AbstractProtoBufMessage
+    isbn::String
+    var"#unknown_fields"::Vector{UInt8}
+end
+```
+
+Leaving the flag unset (the default) generates byte-for-byte the same
+output as before. See `examples/docstrings/` for a fuller example.
 
 ## Alternatives
 

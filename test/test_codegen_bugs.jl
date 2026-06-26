@@ -85,4 +85,175 @@ end
     @test encode_latest(bag) == maps_sample_pb
 end
 
+@testset "regression: driver namespace fragmentation when packages interleave" begin
+    # Schema: fixtures/proto/driver_cycle_a{1,2}.proto + driver_cycle_b.proto.
+    #     a1.proto: package driver_cycle.a; message Leaf
+    #     b.proto:  package driver_cycle.b; import a1; message Mid { ...a.Leaf }
+    #     a2.proto: package driver_cycle.a; import b; message Top {
+    #                   ...b.Mid mid; Leaf leaf;   # Leaf is same-package
+    #               }
+    # Topo order (a1, b, a2) forces `driver_cycle.a` to appear in two
+    # `module driver_cycle a … end` blocks in the generated
+    # `_pb_includes.jl` — `b` slots between them because `Top` needs `Mid`.
+    #
+    # Bug: Julia's `module Name … end` source syntax always creates a
+    # FRESH module (it does not "reopen" an existing one — that's a
+    # REPL/`Base.eval` thing). So the second `module driver_cycle.a`
+    # block shadows the first; `Top`'s unqualified reference to `Leaf`
+    # then hits an empty namespace and fails with `UndefVarError`.
+    #
+    # Fix: the driver forward-declares every package's nested module
+    # skeleton once, then emits `<pkg>.include("<file>")` calls in topo
+    # order. Each `include` evaluates in the right pre-existing module,
+    # so same-package refs see prior includes and cross-package refs
+    # see sibling modules.
+
+    response = run_codegen(
+        "driver_cycle_a2.pb",
+        ["driver_cycle_a1.proto", "driver_cycle_b.proto", "driver_cycle_a2.proto"],
+    )
+    @test response.error === nothing
+
+    driver = only(f for f in response.file if f.name == "_pb_includes.jl")
+    # Two-phase form is the canonical signal that the package-aware
+    # topo couldn't find a contiguous order — qualified
+    # `<pkg>.include(...)` calls are emitted at top level, so the
+    # skeleton can be referenced after it's been opened-then-closed.
+    @test occursin("driver_cycle.a.include", driver.content)
+    @test occursin("driver_cycle.b.include", driver.content)
+
+    # Materialize every emitted file on disk so the driver's relative
+    # `include`s resolve. Then eval the driver in a fresh module under a
+    # scoped `REGISTRY` so the per-file `PB.register_message_type` calls
+    # land in a throwaway table — without this, re-running the test (or
+    # any other test that touches the same FQNs) trips the
+    # duplicate-FQN guard.
+    dir = mktempdir()
+    for f in response.file
+        path = joinpath(dir, f.name)
+        mkpath(dirname(path))
+        write(path, f.content)
+    end
+
+    pkg_mod = Module(:DriverCycleTest)
+    Core.eval(pkg_mod, :(import ProtocGen))
+    Base.ScopedValues.with(ProtocGen.REGISTRY => Dict{String,Type}()) do
+        # `Base.include` (vs the driver's own `include` keyword) makes
+        # path resolution explicit: evaluate the driver source as if it
+        # were the `_pb_includes.jl` file living in `dir`, so its
+        # relative `include`s land on the sibling `*_pb.jl` files.
+        Base.include(pkg_mod, joinpath(dir, "_pb_includes.jl"))
+    end
+
+    a_mod = pkg_mod.driver_cycle.a
+    b_mod = pkg_mod.driver_cycle.b
+    @test isdefined(a_mod, :Leaf)
+    @test isdefined(a_mod, :Top)
+    @test isdefined(b_mod, :Mid)
+
+    # End-to-end: build a `Top` carrying both a cross-package `Mid` and a
+    # same-package `Leaf`. If the second-block bug fires, `Top` either
+    # doesn't exist or carries a `Leaf` from a different (empty) module.
+    leaf = Base.invokelatest(a_mod.Leaf; x = Int32(7))
+    mid = Base.invokelatest(b_mod.Mid; leaf)
+    top = Base.invokelatest(a_mod.Top; mid, leaf)
+    @test top isa a_mod.Top
+    @test top.leaf isa a_mod.Leaf
+    @test top.mid isa b_mod.Mid
+end
+
+@testset "driver: package-aware topo prefers contiguous (inline) emit" begin
+    # Schema: fixtures/proto/driver_dag_{a1,a2,b}.proto.
+    #     a1.proto: package driver_dag.a; message Spare  (no deps)
+    #     b.proto:  package driver_dag.b; message Leaf   (no deps)
+    #     a2.proto: package driver_dag.a; import b; message Top { ...b.Leaf }
+    #
+    # Package-level dep graph: `driver_dag.a → driver_dag.b` (acyclic).
+    # The OLD batched-alphabetical file-topo would emit
+    # [a1, b, a2] — pkg `driver_dag.a` split across positions 1 and 3.
+    # The package-aware sort topo-sorts packages first (b before a),
+    # then drains each in turn, producing [b, a1, a2] — pkg
+    # `driver_dag.a` lands at positions 2,3, contiguous.
+    response = run_codegen(
+        "driver_dag_a2.pb",
+        ["driver_dag_a1.proto", "driver_dag_b.proto", "driver_dag_a2.proto"],
+    )
+    @test response.error === nothing
+
+    driver = only(f for f in response.file if f.name == "_pb_includes.jl")
+    # Inline form is detectable structurally: the includes for pkg `a`
+    # live inside the `module a … end` block, not at top level as
+    # `driver_dag.a.include(...)` calls. Asserting on either side is
+    # equivalent; pick the absence of the qualified form as the
+    # canonical signal that we took the inline path.
+    @test !occursin("driver_dag.a.include", driver.content)
+    @test !occursin("driver_dag.b.include", driver.content)
+    # And the inline-form module structure is present.
+    @test occursin("module driver_dag", driver.content)
+
+    # End-to-end: materialize every emitted file on disk and eval the
+    # driver. With contiguous packages the inline form should produce a
+    # working namespace — `Top` carrying a `Leaf` from the sibling pkg.
+    dir = mktempdir()
+    for f in response.file
+        path = joinpath(dir, f.name)
+        mkpath(dirname(path))
+        write(path, f.content)
+    end
+
+    pkg_mod = Module(:DriverDagTest)
+    Core.eval(pkg_mod, :(import ProtocGen))
+    Base.ScopedValues.with(ProtocGen.REGISTRY => Dict{String,Type}()) do
+        Base.include(pkg_mod, joinpath(dir, "_pb_includes.jl"))
+    end
+
+    a_mod = pkg_mod.driver_dag.a
+    b_mod = pkg_mod.driver_dag.b
+    @test isdefined(a_mod, :Spare)
+    @test isdefined(a_mod, :Top)
+    @test isdefined(b_mod, :Leaf)
+
+    leaf = Base.invokelatest(b_mod.Leaf; x = Int32(11))
+    top = Base.invokelatest(a_mod.Top; leaf)
+    @test top isa a_mod.Top
+    @test top.leaf isa b_mod.Leaf
+    @test top.leaf.x == 11
+end
+
+@testset "regression: oneof Union deduplicates shared message types (#14)" begin
+    # Schema: fixtures/proto/oneof_dup.proto
+    #     message Outer {
+    #       oneof choice {
+    #         Inner first  = 1;
+    #         Inner second = 2;
+    #         Other third  = 3;
+    #         Inner fourth = 4;
+    #       }
+    #     }
+    # Bug: `_oneof_jl_type` joined `elem_jl_type` for every arm, so two
+    # `Inner` arms produced `Union{Inner,Inner}`. Fix: dedup the rendered
+    # strings while preserving source order. `Union{T,T} === T` so the
+    # old output was benign at runtime, but noisy and surprising.
+    response = run_codegen("oneof_dup.pb", ["oneof_dup.proto"])
+    @test response.error === nothing
+    f = only(file for file in response.file if file.name == "oneof_dup_pb.jl")
+
+    # Deduplicated, order preserved: Inner appears once, Other appears
+    # once, Inner does not reappear.
+    @test occursin("choice::Union{Nothing,OneOf{<:Union{Inner,Other}}}", f.content)
+    @test !occursin("Union{Inner,Inner", f.content)
+
+    # Sanity: the generated module still evaluates and round-trips a
+    # value picked from a duplicated-type arm.
+    od_mod = eval_generated(f.content, :GeneratedOneofDup)
+    outer = pb_make(
+        od_mod.Outer;
+        choice = ProtocGen.OneOf(:fourth, pb_make(od_mod.Inner; value = "hi")),
+    )
+    decoded = decode_latest(od_mod.Outer, encode_latest(outer))
+    @test decoded.choice !== nothing
+    @test decoded.choice.name === :fourth
+    @test decoded.choice.value.value == "hi"
+end
+
 end  # module TestCodegenBugs

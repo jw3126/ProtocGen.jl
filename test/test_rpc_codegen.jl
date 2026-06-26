@@ -83,8 +83,11 @@ end
     )
     @test !occursin("function SayHelloStream(t::PB.AbstractRpcTransport", src)
 
-    # Eval the module and exercise the trait surface.
-    mod = eval_generated(src, :GeneratedGreeter)
+    # Eval the module and exercise the trait surface. Keep the registry the
+    # eval populated so `request_type`/`response_type` — which resolve FQNs
+    # through the active registry — can re-enter it below.
+    registry = Dict{String,Type}()
+    mod = eval_generated(src, :GeneratedGreeter; registry = registry)
     SayHello = mod.SayHello
     SayHelloStream = mod.SayHelloStream
 
@@ -92,8 +95,10 @@ end
     @test Base.invokelatest(ProtocGen.method_name, SayHello) == "SayHello"
     @test Base.invokelatest(ProtocGen.rpc_mode, SayHello) === :unary
     @test Base.invokelatest(ProtocGen.rpc_mode, SayHelloStream) === :server_stream
-    @test Base.invokelatest(ProtocGen.request_type, SayHello) === mod.HelloRequest
-    @test Base.invokelatest(ProtocGen.response_type, SayHello) === mod.HelloReply
+    Base.ScopedValues.with(ProtocGen.REGISTRY => registry) do
+        @test Base.invokelatest(ProtocGen.request_type, SayHello) === mod.HelloRequest
+        @test Base.invokelatest(ProtocGen.response_type, SayHello) === mod.HelloReply
+    end
     @test mod.Greeter === (SayHello, SayHelloStream)
 end
 
@@ -103,7 +108,10 @@ end
     # end-to-end without any HTTP.
     proto = build_greeter_descriptor()
     src = ProtocGen.Codegen.codegen(proto)
-    mod = eval_generated(src, :GreeterRpc)
+    # Retain the registry: rpc_invoke resolves the response FQN through the
+    # active registry, so the call site below re-enters this table.
+    registry = Dict{String,Type}()
+    mod = eval_generated(src, :GreeterRpc; registry = registry)
     SayHello = mod.SayHello
 
     struct_def = quote
@@ -130,7 +138,9 @@ end
     end
     t = InMem(Dict(("greeter.Greeter", "SayHello") => impl))
 
-    reply = Base.invokelatest(SayHello, t, mod.HelloRequest(name = "Bob"))
+    reply = Base.ScopedValues.with(ProtocGen.REGISTRY => registry) do
+        Base.invokelatest(SayHello, t, mod.HelloRequest(name = "Bob"))
+    end
     @test reply.message == "Hi Bob"
 end
 

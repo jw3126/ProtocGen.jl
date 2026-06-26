@@ -1,0 +1,24 @@
+syntax = "proto3";
+package oneof_dup;
+
+// MWE for https://github.com/jw3126/ProtocGen.jl/issues/14:
+// a oneof with multiple arms whose message types collide. The
+// generated union must deduplicate (`Union{Inner}`), not repeat
+// (`Union{Inner,Inner}`).
+
+message Inner {
+  string value = 1;
+}
+
+message Other {
+  int32 n = 1;
+}
+
+message Outer {
+  oneof choice {
+    Inner first  = 1;
+    Inner second = 2;
+    Other third  = 3;
+    Inner fourth = 4;
+  }
+}

@@ -72,7 +72,29 @@ const DESCRIPTOR_SETS = [
     "test_messages_proto3.proto",
     "unittest_well_known_types.proto",
     "shadow.proto",
+    # MWE for the `_pb_includes.jl` namespace-fragmentation bug.
+    # `driver_cycle_a2.proto` transitively imports `driver_cycle_b.proto`
+    # and `driver_cycle_a1.proto`; protoc's `--include_imports` pulls all
+    # three into the FileDescriptorSet.
+    "driver_cycle_a2.proto",
+    # MWE for the package-aware topo sort: cross-package DAG that the
+    # old alphabetical-batched sort would have interleaved. The a2 file
+    # transitively imports both a1 and b, so `--include_imports` pulls
+    # the full triple into the FileDescriptorSet.
+    "driver_dag_a2.proto",
+    # MWE for issue #14: a oneof with multiple arms sharing the same
+    # message type. The generated `Union{...}` must deduplicate.
+    "oneof_dup.proto",
+    # Scalar `extend google.protobuf.EnumValueOptions` custom options on
+    # enum values, backing the opt-in `enum_metadata` feature.
+    "enum_meta.proto",
 ]
+
+# .proto files captured WITH `--include_source_info`, so the FileDescriptorSet
+# carries the `//` comments protoc otherwise strips. These back the docstring-
+# retention tests. The sets above stay source-info-free to keep their bytes
+# minimal and their golden output stable.
+const DESCRIPTOR_SETS_WITH_SOURCE_INFO = ["docs.proto"]
 
 function find_protoc()
     p = Sys.which("protoc")
@@ -91,6 +113,15 @@ function main()
         out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
         run(
             `$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --descriptor_set_out=$out $proto`,
+        )
+        println("wrote $(relpath(out, HERE))")
+    end
+
+    # Same as above but `--include_source_info` retains the comments.
+    for proto in DESCRIPTOR_SETS_WITH_SOURCE_INFO
+        out = joinpath(PB, replace(proto, r"\.proto$" => ".pb"))
+        run(
+            `$protoc --proto_path=$PROTO --proto_path=$WKT_PROTO --include_imports --include_source_info --descriptor_set_out=$out $proto`,
         )
         println("wrote $(relpath(out, HERE))")
     end

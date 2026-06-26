@@ -46,6 +46,156 @@ function _strip_enum_prefix_enabled(config::AbstractDict)
     return get(cg, "strip_enum_prefix", true) === true
 end
 
+# ----------------------------------------------------------------------------
+# Docstring retention. Opt-in via `[codegen] docstrings = true`. When enabled,
+# `.proto` comments captured by protoc in `FileDescriptorProto.source_code_info`
+# are carried into the generated Julia as docstrings: message comment → struct
+# docstring (with a `# Fields` section listing each field's comment), field
+# comment → field docstring (string literal above the field) as well, enum
+# comment → docstring above `@enumx`, enum-value comment → queryable doc
+# attached after the declaration. Field/oneof-member declarations are wrapped in
+# backticks (as DocStringExtensions does) so their `snake_case` survives Markdown
+# rendering; comment prose is passed through verbatim and is the author's to format.
+# ----------------------------------------------------------------------------
+
+# Read `[codegen] docstrings = …`; default false so the feature is opt-in and
+# the default generated output stays byte-for-byte unchanged.
+function _docstrings_enabled(config::AbstractDict)
+    cg = get(config, "codegen", nothing)
+    cg isa AbstractDict || return false
+    return get(cg, "docstrings", false) === true
+end
+
+# Read `[codegen] enum_metadata = …`; default false so the feature is opt-in and
+# the default generated output stays byte-for-byte unchanged. When enabled and
+# the proto tree declares scalar `extend google.protobuf.EnumValueOptions`
+# fields, codegen emits a `PB.enum_metadata(::SomeEnum.T)` method per enum.
+function _enum_metadata_enabled(config::AbstractDict)
+    cg = get(config, "codegen", nothing)
+    cg isa AbstractDict || return false
+    return get(cg, "enum_metadata", false) === true
+end
+
+# Descriptor field numbers, used to walk SourceCodeInfo location paths. A path
+# is the field-number trail from the file root to an element; e.g. message i is
+# `[4, i]`, its field j is `[4, i, 2, j]`. See descriptor.proto's SourceCodeInfo.
+const _PATH_FILE_MESSAGE = Int32(4)   # FileDescriptorProto.message_type
+const _PATH_FILE_ENUM = Int32(5)      # FileDescriptorProto.enum_type
+const _PATH_MSG_FIELD = Int32(2)      # DescriptorProto.field
+const _PATH_MSG_NESTED = Int32(3)     # DescriptorProto.nested_type
+const _PATH_MSG_ENUM = Int32(4)       # DescriptorProto.enum_type
+const _PATH_MSG_ONEOF = Int32(8)      # DescriptorProto.oneof_decl
+const _PATH_ENUM_VALUE = Int32(2)     # EnumDescriptorProto.value
+
+# protoc stores `leading_comments` with `//` / `/* */` markers removed but each
+# line keeping its single leading space, and the block bracketed by newlines.
+# Strip one leading space per line and trim surrounding whitespace.
+function _clean_comment(s::AbstractString)
+    lines = split(s, '\n')
+    cleaned = map(ln -> startswith(ln, ' ') ? ln[2:end] : ln, lines)
+    return String(strip(join(cleaned, '\n')))
+end
+
+# Render `comment` as a Julia docstring literal. Single-line comments use a
+# plain `"..."` literal (via `repr`, which escapes `\`, `$`, `"`); multi-line
+# comments use a triple-quoted block with `\`, `$`, and any `\"\"\"` escaped.
+# Returns "" for an empty comment so callers can skip emission.
+function _doc_literal(comment::AbstractString)
+    isempty(comment) && return ""
+    occursin('\n', comment) || return repr(comment)
+    esc = replace(comment, "\\" => "\\\\")
+    esc = replace(esc, "\$" => "\\\$")
+    esc = replace(esc, "\"\"\"" => "\\\"\\\"\\\"")
+    return string("\"\"\"\n", esc, "\n\"\"\"")
+end
+
+# Walk the descriptor tree alongside source_code_info, building a lookup from a
+# stable key to the cleaned comment. Keys: bare proto FQN for a message/enum
+# type, `f:<msgfqn>.<field>` for a field, `o:<msgfqn>.<oneof>` for a oneof,
+# `v:<enumfqn>.<value>` for an enum value. The emitters already compute these
+# FQNs, so no path threading through the emit recursion is needed.
+function _build_doc_index(file::FileDescriptorProto)
+    index = Dict{String,String}()
+    sci = file.source_code_info
+    sci === nothing && return index
+    by_path = Dict{Vector{Int32},String}()
+    for loc in sci.location
+        lead = loc.leading_comments
+        trail = loc.trailing_comments
+        raw = if lead !== nothing && !isempty(strip(lead))
+            lead
+        elseif trail !== nothing && !isempty(strip(trail))
+            trail
+        else
+            continue
+        end
+        c = _clean_comment(raw)
+        isempty(c) && continue
+        by_path[copy(loc.path)] = c
+    end
+    isempty(by_path) && return index
+    pkg = something(file.package, "")
+    base_fqn = isempty(pkg) ? "" : string(".", pkg)
+    for (i, m) in pairs(file.message_type)
+        _index_message!(
+            index,
+            by_path,
+            m,
+            base_fqn,
+            Int32[_PATH_FILE_MESSAGE, Int32(i - 1)],
+        )
+    end
+    for (i, e) in pairs(file.enum_type)
+        _index_enum!(index, by_path, e, base_fqn, Int32[_PATH_FILE_ENUM, Int32(i - 1)])
+    end
+    return index
+end
+
+function _index_message!(index, by_path, m::DescriptorProto, parent_fqn, path)
+    fqn = string(parent_fqn, ".", something(m.name, ""))
+    haskey(by_path, path) && (index[fqn] = by_path[path])
+    for (i, f) in pairs(m.field)
+        fp = vcat(path, Int32[_PATH_MSG_FIELD, Int32(i - 1)])
+        haskey(by_path, fp) &&
+            (index[string("f:", fqn, ".", something(f.name, ""))] = by_path[fp])
+    end
+    for (i, o) in pairs(m.oneof_decl)
+        op = vcat(path, Int32[_PATH_MSG_ONEOF, Int32(i - 1)])
+        haskey(by_path, op) &&
+            (index[string("o:", fqn, ".", something(o.name, ""))] = by_path[op])
+    end
+    for (i, e) in pairs(m.enum_type)
+        _index_enum!(
+            index,
+            by_path,
+            e,
+            fqn,
+            vcat(path, Int32[_PATH_MSG_ENUM, Int32(i - 1)]),
+        )
+    end
+    for (i, n) in pairs(m.nested_type)
+        _index_message!(
+            index,
+            by_path,
+            n,
+            fqn,
+            vcat(path, Int32[_PATH_MSG_NESTED, Int32(i - 1)]),
+        )
+    end
+    return index
+end
+
+function _index_enum!(index, by_path, e::EnumDescriptorProto, parent_fqn, path)
+    fqn = string(parent_fqn, ".", something(e.name, ""))
+    haskey(by_path, path) && (index[fqn] = by_path[path])
+    for (i, v) in pairs(e.value)
+        vp = vcat(path, Int32[_PATH_ENUM_VALUE, Int32(i - 1)])
+        haskey(by_path, vp) &&
+            (index[string("v:", fqn, ".", something(v.name, ""))] = by_path[vp])
+    end
+    return index
+end
+
 # "FeatureType" → "FEATURE_TYPE", "JSType" → "JS_TYPE", "Url" → "URL".
 # Insert an underscore before any uppercase letter that follows a lowercase or
 # digit, OR before any uppercase letter that's followed by a lowercase letter
@@ -243,6 +393,74 @@ end
 # the bootstrap convention.
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Enum-value custom-option metadata (opt-in `enum_metadata`). Users declare
+# `extend google.protobuf.EnumValueOptions { … }` and set the options on enum
+# values (`RED = 0 [(my_meta) = "ff0000"];`). protoc resolves those into the
+# *unknown fields* of each value's `EnumValueOptions` (the generated descriptor
+# struct has no typed field for them), so we recover them by decoding the raw
+# bytes against the extension schema collected here. One `EnumMetaField` per
+# scalar extension; message/group/enum-valued options are skipped (see below).
+# ----------------------------------------------------------------------------
+struct EnumMetaField
+    number::Int32
+    name::String                              # NamedTuple key / extension short name
+    proto_type::var"FieldDescriptorProto.Type".T
+    default_value::Union{Nothing,String}      # proto2 `default = …`; nothing → type zero
+end
+
+# Scan every input file for `extend google.protobuf.EnumValueOptions` fields
+# (top-level and nested in messages) and build the global, ordered schema that
+# every value's metadata NamedTuple shares. Non-scalar options can't be baked
+# into a literal without recursive type resolution, so they're skipped with a
+# warning (message/group/enum support is a follow-up). Duplicate option names
+# across packages collide on the NamedTuple key, so we error on a name reused
+# with a different field number.
+function _collect_enum_metadata_schema(files)
+    T = var"FieldDescriptorProto.Type"
+    fields = EnumMetaField[]
+    by_name = Dict{String,EnumMetaField}()
+    function consider(ext::FieldDescriptorProto)
+        something(ext.extendee, "") == ".google.protobuf.EnumValueOptions" || return
+        t = ext.type
+        name = something(ext.name, "")
+        num = something(ext.number, Int32(0))
+        if t === nothing || t === T.MESSAGE || t === T.GROUP || t === T.ENUM
+            @warn "enum_metadata: skipping non-scalar custom option (only scalar options are supported)" option =
+                name type = t
+            return
+        end
+        if haskey(by_name, name)
+            by_name[name].number == num || error(
+                "enum_metadata: option name `$name` declared with conflicting field numbers " *
+                "($(by_name[name].number) and $num)",
+            )
+            return
+        end
+        fld = EnumMetaField(num, name, t, ext.default_value)
+        by_name[name] = fld
+        push!(fields, fld)
+    end
+    function walk_msg(m::DescriptorProto)
+        for ext in m.extension
+            consider(ext)
+        end
+        for n in m.nested_type
+            walk_msg(n)
+        end
+    end
+    for f in files
+        for ext in f.extension
+            consider(ext)
+        end
+        for m in f.message_type
+            walk_msg(m)
+        end
+    end
+    sort!(fields; by = x -> x.number)
+    return fields
+end
+
 Base.@kwdef struct Universe
     messages::Set{String}        # fully-qualified names like ".sample.Outer.Inner"
     enums::Set{String}           # fully-qualified names like ".sample.MyEnum"
@@ -250,6 +468,9 @@ Base.@kwdef struct Universe
     enum_defs::Dict{String,EnumDescriptorProto}  # FQN -> the enum's descriptor
     map_entries::Dict{String,DescriptorProto}    # FQN -> map_entry synthetic message
     package_of::Dict{String,String}              # FQN -> proto package ("google.protobuf")
+    # Global scalar `EnumValueOptions` extension schema; empty unless the proto
+    # tree declares such extensions. Drives `enum_metadata` emission.
+    enum_metadata_schema::Vector{EnumMetaField} = EnumMetaField[]
 end
 
 # Map from proto package name to Julia module path. Cross-package references
@@ -381,6 +602,7 @@ function gather_universe(files)
         enum_defs = Dict{String,EnumDescriptorProto}(),
         map_entries = Dict{String,DescriptorProto}(),
         package_of = Dict{String,String}(),
+        enum_metadata_schema = _collect_enum_metadata_schema(files),
     )
     for f in files
         _add_file_to_universe!(u, f)
@@ -969,6 +1191,115 @@ end
 # Emitters.
 # ----------------------------------------------------------------------------
 
+# One `# Fields` bullet. Continuation lines of a multi-line comment are indented
+# by `pad` so they render under the bullet rather than as a new list item — two
+# spaces for a top-level bullet, four for an indented oneof-member sub-bullet.
+function _field_bullet(decl, comment; pad = "  ")
+    isempty(comment) ? string("- `", decl, "`") :
+    string("- `", decl, "`: ", replace(comment, "\n" => string("\n", pad)))
+end
+
+# Emit the struct's docstring (opt-in; a no-op when nothing is documented). The
+# message comment is the lead paragraph; every plain field and oneof is then
+# listed in a `# Fields` section — with its comment when present — so `?T` shows
+# the full field reference without the generated module needing to depend on
+# DocStringExtensions. Field comments are ALSO emitted as per-field docstrings
+# above each field by `_emit_field_comment`; this section is what surfaces them
+# in `@doc T`, since Julia does not fold field docstrings into the type's doc.
+function _emit_struct_docstring(io, doc_index, fqn, plain_fields, real_oneofs)
+    isempty(doc_index) && return
+    msg_doc = get(doc_index, fqn, "")
+    comments = String[]               # every comment, to test if any is present
+    fieldlines = String["# Fields"]
+    for f in plain_fields
+        c = get(doc_index, string("f:", fqn, ".", f.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(f.jl_fieldname, "::", f.jl_type), c))
+    end
+    for o in real_oneofs
+        c = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+        push!(comments, c)
+        push!(fieldlines, _field_bullet(string(o.jl_fieldname, "::", _oneof_jl_type(o)), c))
+        # oneof members are folded into the union field; list them as sub-bullets.
+        for m in o.members
+            mc = get(doc_index, string("f:", fqn, ".", m.proto_name), "")
+            push!(comments, mc)
+            push!(
+                fieldlines,
+                string(
+                    "  ",
+                    _field_bullet(
+                        string(m.jl_fieldname, "::", m.elem_jl_type),
+                        mc;
+                        pad = "    ",
+                    ),
+                ),
+            )
+        end
+    end
+    any_field_doc = any(!isempty, comments)
+    (isempty(msg_doc) && !any_field_doc) && return
+    parts = String[]
+    isempty(msg_doc) || push!(parts, msg_doc)
+    push!(parts, join(fieldlines, "\n"))
+    println(io, _doc_literal(join(parts, "\n\n")))
+    return
+end
+
+# Look up a plain-field / oneof-member comment by its proto key; "" when absent.
+function _field_doc(doc_index, fqn, proto_name)
+    get(doc_index, string("f:", fqn, ".", proto_name), "")
+end
+
+# Emit `comment` as a real Julia field docstring: a string literal indented into
+# the struct body, directly above the field declaration. Julia attaches such a
+# literal to the following field as a queryable docstring (reachable via
+# `Docs.fielddoc`), unlike a `#` comment which is dropped. The same text is also
+# folded into the struct docstring's `# Fields` section by `_emit_struct_docstring`,
+# since Julia does not surface field docstrings in `@doc T` on its own. Each
+# emitted line is indented by 4 spaces; the triple-quoted form's common indent is
+# stripped back off by Julia's docstring dedent, leaving the original comment
+# text. No-op for an empty comment.
+function _emit_field_comment(io, comment)
+    isempty(comment) && return
+    lit = _doc_literal(comment)
+    for ln in split(lit, '\n')
+        println(io, string("    ", ln))
+    end
+    return
+end
+
+# Build the leading comment for a real-oneof field. The oneof's own comment
+# leads; each member is then listed as a `` - `name::Type`: comment `` bullet
+# (members have no struct line of their own, so their docs would otherwise be
+# lost). The `name::Type` decl is wrapped in backticks so its `snake_case`
+# survives Markdown rendering verbatim (same as the `# Fields` section and DSE).
+# Continuation lines of a multi-line member comment are indented under the
+# bullet. Returns "" when neither the oneof nor any member carries a comment.
+function _oneof_field_comment(doc_index, fqn, o)
+    oc = get(doc_index, string("o:", fqn, ".", o.proto_name), "")
+    member_docs = [(_field_doc(doc_index, fqn, m.proto_name), m) for m in o.members]
+    # Emit nothing when neither the oneof nor any member carries a comment —
+    # this keeps the docstrings-off path (empty `doc_index`) byte-stable, and
+    # avoids bare member bullets for an entirely uncommented oneof.
+    isempty(oc) && all(isempty(first(md)) for md in member_docs) && return ""
+    lines = String[]
+    isempty(oc) || append!(lines, split(oc, '\n'))
+    for (mc, m) in member_docs
+        decl = string("`", m.jl_fieldname, "::", m.elem_jl_type, "`")
+        if isempty(mc)
+            push!(lines, string("- ", decl))
+        else
+            mclines = split(mc, '\n')
+            push!(lines, string("- ", decl, ": ", mclines[1]))
+            for cont in mclines[2:end]
+                push!(lines, string("  ", cont))
+            end
+        end
+    end
+    return join(lines, "\n")
+end
+
 function _emit_message(
     io::IO,
     msg::DescriptorProto,
@@ -977,6 +1308,8 @@ function _emit_message(
     parent_proto::String = isempty(names.package) ? "" : ".$(names.package)";
     batteries_kw::String = "",
     enumbatteries_kw::String = "",
+    doc_index::AbstractDict = Dict{String,String}(),
+    enum_metadata_schema::AbstractVector{EnumMetaField} = EnumMetaField[],
 )
     name = something(msg.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1005,6 +1338,8 @@ function _emit_message(
             parent_proto = proto_fqn,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
+            doc_index = doc_index,
+            enum_metadata_schema = enum_metadata_schema,
         )
     end
     for nested in msg.nested_type
@@ -1017,6 +1352,7 @@ function _emit_message(
             proto_fqn;
             batteries_kw = batteries_kw,
             enumbatteries_kw = enumbatteries_kw,
+            doc_index = doc_index,
         )
     end
 
@@ -1049,6 +1385,7 @@ function _emit_message(
     # buffer field so it can't collide with a user proto field of that
     # name — proto field names match `[a-zA-Z_][a-zA-Z0-9_]*` so `#` is
     # forever out of reach for protoc.
+    _emit_struct_docstring(io, doc_index, proto_fqn, plain_fields, real_oneofs)
     println(
         io,
         is_cycle_participant ? "struct $(jl_name) <: $(_abstract_name(jl_name))" :
@@ -1056,10 +1393,12 @@ function _emit_message(
     )
     param_names = String[]
     for f in plain_fields
+        _emit_field_comment(io, _field_doc(doc_index, proto_fqn, f.proto_name))
         println(io, "    ", f.jl_fieldname, "::", f.jl_type)
         push!(param_names, f.jl_fieldname)
     end
     for o in real_oneofs
+        _emit_field_comment(io, _oneof_field_comment(doc_index, proto_fqn, o))
         println(io, "    ", o.jl_fieldname, "::", _oneof_jl_type(o))
         push!(param_names, o.jl_fieldname)
     end
@@ -1310,7 +1649,11 @@ function _emit_message(
 end
 
 function _oneof_jl_type(o::OneofModel)
-    elem_union = join((m.elem_jl_type for m in o.members), ",")
+    # `unique` over the rendered type strings keeps the first occurrence
+    # of each arm in source order — so a oneof with two arms of the same
+    # message type collapses to `Union{T}` instead of `Union{T,T}`. See
+    # https://github.com/jw3126/ProtocGen.jl/issues/14.
+    elem_union = join(unique(m.elem_jl_type for m in o.members), ",")
     return "Union{Nothing,OneOf{<:Union{$(elem_union)}}}"
 end
 
@@ -1607,6 +1950,192 @@ function _emit_encoded_size_field(io::IO, f::FieldModel)
     end
 end
 
+# Emit the enum's leading comment as a docstring above `@enumx` (it binds to
+# the EnumX baremodule, so `?MyEnum` resolves). No-op when not enabled / absent.
+function _emit_enum_docstring(io, doc_index, fqn)
+    isempty(doc_index) && return
+    lit = _doc_literal(get(doc_index, fqn, ""))
+    isempty(lit) || println(io, lit)
+    return
+end
+
+# Attach each value's comment as a real, queryable docstring AFTER the
+# declaration (`"comment" MyEnum.VALUE`) — a docstring inside the `@enumx`
+# block is rejected by the macro, but attaching afterwards makes
+# `?MyEnum.VALUE` resolve. Uses the prefix-stripped value identifier.
+function _emit_enum_value_docs(io, doc_index, fqn, jl_name, e, strip_value)
+    isempty(doc_index) && return
+    for v in e.value
+        vname = something(v.name, "")
+        lit = _doc_literal(get(doc_index, string("v:", fqn, ".", vname), ""))
+        isempty(lit) && continue
+        println(io, lit, " ", jl_name, ".", strip_value(vname))
+    end
+    return
+end
+
+# Decode one scalar custom option from the wire, given its proto type. Mirrors
+# the per-type dispatch the generated message decoders use; runs at codegen
+# time over the captured option bytes (not in generated code).
+function _decode_meta_scalar(d, t)
+    T = var"FieldDescriptorProto.Type"
+    t === T.DOUBLE && return ProtocGen._decode(d, Float64)
+    t === T.FLOAT && return ProtocGen._decode(d, Float32)
+    t === T.INT64 && return ProtocGen._decode(d, Int64)
+    t === T.UINT64 && return ProtocGen._decode(d, UInt64)
+    t === T.INT32 && return ProtocGen._decode(d, Int32)
+    t === T.FIXED64 && return ProtocGen._decode(d, UInt64, Val{:fixed})
+    t === T.FIXED32 && return ProtocGen._decode(d, UInt32, Val{:fixed})
+    t === T.BOOL && return ProtocGen._decode(d, Bool)
+    t === T.STRING && return ProtocGen._decode(d, String)
+    t === T.BYTES && return ProtocGen._decode(d, Vector{UInt8})
+    t === T.UINT32 && return ProtocGen._decode(d, UInt32)
+    t === T.SFIXED32 && return ProtocGen._decode(d, Int32, Val{:fixed})
+    t === T.SFIXED64 && return ProtocGen._decode(d, Int64, Val{:fixed})
+    t === T.SINT32 && return ProtocGen._decode(d, Int32, Val{:zigzag})
+    t === T.SINT64 && return ProtocGen._decode(d, Int64, Val{:zigzag})
+    error("enum_metadata: unsupported option wire type $t")
+end
+
+# Decode the custom options set on one enum value into `number -> value`. The
+# options live in `EnumValueOptions.#unknown_fields` (protoc serializes
+# resolved extensions there); we walk the raw bytes, decode field numbers in
+# the schema, and skip everything else. Returns an empty dict when no options.
+function _decode_enum_metadata(options, by_number::AbstractDict)
+    vals = Dict{Int32,Any}()
+    options === nothing && return vals
+    bytes = options.var"#unknown_fields"
+    isempty(bytes) && return vals
+    d = ProtocGen.ProtoDecoder(IOBuffer(bytes))
+    while !ProtocGen.message_done(d, 0, false)
+        fnum, wtype = ProtocGen.decode_tag(d)
+        f = get(by_number, fnum, nothing)
+        if f === nothing
+            Base.skip(d, wtype)
+        else
+            vals[fnum] = _decode_meta_scalar(d, f.proto_type)
+        end
+    end
+    return vals
+end
+
+# Render a `Vector{UInt8}` as a Julia byte-array literal (`UInt8[0x01, 0x02]`).
+function _render_bytes_literal(bytes, nm::NameMap)
+    isempty(bytes) && return string(nm.UInt8, "[]")
+    elems = join((string("0x", string(b; base = 16, pad = 2)) for b in bytes), ", ")
+    return string(nm.UInt8, "[", elems, "]")
+end
+
+# Render a decoded option value as a Julia literal whose type matches the
+# NamedTuple field type exactly (e.g. `Int32(3)`, `Float32(1.5)`, `"x"`), so
+# every branch of the generated `if`/`elseif` chain is type-identical.
+function _render_meta_value(value, f::EnumMetaField, nm::NameMap)
+    T = var"FieldDescriptorProto.Type"
+    t = f.proto_type
+    if t === T.STRING
+        return repr(value)
+    elseif t === T.BYTES
+        return _render_bytes_literal(value, nm)
+    elseif t === T.BOOL
+        return value ? "true" : "false"
+    else
+        jl, _ = _scalar_jl_type_and_wire(t, nm)
+        return string(jl, "(", value, ")")
+    end
+end
+
+# Render the default literal for an option not set on a value: the proto2
+# `default = …` parsed to the field type, else the type's zero. Keeps the
+# NamedTuple shape uniform and type-stable across all values.
+function _render_meta_default(f::EnumMetaField, nm::NameMap)
+    T = var"FieldDescriptorProto.Type"
+    t = f.proto_type
+    jl, _ = _scalar_jl_type_and_wire(t, nm)
+    dv = f.default_value
+    dv === nothing && return _scalar_zero(jl, nm)
+    if t === T.STRING
+        return repr(dv)
+    elseif t === T.BOOL
+        return dv == "true" ? "true" : "false"
+    elseif t === T.BYTES
+        # proto2 bytes defaults are C-escaped strings; not worth decoding here.
+        return _scalar_zero(jl, nm)
+    else
+        return string(jl, "(", dv, ")")
+    end
+end
+
+# Emit the per-enum `enum_metadata` method: long-form, return-type annotated,
+# one `if`/`elseif` arm per distinct enum value (defaults filled for options it
+# doesn't set), and a final `else` that errors — unreachable because every
+# value is listed. No-op when the schema is empty (no methods generated, so a
+# call is a loud MethodError rather than a silent empty tuple).
+function _emit_enum_metadata(
+    io::IO,
+    e::EnumDescriptorProto,
+    jl_name::AbstractString,
+    strip_value,
+    schema::AbstractVector{EnumMetaField},
+    nm::NameMap,
+)
+    isempty(schema) && return
+    by_number = Dict{Int32,EnumMetaField}(f.number => f for f in schema)
+    # The schema is universe-wide: it's non-empty as soon as *any* proto file
+    # declares a scalar `EnumValueOptions` extension. An enum whose values set
+    # none of those options carries no metadata of its own — emit an empty,
+    # type-stable `(;)` accessor rather than a NamedTuple of bare defaults, so
+    # `enum_metadata` answers uniformly across every enum in a module that
+    # exposes the feature without inventing metadata the enum doesn't have.
+    if !any(v -> !isempty(_decode_enum_metadata(v.options, by_number)), e.value)
+        println(
+            io,
+            "function PB.enum_metadata(x::",
+            jl_name,
+            ".T)::NamedTuple{(), Tuple{}}",
+        )
+        println(io, "    return (;)")
+        println(io, "end")
+        return
+    end
+    n = length(schema)
+    names_tuple =
+        n == 1 ? string("(:", schema[1].name, ",)") :
+        string("(", join((string(":", f.name) for f in schema), ", "), ")")
+    types_tuple = string(
+        "Tuple{",
+        join((_scalar_jl_type_and_wire(f.proto_type, nm)[1] for f in schema), ", "),
+        "}",
+    )
+    nt_type = string("NamedTuple{", names_tuple, ", ", types_tuple, "}")
+
+    println(io, "function PB.enum_metadata(x::", jl_name, ".T)::", nt_type)
+    seen = Set{Int}()
+    first = true
+    for v in e.value
+        vnum = Int(something(v.number, Int32(0)))
+        vnum in seen && continue   # alias: same instance as the canonical, already listed
+        push!(seen, vnum)
+        vname = strip_value(something(v.name, ""))
+        decoded = _decode_enum_metadata(v.options, by_number)
+        parts = String[]
+        for f in schema
+            lit =
+                haskey(decoded, f.number) ? _render_meta_value(decoded[f.number], f, nm) :
+                _render_meta_default(f, nm)
+            push!(parts, string(f.name, " = ", lit))
+        end
+        trailing = n == 1 ? "," : ""
+        println(io, "    ", first ? "if" : "elseif", " x == ", jl_name, ".", vname)
+        println(io, "        return (", join(parts, ", "), trailing, ")")
+        first = false
+    end
+    println(io, "    else")
+    println(io, "        error(\"enum_metadata: unreachable enum variant: \$x\")")
+    println(io, "    end")
+    println(io, "end")
+    return
+end
+
 function _emit_enum(
     io::IO,
     e::EnumDescriptorProto,
@@ -1615,6 +2144,8 @@ function _emit_enum(
     parent_proto::String = "",
     enumbatteries_kw::String = "",
     strip_enum_prefix::Bool = true,
+    doc_index::AbstractDict = Dict{String,String}(),
+    enum_metadata_schema::AbstractVector{EnumMetaField} = EnumMetaField[],
 )
     name = something(e.name, "")
     jl_name_plain = isempty(parent_jl) ? name : string(parent_jl, ".", name)
@@ -1650,12 +2181,15 @@ function _emit_enum(
             ),
             " ",
         )
+        _emit_enum_docstring(io, doc_index, proto_fqn)
         println(io, "@enumx ", jl_name, " ", members)
+        _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
         # is what `@enumbatteries` operates on.
         println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
         _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
+        _emit_enum_metadata(io, e, jl_name, strip_value, enum_metadata_schema, nm)
         println(io)
         return
     end
@@ -1682,6 +2216,7 @@ function _emit_enum(
         end
     end
     members = join((string(n, "=", num) for (n, num) in canonicals), " ")
+    _emit_enum_docstring(io, doc_index, proto_fqn)
     println(io, "@enumx ", jl_name, " ", members)
     # `Core.eval(Mod, expr)` rather than `Mod.eval(expr)` because EnumX
     # builds the enum module as a `baremodule`, which doesn't import
@@ -1689,8 +2224,10 @@ function _emit_enum(
     for (alias, canonical) in aliases
         println(io, core_q, ".eval(", jl_name, ", :(const ", alias, " = ", canonical, "))")
     end
+    _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
     println(io, "@enumbatteries ", jl_name, ".T ", _join_kw(salt_kw, enumbatteries_kw))
     _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
+    _emit_enum_metadata(io, e, jl_name, strip_value, enum_metadata_schema, nm)
     println(io)
 end
 
@@ -2073,6 +2610,16 @@ function codegen(
     batteries_kw = _config_kw_table(config, "batteries")
     enumbatteries_kw = _config_kw_table(config, "enumbatteries")
 
+    # `.proto` comment retention (opt-in). Empty index when disabled or when
+    # protoc sent no source_code_info, in which case every emitter is a no-op.
+    doc_index = _docstrings_enabled(config) ? _build_doc_index(file) : Dict{String,String}()
+
+    # Enum-value custom-option metadata (opt-in). Empty schema when disabled or
+    # when no `extend google.protobuf.EnumValueOptions` fields exist, in which
+    # case `_emit_enum_metadata` is a no-op and the default output is unchanged.
+    meta_schema =
+        _enum_metadata_enabled(config) ? universe.enum_metadata_schema : EnumMetaField[]
+
     println(io, "# Generated by ProtocGen. Do not edit.")
     println(io, "# source: ", proto_name, " (", syntax, " syntax)")
     println(io, "#! format: off")
@@ -2083,6 +2630,11 @@ function codegen(
     # `encode(io, msg)` / `decode(io, T)` / `encode_json` / `decode_json`
     # work without the caller importing ProtocGen themselves.
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
+    # Surface `enum_metadata` in the generated module only when methods are
+    # emitted for it, so the default preamble stays byte-for-byte unchanged.
+    if !isempty(meta_schema)
+        println(io, "using ProtocGen: enum_metadata")
+    end
     println(io, "using ProtocGen.EnumX: @enumx")
     # `@batteries` / `@enumbatteries` reach the user's namespace via
     # the ProtocGen → StructHelpers re-export, so users only need to
@@ -2159,6 +2711,9 @@ function codegen(
             isempty(mname) || push!(exports, mname)
         end
     end
+    if !isempty(meta_schema)
+        push!(exports, "enum_metadata")
+    end
     if !isempty(exports)
         println(io, "export ", join(exports, ", "))
         println(io)
@@ -2174,6 +2729,8 @@ function codegen(
             parent_proto = file_parent_proto,
             enumbatteries_kw = enumbatteries_kw,
             strip_enum_prefix = names.strip_enum_prefix,
+            doc_index = doc_index,
+            enum_metadata_schema = meta_schema,
         )
     end
     sorted_msgs, cycle_participants = _topo_sort(file, names)
@@ -2216,6 +2773,8 @@ function codegen(
             cycle_names;
             batteries_kw = batteries_kw,
             enumbatteries_kw = enumbatteries_kw,
+            doc_index = doc_index,
+            enum_metadata_schema = meta_schema,
         )
     end
     # Forwarding decode methods so that decoding into Vector{Abstract<X>}
@@ -2301,14 +2860,19 @@ function codegen_driver(
         f = by_name[path]
         deps[path] = [d for d in f.dependency if d in in_set]
     end
-    order = String[]
-    remaining = Set(keys(deps))
-    while !isempty(remaining)
-        ready = sort!([n for n in remaining if all(d -> d in order, deps[n])])
-        isempty(ready) && error("codegen_driver: dependency cycle in $remaining")
-        append!(order, ready)
-        foreach(n -> delete!(remaining, n), ready)
+    function pkg_of(p)
+        something(by_name[p].package, "")
     end
+
+    # Try the package-aware order first: topo-sort PACKAGES, then files
+    # within each package. When the package-level dependency graph is a
+    # DAG this guarantees every package occupies a contiguous run in the
+    # emitted order, which lets the prettier inline emit go through.
+    # A package-level cycle (file A1 in pkg a → file B in pkg b → file
+    # A2 in pkg a) makes pkg a re-enter the order no matter how files
+    # are picked — we fall back to a file-level topo sort + the
+    # skeleton-first emit shape, which doesn't depend on contiguity.
+    contiguous_order = _try_package_topo_sort(deps, pkg_of)
 
     io = IOBuffer()
     println(io, "# Generated by ProtocGen. Do not edit.")
@@ -2323,11 +2887,96 @@ function codegen_driver(
     println(io, "using ProtocGen: encode, decode, encode_json, decode_json")
     println(io)
 
-    # Walk the topo order, transitioning between module paths by closing
-    # back to the lowest common ancestor and opening down to the new
-    # target. `include(...)` is then plain Julia: relative to this driver
-    # file and evaluated in the enclosing `module`. Reopening a module
-    # later in the same file is fine — Julia merges the contents.
+    if contiguous_order !== nothing
+        _emit_driver_inline(io, contiguous_order, by_name)
+    else
+        # Cyclic package graph: emit in a file-level topo order. Any
+        # valid one will do — same-package re-entry is handled by the
+        # skeleton-first phase.
+        fallback_order = _file_topo_sort(deps)
+        _emit_driver_two_phase(io, fallback_order, by_name)
+    end
+
+    println(io)
+    println(io, "#! format: on")
+    return String(take!(io))
+end
+
+# Package-aware topo sort: returns a file ordering where each package
+# occupies a contiguous run, or `nothing` if the package-level
+# dependency graph has a cycle (in which case no such ordering exists).
+function _try_package_topo_sort(deps::Dict{String,Vector{String}}, pkg_of::Function)
+    # Build the per-package dependency set from cross-package file imports.
+    files_by_pkg = Dict{String,Vector{String}}()
+    pkg_deps = Dict{String,Set{String}}()
+    for path in keys(deps)
+        pkg = pkg_of(path)
+        push!(get!(files_by_pkg, pkg, String[]), path)
+        get!(pkg_deps, pkg, Set{String}())
+        for d in deps[path]
+            dpkg = pkg_of(d)
+            dpkg == pkg && continue
+            push!(pkg_deps[pkg], dpkg)
+        end
+    end
+
+    # Topo-sort packages — alphabetical tie-break for determinism.
+    # `error`-on-cycle would crash the plugin; return `nothing` so the
+    # caller can fall back instead.
+    pkg_order = String[]
+    pkg_remaining = Set(keys(pkg_deps))
+    pkg_emitted = Set{String}()
+    while !isempty(pkg_remaining)
+        ready = sort!([p for p in pkg_remaining if all(d -> d in pkg_emitted, pkg_deps[p])])
+        isempty(ready) && return nothing
+        append!(pkg_order, ready)
+        for p in ready
+            push!(pkg_emitted, p)
+            delete!(pkg_remaining, p)
+        end
+    end
+
+    # File-level topo sort, drained one package at a time. Intra-package
+    # deps stay constrained; cross-package deps are all satisfied by the
+    # time we enter a package because the package order respects them.
+    order = String[]
+    emitted = Set{String}()
+    for pkg in pkg_order
+        local_remaining = Set(files_by_pkg[pkg])
+        while !isempty(local_remaining)
+            ready = sort!([n for n in local_remaining if all(d -> d in emitted, deps[n])])
+            isempty(ready) && error("intra-package dependency cycle in pkg $(repr(pkg))")
+            append!(order, ready)
+            for n in ready
+                push!(emitted, n)
+                delete!(local_remaining, n)
+            end
+        end
+    end
+    return order
+end
+
+# Plain file-level topo sort with alphabetical tie-break — used only as
+# the fallback when the package graph has a cycle and contiguous emit
+# isn't reachable.
+function _file_topo_sort(deps::Dict{String,Vector{String}})
+    order = String[]
+    remaining = Set(keys(deps))
+    while !isempty(remaining)
+        ready = sort!([n for n in remaining if all(d -> d in order, deps[n])])
+        isempty(ready) && error("codegen_driver: file-level dependency cycle in $remaining")
+        append!(order, ready)
+        foreach(n -> delete!(remaining, n), ready)
+    end
+    return order
+end
+
+# Inline emit: walk `order` linearly, opening/closing nested module
+# blocks as the package path changes. Requires that no package
+# reappears after being closed — guaranteed by the contiguity check at
+# the call site. Same-package refs resolve against prior includes;
+# cross-package refs resolve against sibling modules opened earlier.
+function _emit_driver_inline(io::IO, order, by_name)
     current_path = String[]
     for path in order
         f = by_name[path]
@@ -2353,10 +3002,64 @@ function codegen_driver(
     for d in length(current_path):-1:1
         println(io, "    "^(d - 1), "end # module ", current_path[d])
     end
+    return nothing
+end
 
-    println(io)
-    println(io, "#! format: on")
-    return String(take!(io))
+# Two-phase emit:
+# 1. Forward-declare every proto package as an empty nested module.
+# 2. Emit `<pkg>.include("file_pb.jl")` for each file in topo order.
+#
+# Used when a genuine package-level dependency cycle forces the topo
+# order to split a single package across non-contiguous positions.
+# Julia's source `module Name ... end` always creates a FRESH module —
+# there is no reopen-merge (that's a REPL/`Base.eval` trick) — so the
+# inline form above would shadow the first block with the second.
+# Skeleton-first sidesteps that: each package gets one module instance
+# and every later include lands in the same one regardless of when in
+# the topo order it runs.
+function _emit_driver_two_phase(io::IO, order, by_name)
+    pkg_paths = Set{NTuple{N,String} where N}()
+    for path in order
+        pkg = something(by_name[path].package, "")
+        push!(pkg_paths, isempty(pkg) ? () : Tuple(String.(split(pkg, '.'))))
+    end
+    # The trie: parent path → set of child segment names. Every prefix
+    # of every package path needs a node, otherwise nested children
+    # would miss their parent module.
+    skeleton = Dict{Tuple{Vararg{String}},Set{String}}()
+    skeleton[()] = Set{String}()
+    for ppath in pkg_paths
+        for i in 1:length(ppath)
+            parent = Tuple(ppath[1:i-1])
+            push!(get!(skeleton, parent, Set{String}()), ppath[i])
+        end
+    end
+    function _emit_skel(parent::Tuple, depth::Int)
+        for name in sort!(collect(get(skeleton, parent, Set{String}())))
+            println(io, "    "^depth, "module ", name)
+            _emit_skel((parent..., name), depth + 1)
+            println(io, "    "^depth, "end # module ", name)
+        end
+    end
+    _emit_skel((), 0)
+
+    # Phase 2: `<pkg>.include("file_pb.jl")` in topo order. Each include
+    # lands inside the pre-declared module, so same-package references
+    # resolve against prior includes' definitions and cross-package
+    # imports (`import ..other_pkg`) resolve against the sibling
+    # skeleton module — present (though possibly empty of types) by the
+    # time any code in `other_pkg` actually runs.
+    if !isempty(order)
+        println(io)
+    end
+    for path in order
+        f = by_name[path]
+        pkg = something(f.package, "")
+        out_name = string(replace(path, r"\.proto$" => ""), "_pb.jl")
+        prefix = isempty(pkg) ? "" : "$(pkg)."
+        println(io, prefix, "include(", repr(out_name), ")")
+    end
+    return nothing
 end
 
 end # module Codegen
