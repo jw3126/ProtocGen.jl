@@ -1,5 +1,5 @@
 """
-ProtoConnect — Connect RPC transport for ProtocGen-generated services.
+ProtocGenConnect — Connect RPC transport for ProtocGen-generated services.
 
 Minimal v0 sketch covering unary calls only. Connect-protocol unary is
 essentially a plain HTTP POST: request body is the encoded protobuf,
@@ -13,7 +13,7 @@ mirrors gRPC-Web closely; we'll land it once a real consumer needs it.
 
 Spec reference: https://connectrpc.com/docs/protocol
 """
-module ProtoConnect
+module ProtocGenConnect
 
 import ProtocGen as PB
 import HTTP
@@ -32,7 +32,7 @@ const PROTOCOL_VERSION = "1"
 
 Connect-protocol client. Pass directly to a generated RPC stub:
 
-    client = ProtoConnect.Client("http://localhost:8080")
+    client = ProtocGenConnect.Client("http://localhost:8080")
     reply = SayHello(client, HelloRequest(name = "Alice"))
 
 `base_url` is the origin only (no trailing slash); the path becomes
@@ -282,4 +282,4 @@ function _status_from_http(status::Integer)
     end
 end
 
-end # module ProtoConnect
+end # module ProtocGenConnect

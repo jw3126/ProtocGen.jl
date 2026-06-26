@@ -1,8 +1,7 @@
-name = "ProtoConnect"
+name = "ProtocGenConnect"
 uuid = "ad787490-c120-4cda-8d00-74a3553909c6"
 authors = ["Jan Weidner <jw3126@gmail.com>"]
-version = "0.1.0-DEV"
-desc = "Connect RPC transport for ProtocGen.jl"
+version = "0.1.0"
 
 [deps]
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"

@@ -1,6 +1,6 @@
 using Test
 using ProtocGen
-using ProtoConnect
+using ProtocGenConnect
 using HTTP
 using Sockets
 
@@ -81,9 +81,9 @@ end
 
 # Listen on an ephemeral port and tear down at the end.
 function with_running_server(f; impl = EchoGreeter("!"))
-    srv = ProtoConnect.Server()
-    ProtoConnect.serve!(srv, impl, GreeterMethods)
-    http = ProtoConnect.listen(srv; host = "127.0.0.1", port = 0)
+    srv = ProtocGenConnect.Server()
+    ProtocGenConnect.serve!(srv, impl, GreeterMethods)
+    http = ProtocGenConnect.listen(srv; host = "127.0.0.1", port = 0)
     try
         # `port = 0` asks the kernel for a free port; the actual port lives on
         # the underlying TCP server. `HTTP.Server` does not expose it directly.
@@ -94,18 +94,18 @@ function with_running_server(f; impl = EchoGreeter("!"))
     end
 end
 
-@testset "ProtoConnect — unary roundtrip" begin
+@testset "ProtocGenConnect — unary roundtrip" begin
     with_running_server() do url
-        client = ProtoConnect.Client(url)
+        client = ProtocGenConnect.Client(url)
         reply = Base.invokelatest(SayHello, client, HelloRequest(name = "Alice"))
         @test reply isa HelloReply
         @test reply.message == "Hello, Alice!"
     end
 end
 
-@testset "ProtoConnect — RpcError round-trip" begin
+@testset "ProtocGenConnect — RpcError round-trip" begin
     with_running_server() do url
-        client = ProtoConnect.Client(url)
+        client = ProtocGenConnect.Client(url)
         err = try
             Base.invokelatest(SayHello, client, HelloRequest(name = ""))
             nothing
@@ -118,9 +118,9 @@ end
     end
 end
 
-@testset "ProtoConnect — 404 on unknown method" begin
+@testset "ProtocGenConnect — 404 on unknown method" begin
     with_running_server() do url
-        client = ProtoConnect.Client(url)
+        client = ProtocGenConnect.Client(url)
         err = try
             ProtocGen.rpc_call(client, "greeter.Greeter", "DoesNotExist", UInt8[])
             nothing

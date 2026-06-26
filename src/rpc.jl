@@ -11,8 +11,8 @@ import EnumX
 """
     AbstractRpcTransport
 
-Supertype every concrete transport (`ProtoConnect.Client`,
-`ProtoConnect.Server`, in-process test transports, ...) subtypes.
+Supertype every concrete transport (`ProtocGenConnect.Client`,
+`ProtocGenConnect.Server`, in-process test transports, ...) subtypes.
 
 Codegen-emitted client stubs dispatch on this supertype, so the user
 calls `SayHello(transport, req)` directly with whatever transport they
