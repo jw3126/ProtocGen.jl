@@ -144,7 +144,11 @@ function PB.StructHelpers.default_keywords(::Type{CodeGeneratorRequest})
     return (;file_to_generate = Vector{String}(), parameter = nothing, proto_file = Vector{google_protobuf.FileDescriptorProto}(), source_file_descriptors = Vector{google_protobuf.FileDescriptorProto}(), compiler_version = nothing, var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"CodeGeneratorResponse.Feature" NONE=0 PROTO3_OPTIONAL=1 SUPPORTS_EDITIONS=2
+@enumx var"CodeGeneratorResponse.Feature" begin
+    NONE = 0
+    PROTO3_OPTIONAL = 1
+    SUPPORTS_EDITIONS = 2
+end
 @enumbatteries var"CodeGeneratorResponse.Feature".T typesalt=0x0f8ab756e8575a15
 PB._enum_proto_prefix(::Type{var"CodeGeneratorResponse.Feature".T}) = "FEATURE_"
 

@@ -7,6 +7,76 @@
 
 using Scratch: get_scratch!
 
+"""
+    greeter_file_descriptor() -> google.protobuf.FileDescriptorProto
+
+In-process `FileDescriptorProto` for the canonical greeter test service:
+`HelloRequest`/`HelloReply` messages, a unary `SayHello`, and a
+server-streaming `SayHelloStream` (package `greeter`). Built without
+protoc so test suites stay hermetic. Shared by ProtocGen's own
+service-codegen tests and transport packages (e.g. ProtocGenConnect)
+so the fixture cannot drift between suites.
+"""
+function greeter_file_descriptor()
+    G = google.protobuf
+    function msg(name, fields...)
+        G.DescriptorProto(;
+            name = name,
+            field = collect(fields),
+            nested_type = G.DescriptorProto[],
+            enum_type = G.EnumDescriptorProto[],
+            extension_range = G.var"DescriptorProto.ExtensionRange"[],
+            oneof_decl = G.OneofDescriptorProto[],
+            reserved_range = G.var"DescriptorProto.ReservedRange"[],
+            reserved_name = String[],
+            extension = G.FieldDescriptorProto[],
+        )
+    end
+    function fld(name, number)
+        G.FieldDescriptorProto(;
+            name = name,
+            number = Int32(number),
+            label = G.var"FieldDescriptorProto.Label".OPTIONAL,
+            type = G.var"FieldDescriptorProto.Type".STRING,
+        )
+    end
+    return G.FileDescriptorProto(;
+        name = "greeter.proto",
+        package = "greeter",
+        syntax = "proto3",
+        dependency = String[],
+        public_dependency = Int32[],
+        weak_dependency = Int32[],
+        enum_type = G.EnumDescriptorProto[],
+        extension = G.FieldDescriptorProto[],
+        message_type = [
+            msg("HelloRequest", fld("name", 1)),
+            msg("HelloReply", fld("message", 1)),
+        ],
+        service = [
+            G.ServiceDescriptorProto(;
+                name = "Greeter",
+                method = [
+                    G.MethodDescriptorProto(;
+                        name = "SayHello",
+                        input_type = ".greeter.HelloRequest",
+                        output_type = ".greeter.HelloReply",
+                        client_streaming = false,
+                        server_streaming = false,
+                    ),
+                    G.MethodDescriptorProto(;
+                        name = "SayHelloStream",
+                        input_type = ".greeter.HelloRequest",
+                        output_type = ".greeter.HelloReply",
+                        client_streaming = false,
+                        server_streaming = true,
+                    ),
+                ],
+            ),
+        ],
+    )
+end
+
 const _CONFORMANCE_PROTOBUF_TAG = "v25.9"
 const _CONFORMANCE_RUNNER_VERSION = "v25.9-1"
 const _CONFORMANCE_PROTOBUF_REPO = "https://github.com/protocolbuffers/protobuf.git"

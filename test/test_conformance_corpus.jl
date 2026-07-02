@@ -153,7 +153,12 @@ end
         f.content,
     )
     @test occursin(
-        "@enumx var\"TestAllTypesProto3.AliasedEnum\" ALIAS_FOO=0 ALIAS_BAR=1 ALIAS_BAZ=2",
+        """
+        @enumx var"TestAllTypesProto3.AliasedEnum" begin
+            ALIAS_FOO = 0
+            ALIAS_BAR = 1
+            ALIAS_BAZ = 2
+        end""",
         f.content,
     )
     # `test_messages_proto3.proto` has no top-level name that collides

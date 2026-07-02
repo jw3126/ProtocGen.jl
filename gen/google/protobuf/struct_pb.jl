@@ -11,7 +11,9 @@ const var"#core" = Core
 
 export NullValue, Struct, Value, ListValue
 
-@enumx NullValue NULL_VALUE=0
+@enumx NullValue begin
+    NULL_VALUE = 0
+end
 @enumbatteries NullValue.T typesalt=0xe323a9dc5cbe6643
 
 # Forward declarations for cyclic message types. Each cycle

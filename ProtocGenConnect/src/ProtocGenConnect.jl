@@ -40,11 +40,29 @@ Connect-protocol client. Pass directly to a generated RPC stub:
 """
 struct Client <: PB.AbstractRpcTransport
     base_url::String
-    default_headers::Dict{String,String}
+    # Complete header set, assembled once in the constructor — headers are
+    # constant for the Client's lifetime, so rpc_call sends them as-is.
+    headers::Vector{Pair{String,String}}
 end
 
-function Client(base_url::AbstractString; default_headers::AbstractDict = Dict{String,String}())
-    return Client(String(rstrip(base_url, '/')), Dict{String,String}(default_headers))
+function Client(
+    base_url::AbstractString;
+    default_headers::AbstractDict = Dict{String,String}(),
+)
+    headers = Pair{String,String}[]
+    # Protocol headers first; a user-supplied header of the same name
+    # (case-insensitive, per HTTP) replaces the default instead of being
+    # sent as a duplicate.
+    for (k, v) in
+        ("Content-Type" => CONTENT_TYPE_PROTO, PROTOCOL_VERSION_HEADER => PROTOCOL_VERSION)
+        if !any(lowercase(String(uk)) == lowercase(k) for (uk, _) in default_headers)
+            push!(headers, k => v)
+        end
+    end
+    for (k, v) in default_headers
+        push!(headers, String(k) => String(v))
+    end
+    return Client(String(rstrip(base_url, '/')), headers)
 end
 
 function PB.rpc_call(
@@ -54,14 +72,10 @@ function PB.rpc_call(
     body::AbstractVector{UInt8},
 )
     url = string(c.base_url, "/", service, "/", method)
-    headers = vcat(
-        [
-            "Content-Type" => CONTENT_TYPE_PROTO,
-            PROTOCOL_VERSION_HEADER => PROTOCOL_VERSION,
-        ],
-        [k => v for (k, v) in c.default_headers],
-    )
-    resp = HTTP.post(url, headers, Vector{UInt8}(body); status_exception = false)
+    # `encode` already hands us a fresh Vector{UInt8}; only copy when the
+    # caller passed some other AbstractVector.
+    req_body = body isa Vector{UInt8} ? body : Vector{UInt8}(body)
+    resp = HTTP.post(url, c.headers, req_body; status_exception = false)
     if resp.status == 200
         return resp.body
     end
@@ -110,7 +124,9 @@ the user attached server-side methods to. `listen` opens an
 struct Server <: PB.AbstractRpcTransport
     routes::Dict{Tuple{String,String},Tuple{Function,Any}}
 end
-Server() = Server(Dict{Tuple{String,String},Tuple{Function,Any}}())
+function Server()
+    Server(Dict{Tuple{String,String},Tuple{Function,Any}}())
+end
 
 function serve!(s::Server, impl, methods::Tuple)
     for f in methods
@@ -132,16 +148,27 @@ end
 
 function _handler(s::Server)
     return function (req::HTTP.Request)
-        target = req.target
-        # Strip query string if any.
-        qidx = findfirst('?', target)
-        path = qidx === nothing ? target : target[1:qidx-1]
-        parts = split(strip(path, '/'), '/')
+        # HTTP.URI handles query strings and multi-byte targets; hand-rolled
+        # byte slicing would StringIndexError on non-ASCII paths.
+        parts = HTTP.URIs.splitpath(HTTP.URI(req.target).path)
         length(parts) == 2 || return HTTP.Response(404, "expected /<service>/<method>")
         route = get(s.routes, (String(parts[1]), String(parts[2])), nothing)
-        route === nothing && return HTTP.Response(
-            404,
-            string("no route for ", parts[1], "/", parts[2]),
+        route === nothing &&
+            return HTTP.Response(404, string("no route for ", parts[1], "/", parts[2]))
+        # Unary Connect also allows application/json; we only speak proto so
+        # far, so reject everything else with 415 per spec instead of feeding
+        # a JSON body to the binary decoder.
+        content_type = HTTP.header(req, "Content-Type", "")
+        media_type = lowercase(strip(first(split(content_type, ';'; limit = 2))))
+        media_type == CONTENT_TYPE_PROTO || return HTTP.Response(
+            415,
+            string(
+                "unsupported content-type ",
+                repr(content_type),
+                "; only ",
+                CONTENT_TYPE_PROTO,
+                " is supported",
+            ),
         )
         f, impl = route
         try
@@ -162,9 +189,9 @@ function _handler(s::Server)
                 # Wrap unexpected errors as INTERNAL so the client sees a
                 # well-shaped Connect error envelope instead of a raw
                 # 500 with a stringified exception.
-                io = IOBuffer()
-                showerror(io, e)
-                return _error_response(PB.RpcError(PB.StatusCode.INTERNAL, String(take!(io))))
+                return _error_response(
+                    PB.RpcError(PB.StatusCode.INTERNAL, sprint(showerror, e)),
+                )
             end
         end
     end
@@ -185,98 +212,116 @@ end
 # ---------------------------------------------------------------------------
 
 function _connect_code_string(c::PB.StatusCode.T)
-    return _CONNECT_CODE_NAMES[c]
+    if c === PB.StatusCode.OK
+        return "ok"
+    elseif c === PB.StatusCode.CANCELLED
+        return "canceled"
+    elseif c === PB.StatusCode.UNKNOWN
+        return "unknown"
+    elseif c === PB.StatusCode.INVALID_ARGUMENT
+        return "invalid_argument"
+    elseif c === PB.StatusCode.DEADLINE_EXCEEDED
+        return "deadline_exceeded"
+    elseif c === PB.StatusCode.NOT_FOUND
+        return "not_found"
+    elseif c === PB.StatusCode.ALREADY_EXISTS
+        return "already_exists"
+    elseif c === PB.StatusCode.PERMISSION_DENIED
+        return "permission_denied"
+    elseif c === PB.StatusCode.RESOURCE_EXHAUSTED
+        return "resource_exhausted"
+    elseif c === PB.StatusCode.FAILED_PRECONDITION
+        return "failed_precondition"
+    elseif c === PB.StatusCode.ABORTED
+        return "aborted"
+    elseif c === PB.StatusCode.OUT_OF_RANGE
+        return "out_of_range"
+    elseif c === PB.StatusCode.UNIMPLEMENTED
+        return "unimplemented"
+    elseif c === PB.StatusCode.INTERNAL
+        return "internal"
+    elseif c === PB.StatusCode.UNAVAILABLE
+        return "unavailable"
+    elseif c === PB.StatusCode.DATA_LOSS
+        return "data_loss"
+    elseif c === PB.StatusCode.UNAUTHENTICATED
+        return "unauthenticated"
+    else
+        error("unreachable: unknown status code $(c)")
+    end
 end
+
+const _CONNECT_CODE_LOOKUP = Dict{String,PB.StatusCode.T}(
+    _connect_code_string(code) => code for code in instances(PB.StatusCode.T)
+)
 
 function _status_from_connect_code(s::AbstractString)
     return get(_CONNECT_CODE_LOOKUP, lowercase(strip(String(s))), PB.StatusCode.UNKNOWN)
 end
 
-const _CONNECT_CODE_NAMES = Dict{PB.StatusCode.T,String}(
-    PB.StatusCode.OK => "ok",
-    PB.StatusCode.CANCELLED => "canceled",
-    PB.StatusCode.UNKNOWN => "unknown",
-    PB.StatusCode.INVALID_ARGUMENT => "invalid_argument",
-    PB.StatusCode.DEADLINE_EXCEEDED => "deadline_exceeded",
-    PB.StatusCode.NOT_FOUND => "not_found",
-    PB.StatusCode.ALREADY_EXISTS => "already_exists",
-    PB.StatusCode.PERMISSION_DENIED => "permission_denied",
-    PB.StatusCode.RESOURCE_EXHAUSTED => "resource_exhausted",
-    PB.StatusCode.FAILED_PRECONDITION => "failed_precondition",
-    PB.StatusCode.ABORTED => "aborted",
-    PB.StatusCode.OUT_OF_RANGE => "out_of_range",
-    PB.StatusCode.UNIMPLEMENTED => "unimplemented",
-    PB.StatusCode.INTERNAL => "internal",
-    PB.StatusCode.UNAVAILABLE => "unavailable",
-    PB.StatusCode.DATA_LOSS => "data_loss",
-    PB.StatusCode.UNAUTHENTICATED => "unauthenticated",
-)
-
-const _CONNECT_CODE_LOOKUP = Dict{String,PB.StatusCode.T}(
-    name => code for (code, name) in _CONNECT_CODE_NAMES
-)
-
 function _http_status_for(c::PB.StatusCode.T)
-    if c === PB.StatusCode.INVALID_ARGUMENT
+    if c === PB.StatusCode.OK
+        # An error envelope never carries OK; if a handler throws
+        # RpcError(OK, …) anyway, surface it as a server bug.
+        return 500
+    elseif c === PB.StatusCode.CANCELLED
+        return 499
+    elseif c === PB.StatusCode.UNKNOWN
+        return 500
+    elseif c === PB.StatusCode.INVALID_ARGUMENT
         return 400
-    elseif c === PB.StatusCode.OUT_OF_RANGE
-        return 400
-    elseif c === PB.StatusCode.FAILED_PRECONDITION
-        return 412
-    elseif c === PB.StatusCode.UNAUTHENTICATED
-        return 401
-    elseif c === PB.StatusCode.PERMISSION_DENIED
-        return 403
+    elseif c === PB.StatusCode.DEADLINE_EXCEEDED
+        return 504
     elseif c === PB.StatusCode.NOT_FOUND
         return 404
     elseif c === PB.StatusCode.ALREADY_EXISTS
         return 409
-    elseif c === PB.StatusCode.ABORTED
-        return 409
+    elseif c === PB.StatusCode.PERMISSION_DENIED
+        return 403
     elseif c === PB.StatusCode.RESOURCE_EXHAUSTED
         return 429
-    elseif c === PB.StatusCode.CANCELLED
-        return 408
-    elseif c === PB.StatusCode.DEADLINE_EXCEEDED
-        return 504
+    elseif c === PB.StatusCode.FAILED_PRECONDITION
+        return 400
+    elseif c === PB.StatusCode.ABORTED
+        return 409
+    elseif c === PB.StatusCode.OUT_OF_RANGE
+        return 400
     elseif c === PB.StatusCode.UNIMPLEMENTED
         return 501
+    elseif c === PB.StatusCode.INTERNAL
+        return 500
     elseif c === PB.StatusCode.UNAVAILABLE
         return 503
-    elseif c === PB.StatusCode.INTERNAL || c === PB.StatusCode.DATA_LOSS ||
-           c === PB.StatusCode.UNKNOWN
+    elseif c === PB.StatusCode.DATA_LOSS
         return 500
+    elseif c === PB.StatusCode.UNAUTHENTICATED
+        return 401
     else
-        return 500
+        error("unreachable: unknown status code $(c)")
     end
 end
 
-# Inverse — used when the body lacks a code field and we fall back to the HTTP status.
+# Fallback used when the error body lacks a `code` field. Deliberately NOT
+# the inverse of `_http_status_for` — the spec's HTTP-to-code table maps
+# statuses a bare proxy/load-balancer would send (see "HTTP to Error Code"
+# at https://connectrpc.com/docs/protocol#error-codes).
 function _status_from_http(status::Integer)
     if status == 400
-        return PB.StatusCode.INVALID_ARGUMENT
+        return PB.StatusCode.INTERNAL
     elseif status == 401
         return PB.StatusCode.UNAUTHENTICATED
     elseif status == 403
         return PB.StatusCode.PERMISSION_DENIED
     elseif status == 404
-        return PB.StatusCode.NOT_FOUND
-    elseif status == 408
-        return PB.StatusCode.CANCELLED
-    elseif status == 409
-        return PB.StatusCode.ALREADY_EXISTS
-    elseif status == 412
-        return PB.StatusCode.FAILED_PRECONDITION
-    elseif status == 429
-        return PB.StatusCode.RESOURCE_EXHAUSTED
-    elseif status == 501
         return PB.StatusCode.UNIMPLEMENTED
+    elseif status == 429
+        return PB.StatusCode.UNAVAILABLE
+    elseif status == 502
+        return PB.StatusCode.UNAVAILABLE
     elseif status == 503
         return PB.StatusCode.UNAVAILABLE
     elseif status == 504
-        return PB.StatusCode.DEADLINE_EXCEEDED
-    elseif 500 <= status < 600
-        return PB.StatusCode.INTERNAL
+        return PB.StatusCode.UNAVAILABLE
     else
         return PB.StatusCode.UNKNOWN
     end

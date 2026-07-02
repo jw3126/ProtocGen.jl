@@ -4,62 +4,11 @@ using ProtocGenConnect
 using HTTP
 using Sockets
 
-# Build greeter.proto's descriptor in-process — keeps the test hermetic
-# (no dependency on `examples/out/greeter_pb.jl`, which is git-ignored).
-function _greeter_file_descriptor()
-    G = ProtocGen.google.protobuf
-    msg(name, fields...) = G.DescriptorProto(;
-        name = name,
-        field = collect(fields),
-        nested_type = G.DescriptorProto[],
-        enum_type = G.EnumDescriptorProto[],
-        extension_range = G.var"DescriptorProto.ExtensionRange"[],
-        oneof_decl = G.OneofDescriptorProto[],
-        reserved_range = G.var"DescriptorProto.ReservedRange"[],
-        reserved_name = String[],
-        extension = G.FieldDescriptorProto[],
-    )
-    fld(name, number) = G.FieldDescriptorProto(;
-        name = name,
-        number = Int32(number),
-        label = G.var"FieldDescriptorProto.Label".OPTIONAL,
-        type = G.var"FieldDescriptorProto.Type".STRING,
-    )
-    return G.FileDescriptorProto(;
-        name = "greeter.proto",
-        package = "greeter",
-        syntax = "proto3",
-        dependency = String[],
-        public_dependency = Int32[],
-        weak_dependency = Int32[],
-        enum_type = G.EnumDescriptorProto[],
-        extension = G.FieldDescriptorProto[],
-        message_type = [
-            msg("HelloRequest", fld("name", 1)),
-            msg("HelloReply", fld("message", 1)),
-        ],
-        service = [
-            G.ServiceDescriptorProto(;
-                name = "Greeter",
-                method = [
-                    G.MethodDescriptorProto(;
-                        name = "SayHello",
-                        input_type = ".greeter.HelloRequest",
-                        output_type = ".greeter.HelloReply",
-                        client_streaming = false,
-                        server_streaming = false,
-                    ),
-                ],
-            ),
-        ],
-    )
-end
-
-# Generate + eval into a fresh anon module.
-const proto = _greeter_file_descriptor()
+# Generate + eval into a fresh anon module. The greeter descriptor is the
+# shared in-process fixture from ProtocGen's src/testing.jl — hermetic (no
+# protoc) and identical to the one ProtocGen's own codegen tests use.
+const proto = ProtocGen.greeter_file_descriptor()
 const src = ProtocGen.Codegen.codegen(proto)
-ProtocGen.unregister_message_type("greeter.HelloRequest")
-ProtocGen.unregister_message_type("greeter.HelloReply")
 const Greeter = Module()
 Core.eval(Greeter, Meta.parseall(src))
 
@@ -76,7 +25,7 @@ function (Greeter.SayHello)(impl::EchoGreeter, req::HelloRequest)
     if isempty(req.name)
         throw(ProtocGen.RpcError(ProtocGen.StatusCode.INVALID_ARGUMENT, "name is required"))
     end
-    return HelloReply(message = "Hello, $(req.name)$(impl.suffix)")
+    return HelloReply(; message = "Hello, $(req.name)$(impl.suffix)")
 end
 
 # Listen on an ephemeral port and tear down at the end.
@@ -97,7 +46,7 @@ end
 @testset "ProtocGenConnect — unary roundtrip" begin
     with_running_server() do url
         client = ProtocGenConnect.Client(url)
-        reply = Base.invokelatest(SayHello, client, HelloRequest(name = "Alice"))
+        reply = Base.invokelatest(SayHello, client, HelloRequest(; name = "Alice"))
         @test reply isa HelloReply
         @test reply.message == "Hello, Alice!"
     end
@@ -107,7 +56,7 @@ end
     with_running_server() do url
         client = ProtocGenConnect.Client(url)
         err = try
-            Base.invokelatest(SayHello, client, HelloRequest(name = ""))
+            Base.invokelatest(SayHello, client, HelloRequest(; name = ""))
             nothing
         catch e
             e
@@ -128,6 +77,20 @@ end
             e
         end
         @test err isa ProtocGen.RpcError
-        @test err.code === ProtocGen.StatusCode.NOT_FOUND
+        # The no-route 404 carries no Connect error envelope, so the client
+        # falls back to the spec's HTTP-to-code table: bare 404 → unimplemented.
+        @test err.code === ProtocGen.StatusCode.UNIMPLEMENTED
+    end
+end
+
+@testset "ProtocGenConnect — 415 on wrong content type" begin
+    with_running_server() do url
+        resp = HTTP.post(
+            "$(url)/greeter.Greeter/SayHello",
+            ["Content-Type" => "application/json"],
+            "{\"name\":\"Alice\"}";
+            status_exception = false,
+        )
+        @test resp.status == 415
     end
 end

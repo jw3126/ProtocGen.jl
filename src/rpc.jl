@@ -8,6 +8,11 @@
 
 import EnumX
 
+# Re-export the proto descriptor type at the top level so codegen can
+# emit `PB.MethodDescriptorProto(...)` without reaching into the nested
+# `google.protobuf` module. Users get a shorter spelling too.
+const MethodDescriptorProto = google.protobuf.MethodDescriptorProto
+
 """
     AbstractRpcTransport
 
@@ -18,11 +23,6 @@ Codegen-emitted client stubs dispatch on this supertype, so the user
 calls `SayHello(transport, req)` directly with whatever transport they
 hold — no per-service `*Client` wrapper.
 """
-# Re-export the proto descriptor type at the top level so codegen can
-# emit `PB.MethodDescriptorProto(...)` without reaching into the nested
-# `google.protobuf` module. Users get a shorter spelling too.
-const MethodDescriptorProto = google.protobuf.MethodDescriptorProto
-
 abstract type AbstractRpcTransport end
 
 """
@@ -82,9 +82,14 @@ end
 #   PB.service_fqn(::typeof(f))            — owning service's FQN string. Not
 #                                            on MethodDescriptorProto itself,
 #                                            so it lives as its own trait.
+#   PB.request_type(::typeof(f))           — concrete Julia request type.
+#   PB.response_type(::typeof(f))          — concrete Julia response type.
 #
-# Everything else (`method_name`, `request_type`, `response_type`, `rpc_mode`)
-# is derived from those two, so codegen doesn't have to repeat itself.
+# `request_type`/`response_type` are emitted directly (codegen already
+# resolved the Julia types for the stub signature) rather than derived
+# from the descriptor's FQN strings at call time — that would drag the
+# global message-type registry into every RPC. `method_name` and
+# `rpc_mode` are derived from the descriptor.
 # -----------------------------------------------------------------------------
 
 """
@@ -95,6 +100,22 @@ function `f`. Codegen emits one method per RPC.
 """
 function service_fqn end
 
+"""
+    request_type(f) -> Type
+
+Concrete Julia type of the RPC function `f`'s request message.
+Codegen emits one method per RPC.
+"""
+function request_type end
+
+"""
+    response_type(f) -> Type
+
+Concrete Julia type of the RPC function `f`'s response message.
+Codegen emits one method per RPC.
+"""
+function response_type end
+
 function method_name(f::Function)
     desc = MethodDescriptorProto(f)
     name = desc.name
@@ -102,51 +123,33 @@ function method_name(f::Function)
     return name
 end
 
-function rpc_mode(f::Function)
-    desc = MethodDescriptorProto(f)
-    cs = something(desc.client_streaming, false)
-    ss = something(desc.server_streaming, false)
-    if cs && ss
+# Shared streaming-bit classification — codegen's service emitter uses
+# the same helper when it picks stubs and comments, so the two can't drift.
+function _rpc_mode(client_streaming::Bool, server_streaming::Bool)
+    if client_streaming && server_streaming
         return :bidi
-    elseif ss
+    elseif server_streaming
         return :server_stream
-    elseif cs
+    elseif client_streaming
         return :client_stream
     else
         return :unary
     end
 end
 
-function request_type(f::Function)
-    fqn = MethodDescriptorProto(f).input_type
-    fqn === nothing &&
-        error("MethodDescriptorProto for $(f) is missing the `input_type` field")
-    return _resolve_message_type(f, fqn, "input_type")
-end
-
-function response_type(f::Function)
-    fqn = MethodDescriptorProto(f).output_type
-    fqn === nothing &&
-        error("MethodDescriptorProto for $(f) is missing the `output_type` field")
-    return _resolve_message_type(f, fqn, "output_type")
-end
-
-function _resolve_message_type(f::Function, fqn::AbstractString, field::String)
-    # Proto FQN refs are leading-dot in descriptors (`.greeter.HelloRequest`);
-    # the message-type registry keys are dotless (`greeter.HelloRequest`).
-    key = startswith(fqn, ".") ? fqn[2:end] : String(fqn)
-    T = lookup_message_type(key)
-    T === nothing && error(
-        "RPC $(f): cannot resolve $(field) $(repr(fqn)) — no message type registered. " *
-        "Did you forget to load the proto module that defines it?",
+function rpc_mode(f::Function)
+    desc = MethodDescriptorProto(f)
+    return _rpc_mode(
+        something(desc.client_streaming, false),
+        something(desc.server_streaming, false),
     )
-    return T
 end
 
 # -----------------------------------------------------------------------------
-# Transport surface. Transports implement `rpc_call` (unary, mandatory);
-# streaming variants are optional and throw `RpcError(UNIMPLEMENTED, …)`
-# by default so a unary-only transport gives a clean diagnostic.
+# Transport surface. Transports implement `rpc_call` (unary, mandatory)
+# plus the streaming variants when they support them. All four are bare
+# generic functions — a transport that lacks one fails with a MethodError
+# at the call site instead of a misleading wire-level status.
 # -----------------------------------------------------------------------------
 
 """
@@ -155,31 +158,11 @@ end
 Send a unary RPC. Transports must implement this. `req_bytes` carries
 the encoded protobuf body; the return value is the encoded response.
 """
-function rpc_call(
-    t::AbstractRpcTransport,
-    service::AbstractString,
-    method::AbstractString,
-    req_bytes::AbstractVector{UInt8},
-)
-    throw(RpcError(StatusCode.UNIMPLEMENTED, "$(typeof(t)) does not implement rpc_call"))
-end
+function rpc_call end
 
-# Streaming entry points — placeholders so transports that support them
-# get a clean override target. Not wired into codegen yet.
-function rpc_server_stream(
-    t::AbstractRpcTransport,
-    service::AbstractString,
-    method::AbstractString,
-    req_bytes::AbstractVector{UInt8},
-)
-    throw(
-        RpcError(
-            StatusCode.UNIMPLEMENTED,
-            "$(typeof(t)) does not implement rpc_server_stream",
-        ),
-    )
-end
-
+# Streaming entry points — declared so transports that support them get a
+# stable override target. Not wired into codegen yet (see #9).
+function rpc_server_stream end
 function rpc_client_stream end
 function rpc_bidi_stream end
 
@@ -192,10 +175,19 @@ response per `response_type(f)`. Streaming variants will land alongside
 the matching codegen.
 """
 function rpc_invoke(t::AbstractRpcTransport, f::Function, req::AbstractProtoBufMessage)
-    mode = rpc_mode(f)
+    # One descriptor fetch per call — each trait accessor would otherwise
+    # rebuild the descriptor struct.
+    desc = MethodDescriptorProto(f)
+    mode = _rpc_mode(
+        something(desc.client_streaming, false),
+        something(desc.server_streaming, false),
+    )
     if mode === :unary
+        name = desc.name
+        name === nothing &&
+            error("MethodDescriptorProto for $(f) is missing the `name` field")
         req_bytes = encode(req)
-        resp_bytes = rpc_call(t, service_fqn(f), method_name(f), req_bytes)
+        resp_bytes = rpc_call(t, service_fqn(f), name, req_bytes)
         return decode(resp_bytes, response_type(f))
     else
         throw(

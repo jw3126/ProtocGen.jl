@@ -11,7 +11,10 @@ const var"#core" = Core
 
 export Syntax, Type, Field, Enum, EnumValue, Option
 
-@enumx Syntax PROTO2=0 PROTO3=1
+@enumx Syntax begin
+    PROTO2 = 0
+    PROTO3 = 1
+end
 @enumbatteries Syntax.T typesalt=0x4a764bdccfecd59c
 PB._enum_proto_prefix(::var"#core".Type{Syntax.T}) = "SYNTAX_"
 
@@ -66,10 +69,35 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{Option})
     return (;name = "", value = nothing, var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"Field.Kind" TYPE_UNKNOWN=0 TYPE_DOUBLE=1 TYPE_FLOAT=2 TYPE_INT64=3 TYPE_UINT64=4 TYPE_INT32=5 TYPE_FIXED64=6 TYPE_FIXED32=7 TYPE_BOOL=8 TYPE_STRING=9 TYPE_GROUP=10 TYPE_MESSAGE=11 TYPE_BYTES=12 TYPE_UINT32=13 TYPE_ENUM=14 TYPE_SFIXED32=15 TYPE_SFIXED64=16 TYPE_SINT32=17 TYPE_SINT64=18
+@enumx var"Field.Kind" begin
+    TYPE_UNKNOWN = 0
+    TYPE_DOUBLE = 1
+    TYPE_FLOAT = 2
+    TYPE_INT64 = 3
+    TYPE_UINT64 = 4
+    TYPE_INT32 = 5
+    TYPE_FIXED64 = 6
+    TYPE_FIXED32 = 7
+    TYPE_BOOL = 8
+    TYPE_STRING = 9
+    TYPE_GROUP = 10
+    TYPE_MESSAGE = 11
+    TYPE_BYTES = 12
+    TYPE_UINT32 = 13
+    TYPE_ENUM = 14
+    TYPE_SFIXED32 = 15
+    TYPE_SFIXED64 = 16
+    TYPE_SINT32 = 17
+    TYPE_SINT64 = 18
+end
 @enumbatteries var"Field.Kind".T typesalt=0xa062978f68132043
 
-@enumx var"Field.Cardinality" UNKNOWN=0 OPTIONAL=1 REQUIRED=2 REPEATED=3
+@enumx var"Field.Cardinality" begin
+    UNKNOWN = 0
+    OPTIONAL = 1
+    REQUIRED = 2
+    REPEATED = 3
+end
 @enumbatteries var"Field.Cardinality".T typesalt=0x23d20bf4ca20a55f
 PB._enum_proto_prefix(::var"#core".Type{var"Field.Cardinality".T}) = "CARDINALITY_"
 
