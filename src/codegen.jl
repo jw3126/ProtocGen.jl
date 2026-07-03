@@ -6,6 +6,8 @@ using ..ProtocGen.google.protobuf:
     DescriptorProto,
     EnumDescriptorProto,
     FileDescriptorProto,
+    MethodDescriptorProto,
+    ServiceDescriptorProto,
     var"FieldDescriptorProto.Label",
     var"FieldDescriptorProto.Type"
 
@@ -2169,18 +2171,15 @@ function _emit_enum(
 
     allow_alias = e.options !== nothing && e.options.allow_alias === true
     if !allow_alias
-        members = join(
-            (
-                string(
-                    strip_value(something(v.name, "")),
-                    "=",
-                    Int(something(v.number, Int32(0))),
-                ) for v in e.value
-            ),
-            " ",
-        )
         _emit_enum_docstring(io, doc_index, proto_fqn)
-        println(io, "@enumx ", jl_name, " ", members)
+        _emit_enum_members(
+            io,
+            jl_name,
+            (
+                (strip_value(something(v.name, "")), Int(something(v.number, Int32(0)))) for
+                v in e.value
+            ),
+        )
         _emit_enum_value_docs(io, doc_index, proto_fqn, jl_name, e, strip_value)
         # `@enumx` wraps the underlying `Base.@enum` in a baremodule
         # named after the enum; the enum *type* is `<EnumName>.T`. That
@@ -2213,9 +2212,8 @@ function _emit_enum(
             push!(canonicals, (String(vname), vnum))
         end
     end
-    members = join((string(n, "=", num) for (n, num) in canonicals), " ")
     _emit_enum_docstring(io, doc_index, proto_fqn)
-    println(io, "@enumx ", jl_name, " ", members)
+    _emit_enum_members(io, jl_name, canonicals)
     # `Core.eval(Mod, expr)` rather than `Mod.eval(expr)` because EnumX
     # builds the enum module as a `baremodule`, which doesn't import
     # `Base.eval`.
@@ -2227,6 +2225,16 @@ function _emit_enum(
     _emit_enum_proto_prefix(io, jl_name, prefix, type_q)
     _emit_enum_metadata(io, e, jl_name, strip_value, enum_metadata_schema, nm)
     println(io)
+end
+
+# Emit the `@enumx` declaration in block form, one value per line.
+function _emit_enum_members(io::IO, jl_name::AbstractString, members)
+    println(io, "@enumx ", jl_name, " begin")
+    for (n, num) in members
+        println(io, "    ", n, " = ", num)
+    end
+    println(io, "end")
+    return
 end
 
 # Emit the per-enum `_enum_proto_prefix` overload only when stripping applied,
@@ -2446,18 +2454,20 @@ end
 # lines emitted at the top of the generated file.
 function _collect_cross_packages(file::FileDescriptorProto, names::LocalNames)
     pkgs = Set{String}()
+    function visit_typename(tn::AbstractString)
+        isempty(tn) && return
+        pkg = get(names.package_of, tn, "")
+        if !isempty(pkg) && pkg != names.package
+            push!(pkgs, pkg)
+        end
+    end
     function visit_msg(msg::DescriptorProto)
         # Map entry types are emitted inline as OrderedDict; their key/
         # value type refs need to flow through the same cross-package
         # check. We re-resolve via the FQN so map<K,V> with a V from
         # another package qualifies its V.
         for f in msg.field
-            tn = something(f.type_name, "")
-            isempty(tn) && continue
-            pkg = get(names.package_of, tn, "")
-            if !isempty(pkg) && pkg != names.package
-                push!(pkgs, pkg)
-            end
+            visit_typename(something(f.type_name, ""))
             # Map entry messages are children of `msg` but their fields'
             # type_names also need scanning. The recursive `nested_type`
             # walk below handles them.
@@ -2469,7 +2479,140 @@ function _collect_cross_packages(file::FileDescriptorProto, names::LocalNames)
     for msg in file.message_type
         visit_msg(msg)
     end
+    # Service RPC I/O types — same cross-package rules apply.
+    for svc in file.service
+        for m in svc.method
+            visit_typename(something(m.input_type, ""))
+            visit_typename(something(m.output_type, ""))
+        end
+    end
     return pkgs
+end
+
+# ----------------------------------------------------------------------------
+# Service emission. For each `service Foo { rpc Bar(In) returns (Out); }`,
+# emit:
+#
+#   1. `function Bar end` — a generic function the user adds server-side
+#      methods to (dispatched on their impl type) and that codegen adds a
+#      client-side method to (dispatched on AbstractRpcTransport). Same
+#      function, both roles.
+#   2. `MethodDescriptorProto(::typeof(Bar))` — the proto descriptor as
+#      the per-RPC metadata bundle. `method_name` / `rpc_mode` derive
+#      from it.
+#   3. `service_fqn(::typeof(Bar))` — the one bit not on
+#      MethodDescriptorProto (lives on ServiceDescriptorProto + file
+#      package). Single trait carries it.
+#   4. `request_type(::typeof(Bar))` / `response_type(::typeof(Bar))` —
+#      the concrete Julia I/O types. Emitted directly (we resolved them
+#      for the stub signature anyway) so RPC calls never depend on the
+#      global message-type registry.
+#   5. `Bar(t::AbstractRpcTransport, req::In)` — client stub that routes
+#      through `rpc_invoke`. No per-service `*Client` wrapper.
+#   6. `const Foo = (Bar, ...)` — tuple of RPC functions transports walk
+#      to mount the service.
+#
+# Streaming variants aren't wired into the client stub yet — they get a
+# placeholder comment and a TODO marker. The descriptor still carries
+# the right `client_streaming`/`server_streaming` bits, so transports
+# can introspect even before the client side ships.
+# ----------------------------------------------------------------------------
+function _emit_service(
+    io::IO,
+    svc::ServiceDescriptorProto,
+    names::LocalNames,
+    seen_rpc_names::AbstractSet{String} = Set{String}(),
+)
+    svc_name = something(svc.name, "")
+    isempty(svc_name) && return
+    svc_fqn = isempty(names.package) ? svc_name : string(names.package, ".", svc_name)
+
+    println(io)
+    println(io, "# Service ", svc_fqn)
+
+    method_names = String[]
+    for m in svc.method
+        mname = something(m.name, "")
+        isempty(mname) && continue
+        # Each RPC becomes one top-level generic function, so a method name
+        # reused by another service in the same file would silently overwrite
+        # the first service's traits and misroute its calls. Refuse loudly.
+        mname in seen_rpc_names && error(
+            "duplicate RPC name $(repr(mname)) in $(svc_fqn): another service " *
+            "in the same file already defines an RPC with this name, and " *
+            "codegen emits one top-level function per RPC. Rename one of them.",
+        )
+        push!(seen_rpc_names, mname)
+        push!(method_names, mname)
+        input_proto = something(m.input_type, "")
+        output_proto = something(m.output_type, "")
+        input_jl = _resolve_typename(input_proto, names)
+        output_jl = _resolve_typename(output_proto, names)
+        cs = something(m.client_streaming, false)
+        ss = something(m.server_streaming, false)
+        mode = ProtocGen._rpc_mode(cs, ss)
+        mode_comment = if mode === :bidi
+            "bidi"
+        elseif mode === :client_stream
+            "client-streaming"
+        elseif mode === :server_stream
+            "server-streaming"
+        elseif mode === :unary
+            "unary"
+        else
+            error("unreachable: unknown rpc mode $(repr(mode))")
+        end
+
+        println(io)
+        println(io, "# ", mname, " — ", mode_comment)
+        println(io, "function ", mname, " end")
+        # Dispatch on the function's singleton type via `::typeof(f)` so
+        # callers pass the function value (`MethodDescriptorProto(SayHello)`),
+        # matching how the rest of the trait functions (`service_fqn`,
+        # `method_name`, …) consume RPCs.
+        println(io, "function PB.MethodDescriptorProto(::typeof(", mname, "))")
+        println(io, "    return PB.MethodDescriptorProto(;")
+        println(io, "        name = ", repr(mname), ",")
+        println(io, "        input_type = ", repr(input_proto), ",")
+        println(io, "        output_type = ", repr(output_proto), ",")
+        println(io, "        client_streaming = ", cs, ",")
+        println(io, "        server_streaming = ", ss, ",")
+        println(io, "    )")
+        println(io, "end")
+        println(io, "PB.service_fqn(::typeof(", mname, ")) = ", repr(svc_fqn))
+        println(io, "PB.request_type(::typeof(", mname, ")) = ", input_jl)
+        println(io, "PB.response_type(::typeof(", mname, ")) = ", output_jl)
+        if mode === :unary
+            println(
+                io,
+                "function ",
+                mname,
+                "(t::PB.AbstractRpcTransport, req::",
+                input_jl,
+                ")::",
+                output_jl,
+            )
+            println(io, "    return PB.rpc_invoke(t, ", mname, ", req)")
+            println(io, "end")
+        else
+            println(
+                io,
+                "# Client stub for ",
+                mode_comment,
+                " RPC not emitted yet — descriptor is still queryable. See #9.",
+            )
+        end
+    end
+
+    println(io)
+    # Trailing comma so a single-RPC service still produces a `Tuple` rather
+    # than the bare value (`(x,)` is a 1-tuple; `(x)` is `x`). An empty
+    # service (legal proto) needs plain `()` — `(,)` doesn't parse.
+    if isempty(method_names)
+        println(io, "const ", svc_name, " = ()")
+    else
+        println(io, "const ", svc_name, " = (", join(method_names, ", "), ",)")
+    end
 end
 
 function codegen(file::FileDescriptorProto)
@@ -2591,6 +2734,17 @@ function codegen(
         _is_map_entry(msg) && continue
         push!(exports, something(msg.name, ""))
     end
+    # Services + their RPC functions — exporting both makes
+    # `using <module>` reach `Greeter` (the methods tuple) and each
+    # `SayHello` (the generic the user adds impls to).
+    for svc in file.service
+        sname = something(svc.name, "")
+        isempty(sname) || push!(exports, sname)
+        for m in svc.method
+            mname = something(m.name, "")
+            isempty(mname) || push!(exports, mname)
+        end
+    end
     if !isempty(meta_schema)
         push!(exports, "enum_metadata")
     end
@@ -2699,6 +2853,12 @@ function codegen(
             println(io, "    return PB._decode_json_message(", jl, ", json; kw...)")
             println(io, "end")
         end
+    end
+
+    # Services come after all messages so RPC I/O types are already defined.
+    seen_rpc_names = Set{String}()
+    for svc in file.service
+        _emit_service(io, svc, cycle_names, seen_rpc_names)
     end
 
     println(io)

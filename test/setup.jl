@@ -41,7 +41,7 @@ function run_codegen(fdset_fixture::AbstractString, proto_paths::Vector{String})
 end
 
 """
-    eval_generated(content[, name=:Generated]) -> Module
+    eval_generated(content[, name=:Generated]; registry=Dict{String,Type}()) -> Module
 
 Eval generated codegen source (the `.content` of a CodeGeneratorResponse.File)
 into a fresh anonymous module so test files don't bleed names into each
@@ -52,10 +52,18 @@ into the active `ProtocGen.REGISTRY` table. We swap in a fresh table for
 the dynamic extent of the eval so the FQN-uniqueness guard doesn't fire
 when the same `.proto` is evaluated by multiple test files into
 different anonymous modules.
+
+Pass your own `registry` dict to keep that table after the eval returns —
+useful when later assertions resolve FQNs (e.g. `request_type`) and need
+to re-enter the same registry via `with(ProtocGen.REGISTRY => registry)`.
 """
-function eval_generated(content::AbstractString, name::Symbol = :Generated)
+function eval_generated(
+    content::AbstractString,
+    name::Symbol = :Generated;
+    registry::Dict{String,Type} = Dict{String,Type}(),
+)
     m = Module(name)
-    Base.ScopedValues.with(ProtocGen.REGISTRY => Dict{String,Type}()) do
+    Base.ScopedValues.with(ProtocGen.REGISTRY => registry) do
         Core.eval(m, Meta.parseall(content))
     end
     return m

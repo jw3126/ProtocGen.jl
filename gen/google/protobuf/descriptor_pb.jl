@@ -149,10 +149,18 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{UninterpretedOption
     return (;name = Vector{var"UninterpretedOption.NamePart"}(), identifier_value = nothing, positive_int_value = nothing, negative_int_value = nothing, double_value = nothing, string_value = nothing, aggregate_value = nothing, var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"FieldOptions.CType" STRING=0 CORD=1 STRING_PIECE=2
+@enumx var"FieldOptions.CType" begin
+    STRING = 0
+    CORD = 1
+    STRING_PIECE = 2
+end
 @enumbatteries var"FieldOptions.CType".T typesalt=0xd9f484511c1ca4ea
 
-@enumx var"FieldOptions.JSType" JS_NORMAL=0 JS_STRING=1 JS_NUMBER=2
+@enumx var"FieldOptions.JSType" begin
+    JS_NORMAL = 0
+    JS_STRING = 1
+    JS_NUMBER = 2
+end
 @enumbatteries var"FieldOptions.JSType".T typesalt=0x0b3527e04ab91112
 
 struct FieldOptions <: PB.AbstractProtoBufMessage
@@ -239,11 +247,34 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{FieldOptions})
     return (;ctype = nothing, packed = nothing, jstype = nothing, lazy = nothing, deprecated = nothing, weak = nothing, uninterpreted_option = Vector{UninterpretedOption}(), var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"FieldDescriptorProto.Type" DOUBLE=1 FLOAT=2 INT64=3 UINT64=4 INT32=5 FIXED64=6 FIXED32=7 BOOL=8 STRING=9 GROUP=10 MESSAGE=11 BYTES=12 UINT32=13 ENUM=14 SFIXED32=15 SFIXED64=16 SINT32=17 SINT64=18
+@enumx var"FieldDescriptorProto.Type" begin
+    DOUBLE = 1
+    FLOAT = 2
+    INT64 = 3
+    UINT64 = 4
+    INT32 = 5
+    FIXED64 = 6
+    FIXED32 = 7
+    BOOL = 8
+    STRING = 9
+    GROUP = 10
+    MESSAGE = 11
+    BYTES = 12
+    UINT32 = 13
+    ENUM = 14
+    SFIXED32 = 15
+    SFIXED64 = 16
+    SINT32 = 17
+    SINT64 = 18
+end
 @enumbatteries var"FieldDescriptorProto.Type".T typesalt=0xa3b3794ec94803a4
 PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Type".T}) = "TYPE_"
 
-@enumx var"FieldDescriptorProto.Label" OPTIONAL=1 REQUIRED=2 REPEATED=3
+@enumx var"FieldDescriptorProto.Label" begin
+    OPTIONAL = 1
+    REQUIRED = 2
+    REPEATED = 3
+end
 @enumbatteries var"FieldDescriptorProto.Label".T typesalt=0xa25262cc56149f9a
 PB._enum_proto_prefix(::var"#core".Type{var"FieldDescriptorProto.Label".T}) = "LABEL_"
 
@@ -352,7 +383,11 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{FieldDescriptorProt
     return (;name = nothing, number = nothing, label = nothing, type = nothing, type_name = nothing, extendee = nothing, default_value = nothing, oneof_index = nothing, json_name = nothing, options = nothing, proto3_optional = nothing, var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"MethodOptions.IdempotencyLevel" IDEMPOTENCY_UNKNOWN=0 NO_SIDE_EFFECTS=1 IDEMPOTENT=2
+@enumx var"MethodOptions.IdempotencyLevel" begin
+    IDEMPOTENCY_UNKNOWN = 0
+    NO_SIDE_EFFECTS = 1
+    IDEMPOTENT = 2
+end
 @enumbatteries var"MethodOptions.IdempotencyLevel".T typesalt=0x97d41564f23ffb2b
 
 struct MethodOptions <: PB.AbstractProtoBufMessage
@@ -1417,7 +1452,11 @@ function PB.StructHelpers.default_keywords(::var"#core".Type{SourceCodeInfo})
     return (;location = Vector{var"SourceCodeInfo.Location"}(), var"#unknown_fields" = UInt8[])
 end
 
-@enumx var"FileOptions.OptimizeMode" SPEED=1 CODE_SIZE=2 LITE_RUNTIME=3
+@enumx var"FileOptions.OptimizeMode" begin
+    SPEED = 1
+    CODE_SIZE = 2
+    LITE_RUNTIME = 3
+end
 @enumbatteries var"FileOptions.OptimizeMode".T typesalt=0x6773b55409fca24d
 
 struct FileOptions <: PB.AbstractProtoBufMessage
