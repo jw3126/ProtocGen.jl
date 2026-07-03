@@ -11,7 +11,7 @@ ProtocGen = "b5fc38b8-670b-4930-8529-238e2ca71835"
 [compat]
 HTTP = "1"
 JSON = "0.21, 1"
-ProtocGen = "0.2"
+ProtocGen = "0.2.7"
 julia = "1.12"
 
 [extras]
