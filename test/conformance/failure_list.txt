@@ -1,5 +1,8 @@
 # Known conformance failures for ProtocGen, against the Google
-# protobuf conformance_test_runner from protobuf v25.9.
+# protobuf conformance_test_runner from protobuf v25.9. This list
+# covers the binary + JSON suite; the text format suite has its own
+# allowlist in `text_format_failure_list.txt` (the runner takes them
+# as separate flags).
 #
 # Consumed by `conformance_test_runner --failure_list`. Each uncommented
 # line is a `Required.*` test we currently fail; the runner treats them
