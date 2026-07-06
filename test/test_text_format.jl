@@ -136,11 +136,11 @@ end
             ],
         )
         s = encode_text(u)
-        # `is_extension` is a proto2 `required bool` — bare-typed like an
-        # implicit-presence scalar, so `false` is skipped (same policy as
-        # JSON) and the parse fills the default back in.
+        # `is_extension` is a proto2 `required bool` — the
+        # `required_field_names` trait makes it print even at `false`
+        # (a strict parser rejects a message missing a required field).
         @test s ==
-              "name {\n  name_part: \"a\"\n}\n" *
+              "name {\n  name_part: \"a\"\n  is_extension: false\n}\n" *
               "name {\n  name_part: \"b\"\n  is_extension: true\n}\n"
         @test decode_text(G.UninterpretedOption, s) == u
 
@@ -154,6 +154,11 @@ end
         s = encode_text(st)
         @test s == "fields {\n  key: \"x\"\n  value {\n    bool_value: true\n  }\n}\n"
         @test decode_text(G.Struct, s) == st
+
+        # A per-call `registry` only overrides Any's FQN lookup — cycle
+        # abstracts (AbstractValue here) still resolve via the fallback to
+        # the active registry.
+        @test decode_text(G.Struct, s; registry = Dict{String,Type}()) == st
     end
 
     @testset "printer: WKTs have no special text forms" begin
@@ -275,9 +280,19 @@ end
         @test st.fields["b"].kind.value == 2.0
         @test st.fields["c"] == G.Value()   # missing value half → default
         @test_throws ArgumentError decode_text(G.Struct, "fields { key: \"a\" other: 1 }")
+        # Duplicate `key`/`value` halves inside one entry block error
+        # (protoc rejects them; last-wins would mask producer bugs).
+        @test_throws ArgumentError decode_text(G.Struct, "fields { key: \"a\" key: \"b\" }")
+
+        # The colon is required before a *scalar* list, optional before a
+        # message list (matching protoc).
+        @test decode_text(G.FieldMask, "paths: [\"a\", \"b\"]").paths == ["a", "b"]
+        @test_throws ArgumentError decode_text(G.FieldMask, "paths [\"a\"]")
+        @test decode_text(G.ListValue, "values [{bool_value: true}]").values[1].kind.value ===
+              true
     end
 
-    @testset "parser: duplicate fields, oneofs, merging" begin
+    @testset "parser: duplicate non-repeated fields" begin
         # Duplicate singular scalar → error.
         @test_throws ArgumentError decode_text(G.Duration, "seconds: 1 seconds: 2")
         # Two members of one oneof → error.
@@ -285,13 +300,12 @@ end
             G.Value,
             "string_value: \"a\" bool_value: true",
         )
-        # Repeated occurrences of a singular message field merge.
-        f = decode_text(
+        # Duplicate singular *message* fields error too — protoc's text
+        # parser rejects them (merging is binary wire semantics only).
+        @test_throws ArgumentError decode_text(
             G.FieldDescriptorProto,
             "options { deprecated: true } options { packed: true }",
         )
-        @test f.options.deprecated === true
-        @test f.options.packed === true
     end
 
     @testset "parser: unknown fields and extensions" begin
@@ -365,6 +379,15 @@ end
         )
         s = encode_text(a)
         @test occursin("type_url: \"type.googleapis.com/no.such.Msg\"\n", s)
+        # A resolvable type_url whose value bytes don't decode also falls
+        # back to raw fields instead of crashing.
+        bad = G.var"Any"(;
+            type_url = "type.googleapis.com/google.protobuf.Duration",
+            value = UInt8[0xff, 0xff, 0xff],
+        )
+        sbad = encode_text(bad)
+        @test occursin("type_url:", sbad) && occursin("value:", sbad)
+        @test decode_text(G.var"Any", sbad) == bad
         @test occursin("value: \"\\010\\001\"\n", s)
         @test decode_text(G.var"Any", s) == a
         # Default Any prints nothing at all.

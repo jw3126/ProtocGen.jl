@@ -23,6 +23,7 @@ function PB.json_field_names(::var"#core".Type{var"UninterpretedOption.NamePart"
     return (;name_part = "namePart", is_extension = "isExtension")
 end
 PB.register_message_type("google.protobuf.UninterpretedOption.NamePart", var"UninterpretedOption.NamePart")
+PB.required_field_names(::var"#core".Type{var"UninterpretedOption.NamePart"}) = (:name_part, :is_extension,)
 
 function PB._decode(_d::PB.AbstractProtoDecoder, ::var"#core".Type{<:var"UninterpretedOption.NamePart"}, _endpos::Int=0, _group::Bool=false)
     name_part = ""

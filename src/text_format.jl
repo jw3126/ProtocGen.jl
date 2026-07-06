@@ -26,16 +26,6 @@
 # generated code references these functions, so — unlike `json.jl` — there
 # is no load-order constraint from codegen.
 
-# The proto field name for a Julia struct field. These are identical except
-# when the proto name collides with a Julia keyword and codegen mangled it
-# to `var"#end"` (`_jl_fieldname` in codegen.jl) — strip the marker to
-# recover the wire name. (`#unknown_fields` never reaches this: every walk
-# skips it first.)
-function _proto_field_name(jl_name::Symbol)
-    s = String(jl_name)
-    return startswith(s, '#') ? SubString(s, 2) : SubString(s, 1)
-end
-
 # -----------------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------------
@@ -106,8 +96,9 @@ function _encode_text_fields(
         end
         # Same emission policy as JSON/binary: implicit-presence scalars
         # are skipped at their default; presence-bearing fields
-        # (`Union{Nothing,X}`) always print when non-`nothing`.
-        if !_field_is_presence_bearing(T, jl_name) && _is_json_default(v)
+        # (`Union{Nothing,X}`) and proto2 `required` fields always print
+        # (see `_emit_at_default`).
+        if !_emit_at_default(T, jl_name) && _is_json_default(v)
             continue
         end
         _encode_text_field(io, _proto_field_name(jl_name), v, indent; kw...)
@@ -260,19 +251,15 @@ function _encode_text_scalar(io::IO, b::Vector{UInt8})
     return nothing
 end
 
-# Canonical declared name with the codegen-stripped prefix reattached; a
-# numeric value outside the declared set prints as its number (same
-# policy as JSON).
+# Canonical declared name with the codegen-stripped prefix reattached
+# (via the `_enum_wire_name` helper shared with JSON); a numeric value
+# outside the declared set prints as its number, same policy as JSON.
 function _encode_text_scalar(io::IO, v::Base.Enum)
-    name = try
-        Symbol(v)
-    catch
-        nothing
-    end
+    name = _enum_wire_name(v)
     if name === nothing
         print(io, Integer(v))
     else
-        print(io, _enum_proto_prefix(typeof(v)), String(name))
+        print(io, name)
     end
     return nothing
 end
@@ -309,13 +296,15 @@ end
 # Lexer
 # -----------------------------------------------------------------------------
 
+@enum _TokenKind _TOK_IDENT _TOK_NUMBER _TOK_STRING _TOK_PUNCT _TOK_EOF
+
 struct _TextToken
-    kind::Symbol            # :ident | :number | :string | :punct | :eof
-    text::String            # ident/number text or punct char; "" for :string/:eof
-    bytes::Vector{UInt8}    # unescaped payload (:string only)
+    kind::_TokenKind
+    text::String            # ident/number text or punct char; "" for string/eof
+    bytes::Vector{UInt8}    # unescaped payload (string tokens only)
 end
 
-function _text_token(kind::Symbol, text)
+function _text_token(kind::_TokenKind, text)
     _TextToken(kind, String(text), UInt8[])
 end
 
@@ -390,12 +379,12 @@ end
 
 function _peek_is_punct(lex::_TextLexer, text::AbstractString)
     tok = _peek_token!(lex)
-    return tok.kind === :punct && tok.text == text
+    return tok.kind === _TOK_PUNCT && tok.text == text
 end
 
 function _expect_punct!(lex::_TextLexer, text::AbstractString)
     tok = _next_token!(lex)
-    (tok.kind === :punct && tok.text == text) ||
+    (tok.kind === _TOK_PUNCT && tok.text == text) ||
         _text_error(lex, "expected '$(text)', got '$(tok.text)'")
     return nothing
 end
@@ -403,14 +392,14 @@ end
 function _lex_token!(lex::_TextLexer)
     _skip_ws_and_comments!(lex)
     n = ncodeunits(lex.s)
-    lex.i > n && return _text_token(:eof, "")
+    lex.i > n && return _text_token(_TOK_EOF, "")
     b = codeunit(lex.s, lex.i)
     if _is_text_ident_start(b)
         start = lex.i
         while lex.i <= n && _is_text_ident_char(codeunit(lex.s, lex.i))
             lex.i += 1
         end
-        return _text_token(:ident, SubString(lex.s, start, lex.i - 1))
+        return _text_token(_TOK_IDENT, SubString(lex.s, start, lex.i - 1))
     elseif _is_text_digit(b) ||
            (b == UInt8('.') && lex.i < n && _is_text_digit(codeunit(lex.s, lex.i + 1)))
         return _lex_number!(lex)
@@ -429,7 +418,7 @@ function _lex_token!(lex::_TextLexer)
            b == UInt8('-') ||
            b == UInt8('.')
         lex.i += 1
-        return _text_token(:punct, string(Char(b)))
+        return _text_token(_TOK_PUNCT, string(Char(b)))
     else
         _text_error(lex, "unexpected character $(repr(Char(b)))")
     end
@@ -462,7 +451,7 @@ function _lex_number!(lex::_TextLexer)
             break
         end
     end
-    return _text_token(:number, SubString(lex.s, start, lex.i - 1))
+    return _text_token(_TOK_NUMBER, SubString(lex.s, start, lex.i - 1))
 end
 
 function _lex_string!(lex::_TextLexer)
@@ -475,7 +464,7 @@ function _lex_string!(lex::_TextLexer)
         b = codeunit(lex.s, lex.i)
         if b == quote_b
             lex.i += 1
-            return _TextToken(:string, "", out)
+            return _TextToken(_TOK_STRING, "", out)
         elseif b == UInt8('\n')
             _text_error(lex, "string literals cannot span multiple lines")
         elseif b == UInt8('\\')
@@ -635,8 +624,26 @@ function _resolve_concrete(
     registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
     isconcretetype(T) && return T
+    # The per-call `registry` is documented as overriding FQN → type lookup
+    # for `Any` payloads; it usually holds just those types. So consult it
+    # first, but fall back to the active registry — otherwise passing a
+    # registry would break decoding of any message with a cycle-abstract
+    # field (Struct/Value/ListValue).
+    found = _scan_for_concrete(T, @something(registry, REGISTRY[]))
+    if found === nothing && registry !== nothing
+        found = _scan_for_concrete(T, REGISTRY[])
+    end
+    found === nothing && throw(
+        ArgumentError(
+            "no concrete message type registered for abstract $(T); load the proto module that defines it",
+        ),
+    )
+    return found
+end
+
+function _scan_for_concrete(::Type{T}, registry::AbstractDict) where {T}
     found = nothing
-    for C in values(@something(registry, REGISTRY[]))
+    for C in values(registry)
         if C <: T && isconcretetype(C)
             if found !== nothing && found !== C
                 throw(
@@ -648,11 +655,6 @@ function _resolve_concrete(
             found = C
         end
     end
-    found === nothing && throw(
-        ArgumentError(
-            "no concrete message type registered for abstract $(T); load the proto module that defines it",
-        ),
-    )
     return found
 end
 
@@ -665,24 +667,11 @@ function _decode_text_message(
     ignore_unknown_fields::Bool = false,
     registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
-    oneofs = oneof_field_types(T)
-
-    # Proto field name → Julia field name (identical modulo keyword
-    # mangling; `field_numbers` already flattens oneof members and
-    # excludes `#unknown_fields`).
-    name_to_jl = Dict{String,Symbol}()
-    for jl_name in propertynames(field_numbers(T))
-        name_to_jl[String(_proto_field_name(jl_name))] = jl_name
-    end
-
-    # Inverse oneof lookup: member name → (parent field, member type).
-    oneof_member_lookup = Dict{Symbol,Tuple{Symbol,Type}}()
-    for parent in propertynames(oneofs)
-        members = getproperty(oneofs, parent)
-        for m in propertynames(members)
-            oneof_member_lookup[m] = (parent, getproperty(members, m))
-        end
-    end
+    # Memoized per-type tables: proto field name → Julia field name
+    # (identical modulo keyword mangling) plus the inverse oneof lookup.
+    tables = _field_tables(T)
+    name_to_jl = tables.proto_to_jl
+    oneof_member_lookup = tables.oneof_members
 
     defaults = StructHelpers.default_keywords(T)
     vals = Dict{Symbol,Any}()
@@ -695,18 +684,18 @@ function _decode_text_message(
 
     while true
         tok = _peek_token!(lex)
-        if tok.kind === :eof
+        if tok.kind === _TOK_EOF
             close_delim === nothing && break
             _text_error(
                 lex,
                 "unexpected end of input inside $(T) (expected '$(close_delim)')",
             )
-        elseif tok.kind === :punct &&
+        elseif tok.kind === _TOK_PUNCT &&
                close_delim !== nothing &&
                tok.text == string(close_delim)
             _next_token!(lex)
             break
-        elseif tok.kind === :punct && tok.text == "["
+        elseif tok.kind === _TOK_PUNCT && tok.text == "["
             _decode_text_bracket_field!(
                 T,
                 vals,
@@ -715,7 +704,7 @@ function _decode_text_message(
                 ignore_unknown_fields = ignore_unknown_fields,
                 registry = registry,
             )
-        elseif tok.kind === :ident
+        elseif tok.kind === _TOK_IDENT
             _next_token!(lex)
             jl_name = get(name_to_jl, tok.text, nothing)
             if jl_name === nothing
@@ -766,7 +755,7 @@ end
 # One optional ',' or ';' after a field entry.
 function _consume_field_separator!(lex::_TextLexer)
     tok = _peek_token!(lex)
-    if tok.kind === :punct && (tok.text == "," || tok.text == ";")
+    if tok.kind === _TOK_PUNCT && (tok.text == "," || tok.text == ";")
         _next_token!(lex)
     end
     return nothing
@@ -783,9 +772,9 @@ end
 # Consume '{' or '<' and return the matching close delimiter.
 function _expect_open_delim!(lex::_TextLexer)
     tok = _next_token!(lex)
-    if tok.kind === :punct && tok.text == "{"
+    if tok.kind === _TOK_PUNCT && tok.text == "{"
         return '}'
-    elseif tok.kind === :punct && tok.text == "<"
+    elseif tok.kind === _TOK_PUNCT && tok.text == "<"
         return '>'
     else
         _text_error(lex, "expected '{' or '<', got '$(tok.text)'")
@@ -793,9 +782,10 @@ function _expect_open_delim!(lex::_TextLexer)
 end
 
 # One named-field entry, field name already consumed. Dispatches on the
-# field shape: map, repeated, oneof member, singular message (repeated
-# occurrences merge, per the text-format spec), or singular scalar
-# (repeated occurrences error).
+# field shape: map, repeated, oneof member, or singular. Any non-repeated
+# field appearing more than once is an error — protoc's text parser
+# rejects that even for message fields (unlike the binary wire format,
+# which merges repeated occurrences of a singular message).
 function _decode_text_field!(
     ::Type{T},
     vals::Dict{Symbol,Any},
@@ -842,6 +832,10 @@ function _decode_text_field!(
         E = eltype(FT)
         list = vals[jl_name]
         if _peek_is_punct(lex, "[")
+            # Per the grammar, the colon is only optional before message
+            # values (and lists of them); a scalar list needs one.
+            (had_colon || E <: AbstractProtoBufMessage) ||
+                _text_error(lex, "expected ':' before scalar list")
             _next_token!(lex)
             first = true
             while !_peek_is_punct(lex, "]")
@@ -887,20 +881,6 @@ function _decode_text_field!(
             registry = registry,
         )
         vals[parent] = OneOf(jl_name, v)
-    elseif FT <: AbstractProtoBufMessage
-        # Singular message: repeated occurrences merge (text-format spec),
-        # matching what the binary decoder does with repeated wire tags.
-        v = _parse_text_value(
-            FT,
-            lex,
-            had_colon;
-            ignore_unknown_fields = ignore_unknown_fields,
-            registry = registry,
-        )
-        # proto2 `required` message fields are bare-typed and absent from
-        # `default_keywords`, hence the `get`.
-        prev = get(vals, jl_name, nothing)
-        vals[jl_name] = prev === nothing ? v : Codecs._merge_structs(prev, v)
     else
         jl_name in seen && throw(
             ArgumentError(
@@ -928,16 +908,20 @@ function _parse_text_map_entry!(
     registry::Union{Nothing,AbstractDict},
 ) where {K,V}
     close = _expect_open_delim!(lex)
-    key = _default_text_value(K; registry = registry)
-    val = _default_text_value(V; registry = registry)
+    key = _map_entry_default(K; registry = registry)
+    val = _map_entry_default(V; registry = registry)
+    have_key = false
+    have_val = false
     while true
         tok = _peek_token!(lex)
-        if tok.kind === :eof
+        if tok.kind === _TOK_EOF
             _text_error(lex, "unexpected end of input inside map entry")
-        elseif tok.kind === :punct && tok.text == string(close)
+        elseif tok.kind === _TOK_PUNCT && tok.text == string(close)
             _next_token!(lex)
             break
-        elseif tok.kind === :ident && tok.text == "key"
+        elseif tok.kind === _TOK_IDENT && tok.text == "key"
+            have_key && _text_error(lex, "map entry specifies 'key' more than once")
+            have_key = true
             _next_token!(lex)
             key = _parse_text_value(
                 K,
@@ -946,7 +930,9 @@ function _parse_text_map_entry!(
                 ignore_unknown_fields = ignore_unknown_fields,
                 registry = registry,
             )
-        elseif tok.kind === :ident && tok.text == "value"
+        elseif tok.kind === _TOK_IDENT && tok.text == "value"
+            have_val && _text_error(lex, "map entry specifies 'value' more than once")
+            have_val = true
             _next_token!(lex)
             val = _parse_text_value(
                 V,
@@ -964,8 +950,12 @@ function _parse_text_map_entry!(
     return nothing
 end
 
-# Default for an omitted map-entry half.
-function _default_text_value(
+# Default for an omitted map-entry half. Text format is the only wire
+# form that needs per-leaf-type defaults at runtime: an entry may omit
+# `key:` or `value:` entirely (`fields { key: "a" }`), whereas JSON map
+# syntax always carries both halves and `default_keywords` only covers
+# whole messages, not leaf scalar types.
+function _map_entry_default(
     ::Type{FT};
     registry::Union{Nothing,AbstractDict} = nothing,
 ) where {FT}
@@ -1012,7 +1002,7 @@ end
 function _parse_text_value(::Type{Bool}, lex::_TextLexer, had_colon::Bool; kw...)
     _require_colon(lex, had_colon)
     tok = _next_token!(lex)
-    if tok.kind === :ident
+    if tok.kind === _TOK_IDENT
         if tok.text == "true" || tok.text == "True" || tok.text == "t"
             return true
         elseif tok.text == "false" || tok.text == "False" || tok.text == "f"
@@ -1020,7 +1010,7 @@ function _parse_text_value(::Type{Bool}, lex::_TextLexer, had_colon::Bool; kw...
         else
             _text_error(lex, "invalid bool literal '$(tok.text)'")
         end
-    elseif tok.kind === :number
+    elseif tok.kind === _TOK_NUMBER
         if tok.text == "1"
             return true
         elseif tok.text == "0"
@@ -1042,7 +1032,7 @@ function _parse_text_value(
     _require_colon(lex, had_colon)
     neg = _consume_minus!(lex)
     tok = _next_token!(lex)
-    tok.kind === :number ||
+    tok.kind === _TOK_NUMBER ||
         _text_error(lex, "expected integer literal for $(FT), got '$(tok.text)'")
     mag = _text_int_magnitude(lex, tok.text)
     v = neg ? -mag : mag
@@ -1089,7 +1079,7 @@ function _parse_text_value(
     _require_colon(lex, had_colon)
     neg = _consume_minus!(lex)
     tok = _next_token!(lex)
-    v = if tok.kind === :ident
+    v = if tok.kind === _TOK_IDENT
         low = lowercase(tok.text)
         if low == "inf" || low == "infinity"
             FT(Inf)
@@ -1098,7 +1088,7 @@ function _parse_text_value(
         else
             _text_error(lex, "invalid float literal '$(tok.text)'")
         end
-    elseif tok.kind === :number
+    elseif tok.kind === _TOK_NUMBER
         s = tok.text
         if startswith(s, "0x") || startswith(s, "0X")
             FT(_text_int_magnitude(lex, s))
@@ -1134,7 +1124,7 @@ function _parse_text_value(::Type{String}, lex::_TextLexer, had_colon::Bool; kw.
     s = String(bytes)
     # A string field must hold valid UTF-8 (the same escapes on a bytes
     # field are unrestricted — that's the Vector{UInt8} method).
-    all(isvalid, s) || throw(ArgumentError("invalid UTF-8 in text format string literal"))
+    isvalid(s) || throw(ArgumentError("invalid UTF-8 in text format string literal"))
     return s
 end
 
@@ -1147,9 +1137,10 @@ end
 # ("foo" 'bar' concatenates to "foobar").
 function _parse_text_string_bytes!(lex::_TextLexer)
     tok = _next_token!(lex)
-    tok.kind === :string || _text_error(lex, "expected string literal, got '$(tok.text)'")
+    tok.kind === _TOK_STRING ||
+        _text_error(lex, "expected string literal, got '$(tok.text)'")
     out = tok.bytes
-    while _peek_token!(lex).kind === :string
+    while _peek_token!(lex).kind === _TOK_STRING
         append!(out, _next_token!(lex).bytes)
     end
     return out
@@ -1163,27 +1154,24 @@ function _parse_text_value(
 ) where {E<:Base.Enum}
     _require_colon(lex, had_colon)
     tok = _peek_token!(lex)
-    if tok.kind === :ident
+    if tok.kind === _TOK_IDENT
         _next_token!(lex)
-        # The wire name carries the proto-side prefix codegen stripped
-        # (same slack as JSON: the bare stripped form is accepted too).
-        prefix = _enum_proto_prefix(E)
-        name =
-            startswith(tok.text, prefix) ? SubString(tok.text, lastindex(prefix) + 1) :
-            SubString(tok.text, 1)
-        v = try
-            getfield(parentmodule(E), Symbol(name))
-        catch
-            nothing
-        end
-        v isa E || _text_error(lex, "unknown value '$(tok.text)' for enum $(E)")
+        # Prefix stripping and bare-stripped-form slack live in
+        # `_enum_from_wire_name`, shared with the JSON codec.
+        v = _enum_from_wire_name(E, tok.text)
+        v === nothing && _text_error(lex, "unknown value '$(tok.text)' for enum $(E)")
         return v
     else
         # Numeric form: any in-range integer, declared or not (mirrors the
-        # binary codec's treatment of wire varints).
+        # binary codec's treatment of wire varints). This is open-enum
+        # (proto3) semantics; protoc's text parser rejects undeclared
+        # numbers for *closed* proto2 enums, but whether an enum is closed
+        # isn't knowable from the runtime metadata codegen currently
+        # emits, so we accept them for both. NB an out-of-set value
+        # re-prints as a bare number, which a closed-enum parser refuses.
         neg = _consume_minus!(lex)
         tok2 = _next_token!(lex)
-        tok2.kind === :number ||
+        tok2.kind === _TOK_NUMBER ||
             _text_error(lex, "expected enum name or number for $(E), got '$(tok2.text)'")
         mag = _text_int_magnitude(lex, tok2.text)
         v = neg ? -mag : mag
@@ -1269,16 +1257,17 @@ end
 function _parse_text_bracket_name!(lex::_TextLexer)
     io = IOBuffer()
     tok = _next_token!(lex)
-    tok.kind === :ident || _text_error(lex, "expected a name after '[', got '$(tok.text)'")
+    tok.kind === _TOK_IDENT ||
+        _text_error(lex, "expected a name after '[', got '$(tok.text)'")
     print(io, tok.text)
     while true
         tok = _next_token!(lex)
-        if tok.kind === :punct && tok.text == "]"
+        if tok.kind === _TOK_PUNCT && tok.text == "]"
             return String(take!(io))
-        elseif tok.kind === :punct && (tok.text == "." || tok.text == "/")
+        elseif tok.kind === _TOK_PUNCT && (tok.text == "." || tok.text == "/")
             print(io, tok.text)
             tok2 = _next_token!(lex)
-            tok2.kind === :ident ||
+            tok2.kind === _TOK_IDENT ||
                 _text_error(lex, "expected a name segment after '$(tok.text)' in '[…]'")
             print(io, tok2.text)
         else
@@ -1298,11 +1287,18 @@ function _encode_text_message(
 )
     fqn = findlast('/', msg.type_url) === nothing ? nothing : _any_extract_fqn(msg.type_url)
     C = fqn === nothing ? nothing : lookup_message_type(fqn; registry = registry)
-    if C === nothing
+    # `value` bytes that don't decode as the resolved type also fall back
+    # to the raw form — the expanded form must never turn a printable Any
+    # into a crash.
+    inner = C === nothing ? nothing : try
+        decode(msg.value, C)
+    catch
+        nothing
+    end
+    if inner === nothing
         # Unresolvable — print the raw fields (protoc's fallback too).
         _encode_text_fields(io, msg, indent; registry = registry, kw...)
     else
-        inner = decode(msg.value, C)
         _text_indent(io, indent)
         print(io, '[', msg.type_url, "] {\n")
         _encode_text_message(io, inner, indent + 1; registry = registry, kw...)
@@ -1327,10 +1323,10 @@ end
 
 function _skip_text_single_value!(lex::_TextLexer)
     tok = _peek_token!(lex)
-    if tok.kind === :punct && (tok.text == "{" || tok.text == "<")
+    if tok.kind === _TOK_PUNCT && (tok.text == "{" || tok.text == "<")
         close = _expect_open_delim!(lex)
         _skip_text_block!(lex, close)
-    elseif tok.kind === :punct && tok.text == "["
+    elseif tok.kind === _TOK_PUNCT && tok.text == "["
         _next_token!(lex)
         first = true
         while !_peek_is_punct(lex, "]")
@@ -1339,17 +1335,17 @@ function _skip_text_single_value!(lex::_TextLexer)
             first = false
         end
         _next_token!(lex)
-    elseif tok.kind === :string
+    elseif tok.kind === _TOK_STRING
         _next_token!(lex)
-        while _peek_token!(lex).kind === :string
+        while _peek_token!(lex).kind === _TOK_STRING
             _next_token!(lex)
         end
-    elseif tok.kind === :punct && tok.text == "-"
+    elseif tok.kind === _TOK_PUNCT && tok.text == "-"
         _next_token!(lex)
         tok2 = _next_token!(lex)
-        (tok2.kind === :number || tok2.kind === :ident) ||
+        (tok2.kind === _TOK_NUMBER || tok2.kind === _TOK_IDENT) ||
             _text_error(lex, "expected a value after '-'")
-    elseif tok.kind === :number || tok.kind === :ident
+    elseif tok.kind === _TOK_NUMBER || tok.kind === _TOK_IDENT
         _next_token!(lex)
     else
         _text_error(lex, "expected a value, got '$(tok.text)'")
@@ -1361,16 +1357,16 @@ end
 function _skip_text_block!(lex::_TextLexer, close::Char)
     while true
         tok = _peek_token!(lex)
-        if tok.kind === :eof
+        if tok.kind === _TOK_EOF
             _text_error(lex, "unexpected end of input while skipping unknown field")
-        elseif tok.kind === :punct && tok.text == string(close)
+        elseif tok.kind === _TOK_PUNCT && tok.text == string(close)
             _next_token!(lex)
             return nothing
-        elseif tok.kind === :ident
+        elseif tok.kind === _TOK_IDENT
             _next_token!(lex)
             _skip_text_field_value!(lex)
             _consume_field_separator!(lex)
-        elseif tok.kind === :punct && tok.text == "["
+        elseif tok.kind === _TOK_PUNCT && tok.text == "["
             _next_token!(lex)
             _parse_text_bracket_name!(lex)
             _skip_text_field_value!(lex)

@@ -82,6 +82,16 @@ function field_numbers(::Type{T}) where {T}
     return (;)
 end
 
+# Julia field names of the message's proto2 `required` fields. Codegen
+# emits a method only for messages that have any. Required fields carry
+# presence but are bare-typed, so the JSON/text printers use this to emit
+# them even at their default value (the binary encoder always emits
+# them); without it a printed message could be rejected by a strict
+# parser as missing required fields.
+function required_field_names(::Type{T}) where {T}
+    return ()
+end
+
 # Maps each Julia field name → the JSON key it serializes to. Codegen
 # emits a method per generated message reading the (already populated)
 # `json_name` from the FieldDescriptor; the default-empty NamedTuple
@@ -155,7 +165,11 @@ export encode, decode, encode_json, decode_json, encode_text, decode_text
 export enum_metadata
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields,
-    extendable_field_numbers, oneof_field_types, field_numbers, json_field_names
+    extendable_field_numbers,
+    oneof_field_types,
+    field_numbers,
+    json_field_names,
+    required_field_names
 export AbstractRpcTransport, RpcError, StatusCode
 
 end # module

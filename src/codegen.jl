@@ -1459,6 +1459,27 @@ function _emit_message(
         println(io, "end")
     end
 
+    # proto2 `required` fields carry presence but are bare-typed, so the
+    # JSON/text printers can't tell them apart from implicit-presence
+    # scalars at runtime — this trait lets them emit required fields even
+    # at their default value (the binary encoder always emits them).
+    # Only emitted when the message has any; the runtime fallback in
+    # ProtocGen.jl returns the empty tuple. (`required` can't appear
+    # inside a oneof, so plain fields are the full set.)
+    required = [f for f in plain_fields if f.is_required]
+    if !isempty(required)
+        println(
+            io,
+            "PB.required_field_names(::",
+            type_q,
+            "{",
+            jl_name,
+            "}) = (",
+            join((":$(f.jl_fieldname)" for f in required), ", "),
+            ",)",
+        )
+    end
+
     _emit_reserved_fields(io, jl_name, msg, type_q)
 
     println(io)

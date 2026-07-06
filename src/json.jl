@@ -129,6 +129,93 @@ function _enum_proto_prefix(::Type{<:Base.Enum})
     return ""
 end
 
+# The proto field name for a Julia struct field. Identical except when the
+# proto name collides with a Julia keyword and codegen mangled it to
+# `var"#end"` (`_jl_fieldname` in codegen.jl) — strip the marker to recover
+# the wire name. (`#unknown_fields` never reaches this: every walk skips
+# it first.)
+function _proto_field_name(jl_name::Symbol)
+    s = String(jl_name)
+    return startswith(s, '#') ? SubString(s, 2) : SubString(s, 1)
+end
+
+# -----------------------------------------------------------------------------
+# Enum name resolution — shared by the JSON and text codecs so the two
+# can't drift on prefix, alias, or undeclared-value handling.
+# -----------------------------------------------------------------------------
+
+# Wire name of `v`: the canonical declared name (EnumX's `Symbol`
+# canonicalizes aliases) with the codegen-stripped prefix reattached, or
+# `nothing` for a numeric value outside the declared set (which both wire
+# forms render as a number instead).
+function _enum_wire_name(v::Base.Enum)
+    name = try
+        Symbol(v)
+    catch
+        nothing
+    end
+    name === nothing && return nothing
+    return string(_enum_proto_prefix(typeof(v)), name)
+end
+
+# Inverse: resolve a wire name — or, as ergonomic slack, the bare stripped
+# form matching the Julia identifier — to a value of `E`; `nothing` when
+# the name isn't declared.
+function _enum_from_wire_name(::Type{E}, s::AbstractString) where {E<:Base.Enum}
+    prefix = _enum_proto_prefix(E)
+    name = startswith(s, prefix) ? SubString(s, lastindex(prefix) + 1) : SubString(s, 1)
+    v = try
+        getfield(parentmodule(E), Symbol(name))
+    catch
+        nothing
+    end
+    return v isa E ? v : nothing
+end
+
+# -----------------------------------------------------------------------------
+# Per-message-type decode tables. These depend only on `T`, so they're
+# built once and memoized — decoding N instances of a message costs one
+# reflection walk, not N. Shared by the JSON and text decoders.
+# -----------------------------------------------------------------------------
+
+struct _FieldTables
+    # JSON key → Julia field name. Accepts both the camelCase `json_name`
+    # form and the original proto (snake_case) name, per the JSON spec.
+    json_to_jl::Dict{String,Symbol}
+    # proto field name → Julia field name (what the text format uses).
+    proto_to_jl::Dict{String,Symbol}
+    # oneof member name → (parent field, member type).
+    oneof_members::Dict{Symbol,Tuple{Symbol,Type}}
+end
+
+const _FIELD_TABLES = IdDict{Type,_FieldTables}()
+const _FIELD_TABLES_LOCK = ReentrantLock()
+
+function _field_tables(::Type{T}) where {T<:AbstractProtoBufMessage}
+    return lock(_FIELD_TABLES_LOCK) do
+        get!(_FIELD_TABLES, T) do
+            keys = json_field_names(T)
+            json_to_jl = Dict{String,Symbol}()
+            proto_to_jl = Dict{String,Symbol}()
+            for jl_name in propertynames(keys)
+                proto = String(_proto_field_name(jl_name))
+                json_to_jl[getproperty(keys, jl_name)] = jl_name
+                json_to_jl[proto] = jl_name
+                proto_to_jl[proto] = jl_name
+            end
+            oneofs = oneof_field_types(T)
+            members = Dict{Symbol,Tuple{Symbol,Type}}()
+            for parent in propertynames(oneofs)
+                mts = getproperty(oneofs, parent)
+                for m in propertynames(mts)
+                    members[m] = (parent, getproperty(mts, m))
+                end
+            end
+            _FieldTables(json_to_jl, proto_to_jl, members)
+        end
+    end
+end
+
 # -----------------------------------------------------------------------------
 # Public API
 # -----------------------------------------------------------------------------
@@ -262,9 +349,10 @@ function _encode_json_message(io::IO, msg::T; kw...) where {T<:AbstractProtoBufM
         # Presence-bearing fields (`Union{Nothing,X}` — proto3 explicit
         # `optional`, proto2 `optional`, singular submessages) carry
         # presence: a non-`nothing` value is always emitted, even if it
-        # equals the type's default (`""`, `0`, `false`, etc.). The
-        # `nothing` case was already filtered above.
-        if !_field_is_presence_bearing(T, jl_name) && _is_json_default(v)
+        # equals the type's default (`""`, `0`, `false`, etc.); the
+        # `nothing` case was already filtered above. proto2 `required`
+        # fields always emit too (see `_emit_at_default`).
+        if !_emit_at_default(T, jl_name) && _is_json_default(v)
             continue
         end
         json_key = getproperty(keys, jl_name)
@@ -283,6 +371,15 @@ end
 @inline function _field_is_presence_bearing(::Type{T}, name::Symbol) where {T}
     ft = fieldtype(T, name)
     return ft isa Union && Nothing <: ft
+end
+
+# Should this field be emitted even when it holds its default value?
+# Presence-bearing (`Union{Nothing,X}`) fields carry explicit presence, so
+# a non-`nothing` value always prints. proto2 `required` fields are
+# bare-typed but must also always print — the binary encoder emits them
+# unconditionally, and a strict parser rejects a message missing them.
+@inline function _emit_at_default(::Type{T}, name::Symbol) where {T}
+    return _field_is_presence_bearing(T, name) || name in required_field_names(T)
 end
 
 # Does `T`'s JSON form treat a JSON `null` as a real value (rather than
@@ -372,26 +469,16 @@ function _encode_json_value(io::IO, b::Vector{UInt8}; kw...)
     return nothing
 end
 
-# Enums: emit the canonical declared name. With EnumX, `Symbol(v)`
-# returns the canonical-form name even for aliases (per the
-# `allow_alias` design). Per spec: an enum value with no declared name
-# (i.e., a numeric value the wire/JSON delivered that isn't in this
-# enum's value set) round-trips as a JSON number, not a string.
-#
-# The Julia identifier may have had a `<UPPER_SNAKE>_` prefix stripped by
-# codegen; reattach it via `_enum_proto_prefix(typeof(v))` so the JSON wire
-# form stays canonical (`"FEATURE_TYPE_FOO"`, not `"FOO"`). For verbatim
-# enums the prefix is "" and this collapses to the prior behavior.
+# Enums: emit the canonical declared name (prefix reattachment and alias
+# canonicalization live in `_enum_wire_name`). Per spec: an enum value
+# with no declared name (a numeric value delivered by the wire/JSON that
+# isn't in this enum's value set) round-trips as a JSON number.
 function _encode_json_value(io::IO, v::Base.Enum; kw...)
-    name = try
-        Symbol(v)
-    catch
-        nothing
-    end
+    name = _enum_wire_name(v)
     if name === nothing
         print(io, Integer(v))
     else
-        print(io, '"', _enum_proto_prefix(typeof(v)), String(name), '"')
+        print(io, '"', name, '"')
     end
     return nothing
 end
@@ -455,29 +542,15 @@ function _decode_json_message(
     ignore_unknown_fields::Bool = false,
     registry::Union{Nothing,AbstractDict} = nothing,
 ) where {T<:AbstractProtoBufMessage}
-    keys = json_field_names(T)
-    oneofs = oneof_field_types(T)
-
-    # Build a JSON-key → Julia-field-name map. Per spec, parsers must
-    # accept both the camelCase (`json_name`) form and the original
-    # snake_case form on input; emit only camelCase on output.
-    json_to_jl = Dict{String,Symbol}()
-    for jl_name in propertynames(keys)
-        json_to_jl[getproperty(keys, jl_name)] = jl_name
-        json_to_jl[String(jl_name)] = jl_name
-    end
-
-    # Inverse oneof lookup: member-julia-name → (parent-julia-name, member-type).
-    # `keys` already exposes member names at the top level — when a JSON
-    # key resolves to a member we need to redirect the decoded value to
-    # the parent oneof field, wrapped in `OneOf`.
-    oneof_member_lookup = Dict{Symbol,Tuple{Symbol,Type}}()
-    for parent in propertynames(oneofs)
-        members = getproperty(oneofs, parent)
-        for m in propertynames(members)
-            oneof_member_lookup[m] = (parent, getproperty(members, m))
-        end
-    end
+    # Memoized per-type tables: JSON-key → Julia field name (parsers must
+    # accept both the camelCase `json_name` form and the original
+    # snake_case form on input; we emit only camelCase on output), plus
+    # the inverse oneof lookup — when a JSON key resolves to a member we
+    # redirect the decoded value to the parent oneof field, wrapped in
+    # `OneOf`.
+    tables = _field_tables(T)
+    json_to_jl = tables.json_to_jl
+    oneof_member_lookup = tables.oneof_members
 
     defaults = StructHelpers.default_keywords(T)
     vals = Dict{Symbol,Any}()
@@ -682,16 +755,12 @@ function _decode_json_value(::Type{Vector{UInt8}}, v::AbstractString; kw...)
     return Base64.base64decode(v)
 end
 
-# Enums: accept canonical name (string) or numeric value. The wire name
-# carries the proto-side prefix (e.g. `"FEATURE_TYPE_FOO"`); strip it via
-# `_enum_proto_prefix` to recover the Julia identifier (`FOO`). Verbatim
-# enums set the prefix to "" and this is a no-op. As ergonomic slack we
-# also accept the bare stripped form (`"FOO"`) — harmless and useful when
-# users hand-write JSON literals matching the Julia identifier.
+# Enums: accept canonical name (string) or numeric value. Prefix
+# stripping and bare-stripped-form slack live in `_enum_from_wire_name`.
 function _decode_json_value(::Type{E}, v::AbstractString; kw...) where {E<:Base.Enum}
-    prefix = _enum_proto_prefix(E)
-    name = startswith(v, prefix) ? SubString(v, lastindex(prefix) + 1) : v
-    return getfield(parentmodule(E), Symbol(name))::E
+    val = _enum_from_wire_name(E, v)
+    val === nothing && throw(ArgumentError("unknown value $(repr(v)) for enum $(E)"))
+    return val
 end
 # Numeric form. Per spec, *any* integer is accepted; values outside the
 # enum's declared set round-trip as numbers (no symbolic name). Use
