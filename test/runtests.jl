@@ -27,6 +27,7 @@ include("test_conformance_corpus.jl")
 include("test_wkt.jl")
 include("test_corpus_wkt.jl")
 include("test_json.jl")
+include("test_text_format.jl")
 include("test_conformance_runner.jl")
 
 @testset "Aqua" begin

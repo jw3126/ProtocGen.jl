@@ -126,6 +126,11 @@ include("plugin.jl")
 include("plugin_app.jl")
 include("wkt.jl")
 include("json_wkt.jl")
+# `text_format.jl` needs the google WKT types (for the expanded
+# `google.protobuf.Any` form) and the `_Any_` alias from `json_wkt.jl`, so
+# it loads after both. Generated code never references text-format
+# functions, so there is no codegen-side load-order constraint.
+include("text_format.jl")
 include("rpc.jl")
 include("testing.jl")
 
@@ -146,7 +151,7 @@ such extension) is a `MethodError` by design.
 """
 function enum_metadata end
 
-export encode, decode, encode_json, decode_json
+export encode, decode, encode_json, decode_json, encode_text, decode_text
 export enum_metadata
 export OneOf, AbstractProtoBufMessage, DecodeError, OrderedDict
 export reserved_fields,

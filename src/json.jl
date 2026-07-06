@@ -310,6 +310,10 @@ end
 function _is_json_default(v::AbstractDict)
     return isempty(v)
 end
+# Enums are not `Number`s in Julia, so they need their own zero check.
+function _is_json_default(v::Base.Enum)
+    return Integer(v) == 0
+end
 function _is_json_default(v)
     return false
 end
