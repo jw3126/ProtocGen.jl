@@ -41,13 +41,20 @@ from PATH.
 - `testee.jl` — the testee executable. Self-executing Julia script
   (the same shebang trick `bin/protoc-gen-julia` uses). Reads
   framed `ConformanceRequest` blobs from stdin, dispatches via
-  decode → encode through our codec, writes framed
-  `ConformanceResponse` blobs to stdout. JSON / JSPB / TEXT_FORMAT
-  inputs and outputs are reported via `response.skipped`.
-- `failure_list.txt` — allowlist of tests known to fail in v1. The
-  runner treats listed names as expected failures, so the suite
-  passes iff no *new* failures appear. The header inside the file
-  groups failures by category and explains the underlying gaps.
+  decode → encode through our codec (binary, JSON, and text
+  format), writes framed `ConformanceResponse` blobs to stdout.
+  JSPB and text output with `print_unknown_fields` (an explicitly
+  optional feature) are reported via `response.skipped`.
+- `failure_list.txt` — allowlist of binary + JSON suite tests known
+  to fail. The runner treats listed names as expected failures, so
+  the suite passes iff no *new* failures appear. The header inside
+  the file groups failures by category and explains the underlying
+  gaps.
+- `text_format_failure_list.txt` — same allowlist for the text
+  format suite (the runner takes it as a separate
+  `--text_format_failure_list` flag). Its entries are the proto2
+  group-field tests — groups are deliberately unsupported and
+  patched out of the testee's schema.
 - The runner itself is *not* in this directory. It's built on
   demand by `ProtocGen.obtain_conformance_test_runner()`
   (defined in `src/testing.jl`), which clones protobuf at a pinned
@@ -90,28 +97,26 @@ ERROR line:
 ```sh
 /path/to/conformance_test_runner \
     --failure_list test/conformance/failure_list.txt \
+    --text_format_failure_list test/conformance/text_format_failure_list.txt \
     test/conformance/testee.jl
 ```
 
 ## Current state (protobuf v25.9 runner)
 
+The runner drives two suites; both pass:
+
 ```
-1071 successes, 729 skipped, 188 expected failures, 0 unexpected failures
+binary + JSON: 2016 successes, 0 skipped, 0 expected failures, 0 unexpected failures
+text format:    108 successes, 4 skipped, 6 expected failures, 0 unexpected failures
 ```
 
-The 729 skipped cases are JSON, JSPB, and TEXT_FORMAT inputs/outputs
-that v1 doesn't implement (the testee returns `response.skipped` for
-those). The 188 expected failures fall into two underlying gaps,
-both real binary-codec bugs to be addressed in a focused codec pass:
-
-- **Lenient parser**: our decoder accepts several malformed-input
-  cases the spec wants rejected (premature EOF in known/unknown
-  fields, illegal zero field number, oversized BOOL varints).
-- **Map-entry edge cases**: the synthetic *Entry message decoder
-  rejects empty entries, duplicate key/value fields within an
-  entry, and value-before-key field order.
-
-See the header in `failure_list.txt` for the per-category breakdown.
+The 4 skipped text cases request `print_unknown_fields`, an
+explicitly optional feature (our text printer drops unknown fields,
+like the JSON printer). The 6 expected failures are proto2 group
+fields — deliberately unsupported (deprecated wire format) and
+patched out of the testee's schema; binary group tests pass because
+unknown-field capture round-trips the raw tags, but a text input
+names the group field explicitly, which parses as an unknown field.
 
 ## Updating the failure list
 
@@ -125,4 +130,6 @@ grep -aoE '^ERROR, test=[A-Za-z0-9_.\[\]]+' /tmp/conf.txt \
 ```
 
 Then prune entries that no longer fail and add genuinely new ones
-into `failure_list.txt`, preserving the `#`-prefixed header.
+into `failure_list.txt` (binary + JSON suite) or
+`text_format_failure_list.txt` (text format suite), preserving the
+`#`-prefixed headers.

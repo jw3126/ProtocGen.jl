@@ -522,7 +522,8 @@ function _encode_json_message_after_at_type(
             _encode_json_value(io, o.value; kw...)
             continue
         end
-        _is_json_default(v) && continue
+        # Same emission gate as the generic walker in `_encode_json_message`.
+        !_emit_at_default(T, jl_name) && _is_json_default(v) && continue
         json_key = getproperty(keys, jl_name)
         print(io, ',')
         JSON.print(io, json_key)

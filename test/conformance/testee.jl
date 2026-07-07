@@ -26,9 +26,10 @@ exec julia --project="${HERE}/../.." --startup-file=no --color=no "$0" "$@"
 # and eval the result into three sub-modules. Everything else is plain
 # decode → encode dispatch on `request.message_type`.
 #
-# We only support the protobuf wire format. JSON / JSPB / TEXT_FORMAT
-# input or output is reported via `response.skipped`, which the runner
-# treats as a non-failure.
+# We support the protobuf wire format, JSON, and text format. JSPB
+# input or output (and text output with `print_unknown_fields`, an
+# explicitly optional feature) is reported via `response.skipped`,
+# which the runner treats as a non-failure.
 
 using ProtocGen
 const PBD = ProtocGen
@@ -83,6 +84,7 @@ const MESSAGE_TYPE = Dict{String,Type}(
 
 const WF_PROTOBUF = Conf.WireFormat.PROTOBUF
 const WF_JSON = Conf.WireFormat.JSON
+const WF_TEXT = Conf.WireFormat.TEXT_FORMAT
 const TC_JSON_IGNORE_UNKNOWN = Conf.TestCategory.JSON_IGNORE_UNKNOWN_PARSING_TEST
 
 function read_le_uint32(io)::Union{Nothing,UInt32}
@@ -135,15 +137,23 @@ function handle_request(req)
         )
     end
 
-    # JSPB / TEXT_FORMAT input remain skipped; binary and JSON we handle.
-    if !(payload.name in (:protobuf_payload, :json_payload))
+    # JSPB input remains skipped; binary, JSON, and text format we handle.
+    if !(payload.name in (:protobuf_payload, :json_payload, :text_payload))
         return skipped_response(
-            "input format $(payload.name) not supported by ProtocGen v1 (binary + JSON only)",
+            "input format $(payload.name) not supported by ProtocGen (binary + JSON + text format)",
         )
     end
-    if !(req.requested_output_format in (WF_PROTOBUF, WF_JSON))
+    if !(req.requested_output_format in (WF_PROTOBUF, WF_JSON, WF_TEXT))
         return skipped_response(
-            "output format $(req.requested_output_format) not supported by ProtocGen v1 (binary + JSON only)",
+            "output format $(req.requested_output_format) not supported by ProtocGen (binary + JSON + text format)",
+        )
+    end
+    # Printing unknown fields in text format is explicitly optional
+    # (conformance.proto: "this is optional to implement") and ProtocGen's
+    # text printer drops unknown fields, like its JSON printer.
+    if req.requested_output_format == WF_TEXT && req.print_unknown_fields
+        return skipped_response(
+            "print_unknown_fields is not supported by ProtocGen's text format printer",
         )
     end
 
@@ -159,9 +169,13 @@ function handle_request(req)
     msg = try
         if payload.name === :protobuf_payload
             pb_decode(T, payload.value)
-        else
+        elseif payload.name === :json_payload
             ignore_unknown = req.test_category == TC_JSON_IGNORE_UNKNOWN
             PBD.decode_json(T, payload.value; ignore_unknown_fields = ignore_unknown)
+        elseif payload.name === :text_payload
+            PBD.decode_text(T, payload.value)
+        else
+            error("unreachable: payload format $(payload.name) passed the gate above")
         end
     catch e
         return Conf.ConformanceResponse(PBD.OneOf(:parse_error, sprint(showerror, e)), UInt8[])
@@ -178,7 +192,7 @@ function handle_request(req)
             )
         end
         return Conf.ConformanceResponse(PBD.OneOf(:protobuf_payload, bytes), UInt8[])
-    else  # WF_JSON
+    elseif req.requested_output_format == WF_JSON
         json = try
             PBD.encode_json(msg)
         catch e
@@ -188,6 +202,20 @@ function handle_request(req)
             )
         end
         return Conf.ConformanceResponse(PBD.OneOf(:json_payload, json), UInt8[])
+    elseif req.requested_output_format == WF_TEXT
+        text = try
+            PBD.encode_text(msg)
+        catch e
+            return Conf.ConformanceResponse(
+                PBD.OneOf(:serialize_error, sprint(showerror, e)),
+                UInt8[],
+            )
+        end
+        return Conf.ConformanceResponse(PBD.OneOf(:text_payload, text), UInt8[])
+    else
+        error(
+            "unreachable: output format $(req.requested_output_format) passed the gate above",
+        )
     end
 end
 

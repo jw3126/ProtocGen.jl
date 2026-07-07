@@ -24,6 +24,7 @@ using ProtocGen: obtain_conformance_test_runner
 const CONFORMANCE_DIR = joinpath(@__DIR__, "conformance")
 const TESTEE = joinpath(CONFORMANCE_DIR, "testee.jl")
 const FAILURE_LIST = joinpath(CONFORMANCE_DIR, "failure_list.txt")
+const TEXT_FAILURE_LIST = joinpath(CONFORMANCE_DIR, "text_format_failure_list.txt")
 
 function _can_build()
     Sys.iswindows() && return false, "Windows (runner uses POSIX fork)"
@@ -36,6 +37,7 @@ end
     @test isfile(TESTEE)
     @test Sys.isexecutable(TESTEE)
     @test isfile(FAILURE_LIST)
+    @test isfile(TEXT_FAILURE_LIST)
 
     ok, reason = _can_build()
     if !ok
@@ -43,7 +45,9 @@ end
         @test_skip "conformance_test_runner unavailable: $reason"
     else
         runner = obtain_conformance_test_runner()
-        cmd = `$runner --failure_list $FAILURE_LIST $TESTEE`
+        # The runner drives two suites (binary + JSON, and text format),
+        # each with its own allowlist flag.
+        cmd = `$runner --failure_list $FAILURE_LIST --text_format_failure_list $TEXT_FAILURE_LIST $TESTEE`
         out = IOBuffer()
         err = IOBuffer()
         proc = run(pipeline(ignorestatus(cmd); stdout = out, stderr = err))

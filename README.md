@@ -8,7 +8,7 @@
 
 Julia code generator for Protocol Buffers.
 It is meant to be used as a protoc plugin.
-Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for both binary and JSON.
+Passes the official required proto2 and proto3 [conformance tests](https://github.com/protocolbuffers/protobuf/tree/c06e6b41d66d6d380427d29ef95ba59991866bf4/conformance) for binary, JSON, and text format (textproto; the only allowlisted failures are proto2 group fields, which ProtocGen deliberately doesn't support).
 
 ## Install
 
@@ -89,6 +89,18 @@ js = encode_json(person)
 # {"name":"Alice","id":42,"email":"alice@example.com",
 #  "phones":[…],"lastUpdated":"2024-05-06T12:53:20Z"}
 @assert decode_json(Person, js) == person
+
+# Text format (textproto) — full grammar on parse: comments, `<>` blocks,
+# hex/octal literals, expanded `[type.googleapis.com/…]` Any form, …
+txt = encode_text(person)
+# name: "Alice"
+# id: 42
+# …
+# phones {
+#   number: "+1-555-0100"
+#   type: PHONE_TYPE_MOBILE
+# }
+@assert decode_text(Person, txt) == person
 ```
 
 ## Docstring retention

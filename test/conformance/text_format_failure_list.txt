@@ -1,0 +1,18 @@
+# Known text-format conformance failures for ProtocGen, against the
+# Google protobuf conformance_test_runner from protobuf v25.9.
+#
+# Consumed by `conformance_test_runner --text_format_failure_list`
+# (the text format suite's counterpart to `failure_list.txt`).
+#
+# proto2 groups (deprecated wire format, intentionally unsupported —
+# patched out of the testee's schema; see
+# test/fixtures/proto/test_messages_proto2_patched.proto). Binary group
+# tests pass because unknown-field capture round-trips the raw tags,
+# but a text input names the group field explicitly (`Data { … }`),
+# which parses as an unknown field and errors:
+Required.Proto2.TextFormatInput.GroupFieldEmpty.ProtobufOutput
+Required.Proto2.TextFormatInput.GroupFieldEmpty.TextFormatOutput
+Required.Proto2.TextFormatInput.GroupFieldNoColon.ProtobufOutput
+Required.Proto2.TextFormatInput.GroupFieldNoColon.TextFormatOutput
+Required.Proto2.TextFormatInput.GroupFieldWithColon.ProtobufOutput
+Required.Proto2.TextFormatInput.GroupFieldWithColon.TextFormatOutput

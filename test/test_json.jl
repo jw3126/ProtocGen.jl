@@ -177,11 +177,11 @@ end
     end
 
     @testset "default fields are omitted on encode" begin
-        # UninterpretedOption.NamePart has only `name_part::String` and
-        # `is_extension::Bool`, both required-with-default. Default
-        # construction → empty struct → empty JSON object.
-        T = _G.var"UninterpretedOption.NamePart"
-        @test _parsed(_make(T)) == Dict{String,Any}()
+        # SourceContext has a single implicit-presence `file_name::String`.
+        # Default construction → empty struct → empty JSON object. (proto2
+        # `required` fields are the exception — they always emit; see the
+        # "proto2 required fields" testset below.)
+        @test _parsed(_make(_G.SourceContext)) == Dict{String,Any}()
     end
 
     @testset "presence is preserved on JSON encode even at default value" begin
@@ -241,6 +241,24 @@ end
         # Bare stripped form is also accepted (ergonomic slack).
         @test ProtocGen._decode_json_value(typeof(v), "STRING") === v
         @test ProtocGen._decode_json_value(typeof(v), 9) === v
+    end
+
+    @testset "implicit-presence enums skip their zero default" begin
+        # Field.kind :: bare-typed proto3 enum (implicit presence): the
+        # zero value (TYPE_UNKNOWN) is omitted like every other
+        # implicit-presence default; a non-zero value is emitted.
+        f = _make(_G.Field; name = "f")
+        @test !haskey(_parsed(f), "kind")
+        f2 = _make(_G.Field; name = "f", kind = _G.var"Field.Kind".TYPE_DOUBLE)
+        @test _parsed(f2)["kind"] == "TYPE_DOUBLE"
+    end
+
+    @testset "proto2 required fields always emit, even at default" begin
+        # UninterpretedOption.NamePart: both fields are `required`, so a
+        # strict parser rejects output that omits them —
+        # `required_field_names` overrides the default-skip.
+        np = pb_make(_G.var"UninterpretedOption.NamePart", "", false)
+        @test _parsed(np) == Dict("namePart" => "", "isExtension" => false)
     end
 
     @testset "nested submessage" begin
