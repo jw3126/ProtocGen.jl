@@ -44,7 +44,7 @@ end
         if encoded_size_len_guess < encoded_size_len
             # Extend the buffer by the extra size bytes, then shift the payload
             # right so the full varint fits in front of it.
-            for _ in 1:(encoded_size_len - encoded_size_len_guess)
+            for _ in 1:(encoded_size_len-encoded_size_len_guess)
                 write(io, 0x00)
             end
             unsafe_copyto!(
