@@ -25,15 +25,15 @@ end
 @inline function _with_size(f, io::IOBuffer, sink, x, V...)
     if io.seekable
         initpos = position(io)
-        # We need to encode the encoded size of x before we know it. We first preallocate 1
-        # byte as that is the mininum size of the encoded size.
-        # If our guess is right, it will save us a copy, but we never want to preallocate too much
-        # space for the size, because then we risk outgrowing the buffer that was allocated with exact size
-        # needed to contain the message.
-        # TODO: make the guess better (e.g. by incorporating maxsize)
+        # We need to encode the encoded size of x before we know it. Reserve 1
+        # byte — the minimum varint size — as a placeholder and shift the
+        # payload right if the actual size needs more bytes. All buffer growth
+        # must go through `write`/`ensureroom`, never a growing `truncate`: on
+        # Julia ≥ 1.12 the Memory-backed IOBuffer reallocates and copies the
+        # whole buffer on every growing `truncate` (even when capacity already
+        # suffices), which made encoding quadratic in the number of submessages.
         encoded_size_len_guess = 1
-        truncate(io, initpos + encoded_size_len_guess)
-        seek(io, initpos + encoded_size_len_guess)
+        write(io, 0x00)
         # Now we can encode the object itself
         f(sink, x, V...) # e.g. _encode(io, x) or _encode(io, x, Val{:zigzag})
         endpos = position(io)
@@ -42,8 +42,11 @@ end
         @assert (initpos + encoded_size_len + encoded_size) <= io.maxsize
         # If our initial guess on encoded size of the size was wrong, then we need to move the encoded data
         if encoded_size_len_guess < encoded_size_len
-            truncate(io, initpos + encoded_size_len + encoded_size)
-            # Move the data right after the correct size
+            # Extend the buffer by the extra size bytes, then shift the payload
+            # right so the full varint fits in front of it.
+            for _ in 1:(encoded_size_len - encoded_size_len_guess)
+                write(io, 0x00)
+            end
             unsafe_copyto!(
                 io.data,
                 initpos + encoded_size_len + 1,
