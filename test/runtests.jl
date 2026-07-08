@@ -14,6 +14,7 @@ end
 
 include("test_vbyte.jl")
 include("test_codec_primitives.jl")
+include("test_encode_allocations.jl")
 include("test_bootstrap_descriptors.jl")
 include("test_plugin.jl")
 include("test_codegen.jl")
