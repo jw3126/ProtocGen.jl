@@ -15,8 +15,8 @@ end
 
 @testset "encode allocations" begin
     n = 10_000
-    msg = G.ListValue(
-        values = [G.Value(kind = OneOf(:string_value, "payload $(i)")) for i in 1:n],
+    msg = G.ListValue(;
+        values = [G.Value(; kind = OneOf(:string_value, "payload $(i)")) for i in 1:n],
     )
     bytes = encode(msg)  # also warms up compilation before measuring
     @test length(bytes) == ProtocGen.Codecs._encoded_size(msg)
